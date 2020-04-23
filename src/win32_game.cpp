@@ -1,73 +1,101 @@
 #include <windows.h>
-
-#define global_variable static
-// localy scoped variable that will persist its value
-// when function goes out of scope
-#define local_persist static
-// reserved for functions that are going to
-// be internal to this file, local functions
-#define internal static
+#include <stdint.h>
+#include "win32_game.h"
 
 // loop variable
-global_variable bool Running = true;
-
-// The BITMAPINFO structure defines the 
-// dimensions and color information for a DIB.
-global_variable BITMAPINFO BitmapInfo;
-global_variable void *BitmapMemory;
-global_variable HBITMAP BitmapHandle;
-global_variable HDC BitmapDeviceContext;
-
+global_variable bool RUNNING = true;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable int bytesPerPixel = 4;
 
 internal void
-Win32ResizeDIBSection(int Width, int Height)
-{
-    if(BitmapHandle)
-    {
-        DeleteObject(BitmapHandle);
-    }
+RenderWeirdGradient(int BlueOffset, int GreenOffset)
+{    
+    int Width = GlobalBackbuffer.width;
+    int Height = GlobalBackbuffer.height;
 
-    if(!BitmapDeviceContext)
+    int Pitch = Width * bytesPerPixel;
+    uint8_t *Row = (uint8_t *)GlobalBackbuffer.memory;    
+    for(int Y = 0; Y < GlobalBackbuffer.height; ++Y)
     {
-        // TODO(casey): Should we recreate these under certain special circumstances
-        BitmapDeviceContext = CreateCompatibleDC(0);
-    }
-    
-    BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-    BitmapInfo.bmiHeader.biWidth = Width;
-    BitmapInfo.bmiHeader.biHeight = Height;
-    BitmapInfo.bmiHeader.biPlanes = 1;
-    BitmapInfo.bmiHeader.biBitCount = 32;
-    BitmapInfo.bmiHeader.biCompression = BI_RGB;
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int X = 0; X < GlobalBackbuffer.width; ++X)
+        {
+            uint8_t Blue = (X + BlueOffset);
+            uint8_t Green = (Y + GreenOffset);
+            
+            *Pixel++ = ((Green << 8) | Blue);
+        }
 
-    // The CreateDIBSection function creates a DIB 
-    // that applications can write to directly. The function gives 
-    // you a pointer to the location of the bitmap bit values. 
-    BitmapHandle = CreateDIBSection(
-        BitmapDeviceContext, &BitmapInfo,
-        DIB_RGB_COLORS,
-        &BitmapMemory,
-        0, 0);
+        Row += Pitch;
+    }
 }
 
-internal void
-Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
+win32_window_dimension Win32GetWindowDimension(HWND Window)
 {
-    // SRCCOPY - copy directly
+    RECT ClientRect;
+    win32_window_dimension windowDimension;
+    // get size of the window, without the border
+    GetClientRect(Window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+    return windowDimension;
+}
+
+internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer, 
+                                    win32_window_dimension dimension)
+{
+    // if we dont free before allocating, memory will leak
+    if(buffer->memory)
+    {
+        VirtualFree(buffer->memory, 0, MEM_RELEASE);
+    }
+
+    buffer->width = dimension.width;
+    buffer->height = dimension.height;
+
+    buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
+    buffer->info.bmiHeader.biWidth = buffer->width;
+    // When the biHeight field is negative, this is the clue to
+    // Windows to treat this bitmap as top-down, not bottom-up, meaning that
+    // the first three bytes of the image are the color for the top left pixel
+    // in the bitmap, not the bottom left!
+    buffer->info.bmiHeader.biHeight = -buffer->height;
+    buffer->info.bmiHeader.biPlanes = 1;
+    // color bits
+    buffer->info.bmiHeader.biBitCount = 32;
+    // RGB = uncompressed
+    buffer->info.bmiHeader.biCompression = BI_RGB;
+
+    
+    int bitmapMemorySize = bytesPerPixel * (buffer->width * buffer->height);
+    buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    buffer->pitch = dimension.width * bytesPerPixel;
+}
+
+internal void Win32DisplayBufferInWindow(HDC DeviceContext, 
+                                        win32_window_dimension window, 
+                                        win32_offscreen_buffer buffer)
+{
+    // The StretchDIBits function copies the color data for a rectangle of pixels in a DIB, 
+    // to the specified destination rectangle. 
+    // If the destination rectangle is larger than the source rectangle, 
+    // this function stretches the rows and columns of color data to fit the destination rectangle. 
+    // If the destination rectangle is smaller than the source rectangle, 
+    // this function compresses the rows and columns by using the specified raster operation.
     StretchDIBits(
         DeviceContext,
-        X, Y, Width, Height,
-        X, Y, Width, Height,
-        BitmapMemory,
-        &BitmapInfo,
+        0, 0, window.width, window.height,
+        0, 0, buffer.width, buffer.height,
+        buffer.memory,
+        &buffer.info,
         DIB_RGB_COLORS, SRCCOPY);
 }
 
-LRESULT CALLBACK Win32MainWindowCallback(
-   HWND   Window,
-   UINT   Message,
-   WPARAM WParam,
-   LPARAM LParam)
+
+LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
+                                         UINT   Message,
+                                         WPARAM WParam,
+                                         LPARAM LParam)
 {
     LRESULT Result = 0;
 
@@ -76,19 +104,15 @@ LRESULT CALLBACK Win32MainWindowCallback(
         // WM_NCPAINT message - to draw on frame / titlebar
         case WM_SIZE:
         {
-            RECT ClientRect;
-            // get size of the window, without the border
-            GetClientRect(Window, &ClientRect);
-            int Width = ClientRect.right - ClientRect.left;
-            int Height = ClientRect.bottom - ClientRect.top;
-            Win32ResizeDIBSection(Width, Height);
+            win32_window_dimension dimension = Win32GetWindowDimension(Window);
+            Win32ResizeDIBSection(&GlobalBackbuffer, dimension);
         } break;
         // WM_CLOSE is called when user sends signal to terminate the application
         // we can handle the closing procedure here
         case WM_CLOSE:
         {
             OutputDebugStringA("WM_CLOSE\n");
-            Running = false;
+            RUNNING = false;
         } break;
         case WM_ACTIVATEAPP:
         {
@@ -100,7 +124,7 @@ LRESULT CALLBACK Win32MainWindowCallback(
         case WM_DESTROY:
         {
             OutputDebugStringA("WM_DESTROY\n");
-            Running = false;
+            RUNNING = false;
         } break;
 
         case WM_PAINT:
@@ -108,16 +132,12 @@ LRESULT CALLBACK Win32MainWindowCallback(
             // The PAINTSTRUCT structure contains information for an application. 
             // This information can be used to paint the client area of a window owned by that application.
             PAINTSTRUCT Paint;
-            HDC DeviceContext;
             // The BeginPaint function prepares the specified window for 
             // painting and fills a PAINTSTRUCT structure with information about the painting.
-            DeviceContext = BeginPaint(Window, &Paint);
-            int X = Paint.rcPaint.left;
-            int Y = Paint.rcPaint.top;
-            int Width = Paint.rcPaint.right - Paint.rcPaint.left;
-            int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
+            HDC DeviceContext = BeginPaint(Window, &Paint);
+            win32_window_dimension dimension = Win32GetWindowDimension(Window);
             
-            Win32UpdateWindow(DeviceContext, X, Y, Width, Height);
+            Win32DisplayBufferInWindow(DeviceContext, dimension, GlobalBackbuffer);
             EndPaint(Window, &Paint);
         } break;
         default:
@@ -131,8 +151,7 @@ LRESULT CALLBACK Win32MainWindowCallback(
 }
 
 
-int CALLBACK
-WinMain(HINSTANCE Instance,
+int CALLBACK    WinMain(HINSTANCE Instance,
         HINSTANCE PrevInstance,
         LPSTR     CommandLine,
         int       ShowCode)
@@ -159,7 +178,7 @@ WinMain(HINSTANCE Instance,
         // NULL: this application does not have a menu bar
         // hInstance: the first parameter from WinMain
         // NULL: not used in this application
-        HWND WindowHandle = CreateWindowExA(
+        HWND Window = CreateWindowExA(
             0,
             WindowClass.lpszClassName,
             "TITLE_PLACEHOLDER",
@@ -167,9 +186,14 @@ WinMain(HINSTANCE Instance,
             CW_USEDEFAULT, CW_USEDEFAULT,
             CW_USEDEFAULT, CW_USEDEFAULT,
             NULL, NULL, Instance, NULL);
-        if(WindowHandle)
+        if(Window)
         {
-            while(Running)
+
+            HDC DeviceContext = GetDC(Window);
+            int offsetX = 0;
+            int offsetY = 0;
+
+            while(RUNNING)
             {
                 MSG Message;
                 BOOL MessageResult = GetMessageA(&Message, 0, 0, 0);
@@ -180,8 +204,15 @@ WinMain(HINSTANCE Instance,
                 }
                 else
                 {
-                    Running = false;
+                    RUNNING = false;
                 }
+                RenderWeirdGradient(offsetX, offsetY);
+
+                win32_window_dimension window_dimension = 
+                    Win32GetWindowDimension(Window);
+                Win32DisplayBufferInWindow(DeviceContext, window_dimension, GlobalBackbuffer);
+                offsetX += 1;
+                offsetY += 2;
             }
         }
         else
