@@ -1,1 +1,1 @@
-..\build\win32_game.exe
+..\build\win32_platform_layer.exe

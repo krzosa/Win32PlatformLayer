@@ -1,13 +1,28 @@
 #include <windows.h>
 #include <stdint.h>
-#include "win32_game.h"
+#include "win32_platform_layer.h"
 
 // loop variable
 global_variable bool GlobalRunning = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 
-internal void
-RenderWeirdGradient(win32_offscreen_buffer buffer, int BlueOffset, int GreenOffset)
+internal void RenderRectangle(win32_offscreen_buffer buffer, int x, int y, int width, int height)
+{
+    uint8_t *Row = (uint8_t *)buffer.memory; 
+    Row = Row + (4 * buffer.pitch);
+    for(int Y = 0; Y < height; Y++)
+    {
+        uint8_t *Pixel = Row + (y * 4);
+        for(int X = 0; X < width; X++)
+        {
+            *Pixel = 130;
+            Pixel = Pixel + 4;
+        }
+        Row = Row + buffer.pitch;
+    }
+}
+
+internal void RenderWeirdGradient(win32_offscreen_buffer buffer, int BlueOffset, int GreenOffset)
 {    
     // uint8_t *Row = (uint8_t *)buffer.memory;    
     // for(int Y = 0; Y < buffer.height; ++Y)
@@ -24,12 +39,15 @@ RenderWeirdGradient(win32_offscreen_buffer buffer, int BlueOffset, int GreenOffs
     //     Row += buffer.pitch;
     // }
     uint8_t *Row = (uint8_t *)buffer.memory; 
-    Row = Row + buffer.pitch * 200 + 1;
-
     for(int Y = 0; Y < buffer.height; Y++)
     {
-        *Row = 255;
-        Row = Row+4;
+        uint8_t *Pixel = Row;
+        for(int X = 0; X < buffer.width; X++)
+        {
+            *Pixel = 130;
+            Pixel = Pixel + 4;
+        }
+        Row = Row + buffer.pitch;
     }
 }
 
@@ -217,8 +235,8 @@ int CALLBACK WinMain(  HINSTANCE Instance,
                     TranslateMessage(&Message);
                     DispatchMessageA(&Message);
                 }
-                RenderWeirdGradient(GlobalBackbuffer, offsetX, offsetY);
-
+                // RenderWeirdGradient(GlobalBackbuffer, offsetX, offsetY);
+                RenderRectangle(GlobalBackbuffer, 20, 20, 100, 100);
                 window_dimension dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(DeviceContext, 
                                            dimension.width, dimension.height, 

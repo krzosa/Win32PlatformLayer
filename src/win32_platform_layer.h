@@ -1,6 +1,5 @@
 #pragma once
-
-#include<windows.h>
+#include <windows.h>
 
 #define global_variable static
 // localy scoped variable that will persist its value
@@ -25,7 +24,6 @@ struct win32_offscreen_buffer
     // Note: Pixels are always 32bits wide
 };
 
-// TODO: unpack function calls window_dim to width, height 
 struct window_dimension
 {
     int width;
