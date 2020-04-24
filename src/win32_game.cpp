@@ -3,37 +3,40 @@
 #include "win32_game.h"
 
 // loop variable
-global_variable bool RUNNING = true;
+global_variable bool GlobalRunning = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
-global_variable int bytesPerPixel = 4;
 
 internal void
-RenderWeirdGradient(int BlueOffset, int GreenOffset)
+RenderWeirdGradient(win32_offscreen_buffer buffer, int BlueOffset, int GreenOffset)
 {    
-    int Width = GlobalBackbuffer.width;
-    int Height = GlobalBackbuffer.height;
-
-    int Pitch = Width * bytesPerPixel;
-    uint8_t *Row = (uint8_t *)GlobalBackbuffer.memory;    
-    for(int Y = 0; Y < GlobalBackbuffer.height; ++Y)
-    {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < GlobalBackbuffer.width; ++X)
-        {
-            uint8_t Blue = (X + BlueOffset);
-            uint8_t Green = (Y + GreenOffset);
+    // uint8_t *Row = (uint8_t *)buffer.memory;    
+    // for(int Y = 0; Y < buffer.height; ++Y)
+    // {
+    //     uint32_t *Pixel = (uint32_t *)Row;
+    //     for(int X = 0; X < buffer.width; ++X)
+    //     {
+    //         uint8_t Blue = (X + BlueOffset);
+    //         uint8_t Green = (Y + GreenOffset);
             
-            *Pixel++ = ((Green << 8) | Blue);
-        }
+    //         *Pixel++ = ((Green << 16) | (Blue << 8) );
+    //     }
 
-        Row += Pitch;
+    //     Row += buffer.pitch;
+    // }
+    uint8_t *Row = (uint8_t *)buffer.memory; 
+    Row = Row + buffer.pitch * 200 + 1;
+
+    for(int Y = 0; Y < buffer.height; Y++)
+    {
+        *Row = 255;
+        Row = Row+4;
     }
 }
 
-win32_window_dimension Win32GetWindowDimension(HWND Window)
+window_dimension Win32GetWindowDimension(HWND Window)
 {
     RECT ClientRect;
-    win32_window_dimension windowDimension;
+    window_dimension windowDimension;
     // get size of the window, without the border
     GetClientRect(Window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;
@@ -42,7 +45,7 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
 }
 
 internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer, 
-                                    win32_window_dimension dimension)
+                                    int width, int height)
 {
     // if we dont free before allocating, memory will leak
     if(buffer->memory)
@@ -50,8 +53,9 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer,
         VirtualFree(buffer->memory, 0, MEM_RELEASE);
     }
 
-    buffer->width = dimension.width;
-    buffer->height = dimension.height;
+    buffer->width = width;
+    buffer->height = height;
+    int bytesPerPixel = 4;
 
     buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
     buffer->info.bmiHeader.biWidth = buffer->width;
@@ -69,11 +73,11 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer,
     
     int bitmapMemorySize = bytesPerPixel * (buffer->width * buffer->height);
     buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
-    buffer->pitch = dimension.width * bytesPerPixel;
+    buffer->pitch = width * bytesPerPixel;
 }
 
 internal void Win32DisplayBufferInWindow(HDC DeviceContext, 
-                                        win32_window_dimension window, 
+                                        int windowWidth, int windowHeight, 
                                         win32_offscreen_buffer buffer)
 {
     // The StretchDIBits function copies the color data for a rectangle of pixels in a DIB, 
@@ -84,7 +88,7 @@ internal void Win32DisplayBufferInWindow(HDC DeviceContext,
     // this function compresses the rows and columns by using the specified raster operation.
     StretchDIBits(
         DeviceContext,
-        0, 0, window.width, window.height,
+        0, 0, windowWidth, windowHeight,
         0, 0, buffer.width, buffer.height,
         buffer.memory,
         &buffer.info,
@@ -102,17 +106,18 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
     switch (Message) 
     {
         // WM_NCPAINT message - to draw on frame / titlebar
-        case WM_SIZE:
+        case WM_EXITSIZEMOVE:
         {
-            win32_window_dimension dimension = Win32GetWindowDimension(Window);
-            Win32ResizeDIBSection(&GlobalBackbuffer, dimension);
+            window_dimension dimension = Win32GetWindowDimension(Window);
+            Win32ResizeDIBSection(&GlobalBackbuffer, dimension.width, dimension.height);
+            OutputDebugStringA("WM_SIZE\n");
         } break;
         // WM_CLOSE is called when user sends signal to terminate the application
         // we can handle the closing procedure here
         case WM_CLOSE:
         {
             OutputDebugStringA("WM_CLOSE\n");
-            RUNNING = false;
+            GlobalRunning = false;
         } break;
         case WM_ACTIVATEAPP:
         {
@@ -124,8 +129,12 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
         case WM_DESTROY:
         {
             OutputDebugStringA("WM_DESTROY\n");
-            RUNNING = false;
+            GlobalRunning = false;
         } break;
+        case WM_QUIT:
+        {
+            GlobalRunning = false;
+        }
 
         case WM_PAINT:
         {
@@ -135,9 +144,10 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
             // The BeginPaint function prepares the specified window for 
             // painting and fills a PAINTSTRUCT structure with information about the painting.
             HDC DeviceContext = BeginPaint(Window, &Paint);
-            win32_window_dimension dimension = Win32GetWindowDimension(Window);
-            
-            Win32DisplayBufferInWindow(DeviceContext, dimension, GlobalBackbuffer);
+            window_dimension dimension = Win32GetWindowDimension(Window);
+            Win32DisplayBufferInWindow(DeviceContext, 
+                                       dimension.width, dimension.height, 
+                                       GlobalBackbuffer);
             EndPaint(Window, &Paint);
         } break;
         default:
@@ -147,17 +157,20 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
         
     }
 
-    return Result   ;
+    return Result;
 }
 
 
-int CALLBACK    WinMain(HINSTANCE Instance,
-        HINSTANCE PrevInstance,
-        LPSTR     CommandLine,
-        int       ShowCode)
+int CALLBACK WinMain(  HINSTANCE Instance,
+             HINSTANCE PrevInstance,
+             LPSTR     CommandLine,
+             int       ShowCode)
 {
-    WNDCLASSA WindowClass;
-    WindowClass.style          = CS_HREDRAW | CS_VREDRAW;
+    WNDCLASSA WindowClass = {};
+
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+
+    WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     WindowClass.lpfnWndProc    = Win32MainWindowCallback;
     WindowClass.cbClsExtra     = 0;
     WindowClass.cbWndExtra     = 0;
@@ -193,37 +206,36 @@ int CALLBACK    WinMain(HINSTANCE Instance,
             int offsetX = 0;
             int offsetY = 0;
 
-            while(RUNNING)
+            while(GlobalRunning)
             {
                 MSG Message;
-                BOOL MessageResult = GetMessageA(&Message, 0, 0, 0);
-                if(MessageResult > 0)
+                // GetMessage does not return until a message come in
+                // PeekMessage returns regardless whether message is in the queue
+                // Better for games
+                while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
                 {
                     TranslateMessage(&Message);
                     DispatchMessageA(&Message);
                 }
-                else
-                {
-                    RUNNING = false;
-                }
-                RenderWeirdGradient(offsetX, offsetY);
+                RenderWeirdGradient(GlobalBackbuffer, offsetX, offsetY);
 
-                win32_window_dimension window_dimension = 
-                    Win32GetWindowDimension(Window);
-                Win32DisplayBufferInWindow(DeviceContext, window_dimension, GlobalBackbuffer);
+                window_dimension dimension = Win32GetWindowDimension(Window);
+                Win32DisplayBufferInWindow(DeviceContext, 
+                                           dimension.width, dimension.height, 
+                                           GlobalBackbuffer);
                 offsetX += 1;
                 offsetY += 2;
             }
         }
         else
         {
-            // TODO(Karol): Logging
+            OutputDebugStringA("FAILED to create a Window\n");
         }
         
     }
     else
     {
-        //TODO(Karol): Logging
+        OutputDebugStringA("FAILED to register WindowClass\n");
     }
     
     

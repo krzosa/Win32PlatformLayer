@@ -22,9 +22,11 @@ struct win32_offscreen_buffer
     // this is the value which you want to add to the index
     // if you want to get to the next row when storing 2d thing in 1d
     int pitch;
+    // Note: Pixels are always 32bits wide
 };
 
-struct win32_window_dimension
+// TODO: unpack function calls window_dim to width, height 
+struct window_dimension
 {
     int width;
     int height;
