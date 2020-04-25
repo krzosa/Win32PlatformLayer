@@ -1,22 +1,36 @@
 #include <windows.h>
 #include <stdint.h>
+#include <Xinput.h>
+#include <stdio.h>
+
 #include "win32_platform_layer.h"
 
 // loop variable
 global_variable bool GlobalRunning = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 
+int clamp(int min, int value, int max)
+{
+    if(value > max) return max;
+    else if(value < min) return min;
+    return value;
+}
+
 internal void RenderRectangle(win32_offscreen_buffer buffer, int x, int y, int width, int height)
 {
     uint8_t *Row = (uint8_t *)buffer.memory; 
-    Row = Row + (4 * buffer.pitch);
+    Row = Row + (y * buffer.pitch);
     for(int Y = 0; Y < height; Y++)
     {
-        uint8_t *Pixel = Row + (y * 4);
+        uint32_t *Pixel = (uint32_t*)Row + x;
         for(int X = 0; X < width; X++)
         {
-            *Pixel = 130;
-            Pixel = Pixel + 4;
+            uint8_t red = 50;
+            uint8_t green = 180;
+            uint8_t blue = 100;
+
+            *Pixel = ((red << 16) | (green << 8) | (blue));
+            Pixel = Pixel + 1;
         }
         Row = Row + buffer.pitch;
     }
@@ -24,30 +38,19 @@ internal void RenderRectangle(win32_offscreen_buffer buffer, int x, int y, int w
 
 internal void RenderWeirdGradient(win32_offscreen_buffer buffer, int BlueOffset, int GreenOffset)
 {    
-    // uint8_t *Row = (uint8_t *)buffer.memory;    
-    // for(int Y = 0; Y < buffer.height; ++Y)
-    // {
-    //     uint32_t *Pixel = (uint32_t *)Row;
-    //     for(int X = 0; X < buffer.width; ++X)
-    //     {
-    //         uint8_t Blue = (X + BlueOffset);
-    //         uint8_t Green = (Y + GreenOffset);
-            
-    //         *Pixel++ = ((Green << 16) | (Blue << 8) );
-    //     }
-
-    //     Row += buffer.pitch;
-    // }
-    uint8_t *Row = (uint8_t *)buffer.memory; 
-    for(int Y = 0; Y < buffer.height; Y++)
+    uint8_t *Row = (uint8_t *)buffer.memory;    
+    for(int Y = 0; Y < buffer.height; ++Y)
     {
-        uint8_t *Pixel = Row;
-        for(int X = 0; X < buffer.width; X++)
+        uint32_t *Pixel = (uint32_t *)Row;
+        for(int X = 0; X < buffer.width; ++X)
         {
-            *Pixel = 130;
-            Pixel = Pixel + 4;
+            uint8_t Blue = (X + BlueOffset);
+            uint8_t Green = (Y + GreenOffset);
+            
+            *Pixel++ = ((Green << 16) | (Blue << 8) );
         }
-        Row = Row + buffer.pitch;
+
+        Row += buffer.pitch;
     }
 }
 
@@ -124,12 +127,12 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
     switch (Message) 
     {
         // WM_NCPAINT message - to draw on frame / titlebar
-        case WM_EXITSIZEMOVE:
-        {
-            window_dimension dimension = Win32GetWindowDimension(Window);
-            Win32ResizeDIBSection(&GlobalBackbuffer, dimension.width, dimension.height);
-            OutputDebugStringA("WM_SIZE\n");
-        } break;
+        // case WM_EXITSIZEMOVE:
+        // {
+        //     window_dimension dimension = Win32GetWindowDimension(Window);
+        //     Win32ResizeDIBSection(&GlobalBackbuffer, dimension.width, dimension.height);
+        //     OutputDebugStringA("WM_SIZE\n");
+        // } break;
         // WM_CLOSE is called when user sends signal to terminate the application
         // we can handle the closing procedure here
         case WM_CLOSE:
@@ -152,6 +155,57 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
         case WM_QUIT:
         {
             GlobalRunning = false;
+        }
+
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+        {
+            uint32_t VKCode = WParam;
+            bool wasDown = ((LParam & (1 << 30)) != 0);
+            bool isDown  = ((LParam & (1 << 31)) == 0);
+            if (wasDown != isDown)
+            {
+                if(VKCode == 'W')
+                {
+                    OutputDebugStringA("W: ");
+                    if(isDown)
+                    {
+                        OutputDebugStringA("IsDown ");
+                    }
+                    if(wasDown)
+                    {
+                        OutputDebugStringA("WasDown");
+                    }
+                    OutputDebugStringA("\n");
+                }
+                else if(VKCode == 'S')
+                {
+                }
+                else if(VKCode == 'A')
+                {
+                }
+                else if(VKCode == 'D')
+                {
+                }
+                else if(VKCode == VK_UP)
+                {
+                }
+                else if(VKCode == VK_DOWN)
+                {
+                }
+                else if(VKCode == VK_LEFT)
+                {
+                }
+                else if(VKCode == VK_RIGHT)
+                {
+                }
+                else if(VKCode == VK_ESCAPE)
+                {
+                    GlobalRunning = false; // DEBUG
+                }
+            }
         }
 
         case WM_PAINT:
@@ -188,7 +242,7 @@ int CALLBACK WinMain(  HINSTANCE Instance,
 
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
-    WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
     WindowClass.lpfnWndProc    = Win32MainWindowCallback;
     WindowClass.cbClsExtra     = 0;
     WindowClass.cbWndExtra     = 0;
@@ -200,17 +254,7 @@ int CALLBACK WinMain(  HINSTANCE Instance,
     
     if (RegisterClassA(&WindowClass))
     {
-        // szWindowClass: the name of the application
-        // szTitle: the text that appears in the title bar
-        // WS_OVERLAPPEDWINDOW: the type of window to create
-        // CW_USEDEFAULT, CW_USEDEFAULT: initial position (x, y)
-        // 500, 100: initial size (width, length)
-        // NULL: the parent of this window
-        // NULL: this application does not have a menu bar
-        // hInstance: the first parameter from WinMain
-        // NULL: not used in this application
-        HWND Window = CreateWindowExA(
-            0,
+        HWND Window = CreateWindowExA(0,
             WindowClass.lpszClassName,
             "TITLE_PLACEHOLDER",
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,
@@ -235,8 +279,47 @@ int CALLBACK WinMain(  HINSTANCE Instance,
                     TranslateMessage(&Message);
                     DispatchMessageA(&Message);
                 }
+
+                DWORD xinputState;    
+                // i = controller index
+                for (DWORD i=0; i < 4; i++ )
+                {
+
+                    XINPUT_STATE state;
+                    if(XInputGetState( i, &state ) == ERROR_SUCCESS)
+                    {
+                        XINPUT_GAMEPAD *gamepad = &state.Gamepad;
+                        bool up = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                        bool down = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+                        bool left = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+                        bool right = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+                        bool start = (gamepad->wButtons & XINPUT_GAMEPAD_START);
+                        bool back = (gamepad->wButtons & XINPUT_GAMEPAD_BACK);
+                        bool leftShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+                        bool rightShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+                        bool AButton = (gamepad->wButtons & XINPUT_GAMEPAD_A);
+                        bool BButton = (gamepad->wButtons & XINPUT_GAMEPAD_B);
+                        bool XButton = (gamepad->wButtons & XINPUT_GAMEPAD_X);
+                        bool YButton = (gamepad->wButtons & XINPUT_GAMEPAD_Y);
+
+                        int16_t stickX = gamepad->sThumbLX;
+                        int16_t stickY = gamepad->sThumbLY;
+
+                        if (up == 1)
+                        {
+                            OutputDebugStringA("DPAD UP IS PRESSED\n");
+                        }
+                        // OutputDebugStringA("CONTROLLER CONECTED\n");
+                    }
+                    else
+                    {
+                        // OutputDebugStringA("controller not connected\n");
+                    }
+                }
+
+
                 // RenderWeirdGradient(GlobalBackbuffer, offsetX, offsetY);
-                RenderRectangle(GlobalBackbuffer, 20, 20, 100, 100);
+                RenderRectangle(GlobalBackbuffer, 0, 100, 400, 400);
                 window_dimension dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(DeviceContext, 
                                            dimension.width, dimension.height, 
