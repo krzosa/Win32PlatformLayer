@@ -1,1 +1,1 @@
-..\build\win32_platform_layer.exe
+..\build\win32_main.exe
