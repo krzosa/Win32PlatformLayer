@@ -34,15 +34,10 @@ typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 struct win32_offscreen_buffer
 {
-    // The BITMAPINFOHEADER structure 
-    // contains information about the dimensions 
-    // and color format of a DIB. 
     BITMAPINFO info;
     void *memory;
     int width;
     int height;
-    // this is the value which you want to add to the index
-    // if you want to get to the next row when storing 2d thing in 1d
     int pitch;
     // Note: Pixels are always 32bits wide
 };

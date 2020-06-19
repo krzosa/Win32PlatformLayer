@@ -3,14 +3,14 @@
 #include <Xinput.h>
 #include <dsound.h>
 #include <math.h>
-
 #include "render.cpp"
 #include "win32_main.h"
 
-// loop variable
 global_variable bool GlobalRunning = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
+
+#include "audio.cpp"
 
 #define Pi32 3.14159265359f
 
@@ -20,87 +20,8 @@ static int offsetY = 0;
 global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
 global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
 
-
-// TODO: test going up to direct sound 8
-internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t bufferSize)
-{
-    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
-    if(DSoundLibrary)
-    {
-        direct_sound_create* directSoundCreateObject = 
-            (direct_sound_create*)GetProcAddress(DSoundLibrary, "DirectSoundCreate");
-
-        /* NOTE(Kkrz): first buffer is for setting cooperative level and general settings
-                        we write to the second buffer only */
-        LPDIRECTSOUND DirectSound;
-        if(directSoundCreateObject && SUCCEEDED(directSoundCreateObject(0, &DirectSound, 0)))
-        {
-            WAVEFORMATEX WaveFormat = {};
-            {
-                WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
-                WaveFormat.nChannels = 2;
-                WaveFormat.nSamplesPerSec = samplesPerSecond;
-                WaveFormat.wBitsPerSample = 16;
-                WaveFormat.nBlockAlign = (WaveFormat.nChannels*WaveFormat.wBitsPerSample) / 8;
-                WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
-                WaveFormat.cbSize = 0;
-            }
-            if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
-            {
-                DSBUFFERDESC bufferDescription = {};
-                {
-                    bufferDescription.dwSize = sizeof(bufferDescription);
-                    bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
-                }
-
-                LPDIRECTSOUNDBUFFER primaryBuffer;
-                if(SUCCEEDED(DirectSound->CreateSoundBuffer(&bufferDescription, &primaryBuffer, 0)))
-                {
-                    HRESULT Error = primaryBuffer->SetFormat(&WaveFormat);
-                    if(SUCCEEDED(Error))
-                    {
-                        OutputDebugStringA("Primary buffer format was set.\n");
-                    }
-                    else
-                    {
-                        // TODO: failed to set format for primary buffer
-                    }
-                }
-                else
-                {
-                    // TODO: failed to create sound buffer 
-                }
-            }
-            else
-            {
-                // TODO: failed to set cooperative level
-            }
-            DSBUFFERDESC BufferDescription = {};
-            {
-                BufferDescription.dwSize = sizeof(BufferDescription);
-                BufferDescription.dwFlags = 0;
-                BufferDescription.dwBufferBytes = bufferSize;
-                BufferDescription.lpwfxFormat = &WaveFormat;
-            }
-            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
-            if(SUCCEEDED(Error))
-            {
-                OutputDebugStringA("Secondary buffer created successfully.\n");
-            }
-        }
-        else
-        {
-            // TODO: failed to create sound object
-        }
-    }
-    else
-    {
-        // TODO: failed to load dll
-    }
-}
-
-
-internal void Win32LoadXInput(void)    
+internal void 
+Win32LoadXInput(void)    
 {
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
 
@@ -132,7 +53,8 @@ internal void Win32LoadXInput(void)
     }
 }
 
-window_dimension Win32GetWindowDimension(HWND Window)
+window_dimension 
+Win32GetWindowDimension(HWND Window)
 {
     RECT ClientRect;
     window_dimension windowDimension;
@@ -143,7 +65,8 @@ window_dimension Win32GetWindowDimension(HWND Window)
     return windowDimension;
 }
 
-internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer, 
+internal void 
+Win32ResizeDIBSection(win32_offscreen_buffer* buffer, 
                                     int width, int height)
 {
     // if we dont free before allocating, memory will leak
@@ -173,9 +96,8 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer* buffer,
     buffer->pitch = width * bytesPerPixel;
 }
 
-internal void Win32DrawBufferToScreen(HDC DeviceContext, 
-                                        int windowWidth, int windowHeight, 
-                                        win32_offscreen_buffer* buffer)
+internal void 
+Win32DrawBufferToScreen(HDC DeviceContext, int windowWidth, int windowHeight, win32_offscreen_buffer* buffer)
 {
     // The StretchDIBits function copies the color data for a rectangle of pixels in a DIB, 
     // to the specified destination rectangle. 
@@ -206,9 +128,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
     {
         DWORD Region1SampleCount = Region1Size/SoundOutput->bytesPerSample;
         int16_t *SampleOut = (int16_t *)Region1;
-        for(DWORD SampleIndex = 0;
-            SampleIndex < Region1SampleCount;
-            ++SampleIndex)
+        for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
         {
             float SineValue = sinf(SoundOutput->tSine);
             int16_t SampleValue = (int16_t)(SineValue * SoundOutput->toneVolume);
@@ -221,9 +141,7 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 
         DWORD Region2SampleCount = Region2Size/SoundOutput->bytesPerSample;
         SampleOut = (int16_t *)Region2;
-        for(DWORD SampleIndex = 0;
-            SampleIndex < Region2SampleCount;
-            ++SampleIndex)
+        for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
         {
             float SineValue = sinf(SoundOutput->tSine);
             int16_t SampleValue = (int16_t)(SineValue * SoundOutput->toneVolume);
@@ -239,10 +157,8 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 }
 
 
-LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
-                                         UINT   Message,
-                                         WPARAM WParam,
-                                         LPARAM LParam)
+LRESULT CALLBACK 
+Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
 
@@ -258,9 +174,6 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
         {
             OutputDebugStringA("WM_ACTIVATEAPP\n");
         } break;
-        // WM_DESTROY is sent when a window is being destroyed. 
-        // It is sent to the window procedure of the 
-        // window being destroyed after the window is removed from the screen.
         case WM_DESTROY:
         {
             OutputDebugStringA("WM_DESTROY\n");
@@ -358,39 +271,34 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND   Window,
 }
 
 
-int CALLBACK WinMain(  HINSTANCE Instance,
-             HINSTANCE PrevInstance,
-             LPSTR     CommandLine,
-             int       ShowCode)
+int CALLBACK 
+WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowCode)
 {
-    WNDCLASSA WindowClass = {};
-
     Win32LoadXInput();
-
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
-    WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
-    WindowClass.lpfnWndProc    = Win32MainWindowCallback;
-    WindowClass.cbClsExtra     = 0;
-    WindowClass.cbWndExtra     = 0;
-    WindowClass.hInstance      = Instance;
-    WindowClass.hIcon          = LoadIcon(Instance, IDI_APPLICATION);
-    WindowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
-    WindowClass.lpszMenuName   = NULL;
-    WindowClass.lpszClassName  = ("PLACEHOLDER");
+    WNDCLASSA WindowClass = {};
+    {
+        WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
+        WindowClass.lpfnWndProc    = Win32MainWindowCallback;
+        WindowClass.cbClsExtra     = 0;
+        WindowClass.cbWndExtra     = 0;
+        WindowClass.hInstance      = Instance;
+        WindowClass.hIcon          = LoadIcon(Instance, IDI_APPLICATION);
+        WindowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
+        WindowClass.lpszMenuName   = NULL;
+        WindowClass.lpszClassName  = ("PLACEHOLDER");
+    }
     
     if (!RegisterClassA(&WindowClass))
     {
         OutputDebugStringA("FAILED to register WindowClass\n");
     }
 
-    HWND Window = CreateWindowExA(0,
-        WindowClass.lpszClassName,
-        "TITLE_PLACEHOLDER",
-        WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        NULL, NULL, Instance, NULL);
+    HWND Window = CreateWindowExA(0, WindowClass.lpszClassName, 
+        "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
+        CW_USEDEFAULT, NULL, NULL, Instance, NULL);
 
     if(!Window)
     {
@@ -429,7 +337,7 @@ int CALLBACK WinMain(  HINSTANCE Instance,
 
         DWORD xinputState;    
         // i = controller index
-        for (DWORD i=0; i < 4; i++ )
+        for (DWORD i=0; i < XUSER_MAX_COUNT; i++ )
         {
 
             XINPUT_STATE state;
@@ -455,9 +363,8 @@ int CALLBACK WinMain(  HINSTANCE Instance,
                 offsetX += stickX / 4096 / 2;
                 offsetY -= stickY / 4096 / 2;
 
-
-                // SoundOutput.toneHz = 256 + (float)stickX / 64 * musicIndex;
-                // SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
+                SoundOutput.toneHz = 512 + (int)(256.0f*((float)stickY / 30000.0f));
+                SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
             }
             else
             {
@@ -478,12 +385,12 @@ int CALLBACK WinMain(  HINSTANCE Instance,
             DWORD ByteToLock = ((SoundOutput.runningSampleIndex*SoundOutput.bytesPerSample) %
                                 SoundOutput.secondaryBufferSize);
 
-            DWORD TargetCursor =
-                ((PlayCursor +
-                  (SoundOutput.latencySampleCount*SoundOutput.bytesPerSample)) %
+            DWORD TargetCursor = ((PlayCursor + 
+                (SoundOutput.latencySampleCount*SoundOutput.bytesPerSample)) %
                  SoundOutput.secondaryBufferSize);
+
             DWORD BytesToWrite;
-            
+
             if(ByteToLock > TargetCursor)
             {
                 BytesToWrite = (SoundOutput.secondaryBufferSize - ByteToLock);
