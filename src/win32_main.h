@@ -41,16 +41,16 @@ struct win32_offscreen_buffer
 {
     BITMAPINFO info;
     void *memory;
-    int width;
-    int height;
-    int pitch;
+    i32 width;
+    i32 height;
+    i32 pitch;
     // Note: Pixels are always 32bits wide
 };
 
 struct window_dimension
 {
-    int width;
-    int height;
+    i32 width;
+    i32 height;
 };
 
 struct user_input
@@ -63,13 +63,13 @@ struct user_input
 
 struct win32_sound_output
 {
-    int samplesPerSecond;
-    int toneHz;
-    int16_t toneVolume;
-    uint32_t runningSampleIndex;
-    int wavePeriod;
-    int bytesPerSample;
-    int secondaryBufferSize;
-    float tSine;
-    int latencySampleCount;
+    i32 samplesPerSecond;
+    i32 toneHz;
+    i16 toneVolume;
+    i32 runningSampleIndex;
+    i32 wavePeriod;
+    i32 bytesPerSample;
+    i32 secondaryBufferSize;
+    f32 tSine;
+    i32 latencySampleCount;
 };

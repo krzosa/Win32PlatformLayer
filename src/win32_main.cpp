@@ -7,8 +7,8 @@
 #include "win32_main.h"
 
 global_variable bool GlobalRunning = true;
-global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable user_input GlobalUserInput;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 #include "audio.cpp"
@@ -161,41 +161,76 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
 
+    uint32_t VKCode = WParam;
     switch (Message) 
     {
-        // WM_NCPAINT message - to draw on frame / titlebar
         case WM_CLOSE:
         {
             OutputDebugStringA("WM_CLOSE\n");
             GlobalRunning = false;
-        } break;
+            break;
+        } 
         case WM_ACTIVATEAPP:
         {
             OutputDebugStringA("WM_ACTIVATEAPP\n");
-        } break;
+            break;
+        } 
         case WM_DESTROY:
         {
             OutputDebugStringA("WM_DESTROY\n");
             GlobalRunning = false;
-        } break;
+            break;
+        } 
         case WM_QUIT:
         {
             GlobalRunning = false;
+            break;
         }
 
         case WM_KEYDOWN:
-        case WM_KEYUP:
-        case WM_SYSKEYDOWN:
-        case WM_SYSKEYUP:
         {
-            uint32_t VKCode = WParam;
-            bool AltKeyWasDown = (LParam & (1 << 29));
-            if((VKCode == VK_F4) && AltKeyWasDown)
+            if(VKCode == 'W')
             {
-                GlobalRunning = false;
+                GlobalUserInput.up = 1;
             }
-        } break;
-
+            else if(VKCode == 'S')
+            {
+                GlobalUserInput.down = 1;
+            }
+            if(VKCode == 'A')
+            {
+                GlobalUserInput.left = 1;
+            }
+            else if(VKCode == 'D')
+            {
+                GlobalUserInput.right = 1;
+            }
+            else if(VKCode == VK_ESCAPE)
+            {
+                GlobalRunning = 0;
+            }
+            break;
+        }
+        case WM_KEYUP:
+        {
+            if(VKCode == 'W')
+            {
+                GlobalUserInput.up = 0;
+            }
+            else if(VKCode == 'S')
+            {
+                GlobalUserInput.down = 0;
+            }
+            if(VKCode == 'A')
+            {
+                GlobalUserInput.left = 0;
+            }
+            else if(VKCode == 'D')
+            {
+                GlobalUserInput.right = 0;
+            }
+            break;
+        }
         case WM_PAINT:
         {
             PAINTSTRUCT Paint;
@@ -319,6 +354,11 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
                 OutputDebugStringA("controller not connected\n");
             }
         }
+
+        offsetY -= GlobalUserInput.up * 5;
+        offsetY += GlobalUserInput.down * 5;
+        offsetX += GlobalUserInput.right * 5;
+        offsetX -= GlobalUserInput.left * 5;
 
 
         // RenderWeirdGradient(&GlobalBackbuffer, offsetX, offsetY);
