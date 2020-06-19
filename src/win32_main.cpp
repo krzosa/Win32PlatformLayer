@@ -8,14 +8,15 @@
 
 global_variable bool GlobalRunning = true;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable user_input GlobalUserInput;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 #include "audio.cpp"
 
 #define Pi32 3.14159265359f
 
-static int offsetX = 0;
-static int offsetY = 0;
+static i32 offsetX = 0;
+static i32 offsetY = 0;
 
 global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
 global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
@@ -66,8 +67,7 @@ Win32GetWindowDimension(HWND Window)
 }
 
 internal void 
-Win32ResizeDIBSection(win32_offscreen_buffer* buffer, 
-                                    int width, int height)
+Win32ResizeDIBSection(win32_offscreen_buffer* buffer, i32 width, i32 height)
 {
     // if we dont free before allocating, memory will leak
     if(buffer->memory)
@@ -77,7 +77,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer* buffer,
 
     buffer->width = width;
     buffer->height = height;
-    int bytesPerPixel = 4;
+    i32 bytesPerPixel = 4;
 
     buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
     buffer->info.bmiHeader.biWidth = buffer->width;
@@ -91,13 +91,13 @@ Win32ResizeDIBSection(win32_offscreen_buffer* buffer,
     buffer->info.bmiHeader.biCompression = BI_RGB; //uncompressed RGB
 
     
-    int bitmapMemorySize = bytesPerPixel * (buffer->width * buffer->height);
+    i32 bitmapMemorySize = bytesPerPixel * (buffer->width * buffer->height);
     buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     buffer->pitch = width * bytesPerPixel;
 }
 
 internal void 
-Win32DrawBufferToScreen(HDC DeviceContext, int windowWidth, int windowHeight, win32_offscreen_buffer* buffer)
+Win32DrawBufferToScreen(HDC DeviceContext, i32 windowWidth, i32 windowHeight, win32_offscreen_buffer* buffer)
 {
     // The StretchDIBits function copies the color data for a rectangle of pixels in a DIB, 
     // to the specified destination rectangle. 
@@ -123,15 +123,14 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
     DWORD Region2Size;
     if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
                                              &Region1, &Region1Size,
-                                             &Region2, &Region2Size,
-                                             0)))
+                                             &Region2, &Region2Size, 0)))
     {
         DWORD Region1SampleCount = Region1Size/SoundOutput->bytesPerSample;
-        int16_t *SampleOut = (int16_t *)Region1;
+        i16 *SampleOut = (i16 *)Region1;
         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
         {
             float SineValue = sinf(SoundOutput->tSine);
-            int16_t SampleValue = (int16_t)(SineValue * SoundOutput->toneVolume);
+            i16 SampleValue = (i16)(SineValue * SoundOutput->toneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
 
@@ -140,11 +139,11 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
         }
 
         DWORD Region2SampleCount = Region2Size/SoundOutput->bytesPerSample;
-        SampleOut = (int16_t *)Region2;
+        SampleOut = (i16 *)Region2;
         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
         {
             float SineValue = sinf(SoundOutput->tSine);
-            int16_t SampleValue = (int16_t)(SineValue * SoundOutput->toneVolume);
+            i16 SampleValue = (i16)(SineValue * SoundOutput->toneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
 
@@ -190,55 +189,6 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
         case WM_SYSKEYUP:
         {
             uint32_t VKCode = WParam;
-            bool wasDown = ((LParam & (1 << 30)) != 0);
-            bool isDown  = ((LParam & (1 << 31)) == 0);
-            if (wasDown != isDown)
-            {
-                if(VKCode == 'W')
-                {
-                    OutputDebugStringA("W: ");
-                    if(isDown)
-                    {
-                        OutputDebugStringA("IsDown ");
-                        offsetY-=5;
-                    }
-                    if(wasDown)
-                    {
-                        OutputDebugStringA("WasDown");
-                    }
-
-                    OutputDebugStringA("\n");
-                }
-                else if(VKCode == 'S')
-                {
-                    offsetY+=5;
-                }
-                else if(VKCode == 'A')
-                {
-                    offsetX-=5;
-                }
-                else if(VKCode == 'D')
-                {
-                    offsetX+=5;
-                }
-                else if(VKCode == VK_UP)
-                {
-                }
-                else if(VKCode == VK_DOWN)
-                {
-                }
-                else if(VKCode == VK_LEFT)
-                {
-                }
-                else if(VKCode == VK_RIGHT)
-                {
-                }
-                else if(VKCode == VK_ESCAPE)
-                {
-                    GlobalRunning = false; // DEBUG
-                }
-                
-            }
             bool AltKeyWasDown = (LParam & (1 << 29));
             if((VKCode == VK_F4) && AltKeyWasDown)
             {
@@ -248,10 +198,8 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 
         case WM_PAINT:
         {
-            // The PAINTSTRUCT structure contains information for an application. 
-            // This information can be used to paint the client area of a window owned by that application.
             PAINTSTRUCT Paint;
-            // The BeginPaint function prepares the specified window for 
+            // The BeginPai32 function prepares the specified window for 
             // painting and fills a PAINTSTRUCT structure with information about the painting.
             HDC DeviceContext = BeginPaint(Window, &Paint);
             window_dimension dimension = Win32GetWindowDimension(Window);
@@ -271,8 +219,8 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 }
 
 
-int CALLBACK 
-WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowCode)
+i32 CALLBACK 
+WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowCode)
 {
     Win32LoadXInput();
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
@@ -313,7 +261,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowC
         SoundOutput.toneHz = 256;
         SoundOutput.toneVolume = 1500;
         SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
-        SoundOutput.bytesPerSample = sizeof(int16_t)*2;
+        SoundOutput.bytesPerSample = sizeof(i16)*2;
         SoundOutput.secondaryBufferSize = SoundOutput.samplesPerSecond*SoundOutput.bytesPerSample;
         SoundOutput.latencySampleCount = SoundOutput.samplesPerSecond / 15;
     }
@@ -322,7 +270,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowC
     Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.latencySampleCount*SoundOutput.bytesPerSample);
     GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
     
-    int musicIndex = 1;
+    i32 musicIndex = 1;
     while(GlobalRunning)
     {
         MSG Message;
@@ -357,8 +305,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowC
                 bool XButton = (gamepad->wButtons & XINPUT_GAMEPAD_X);
                 bool YButton = (gamepad->wButtons & XINPUT_GAMEPAD_Y);
 
-                int16_t stickX = gamepad->sThumbLX;
-                int16_t stickY = gamepad->sThumbLY;
+                i16 stickX = gamepad->sThumbLX;
+                i16 stickY = gamepad->sThumbLY;
 
                 offsetX += stickX / 4096 / 2;
                 offsetY -= stickY / 4096 / 2;
@@ -373,9 +321,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, int ShowC
         }
 
 
-        RenderWeirdGradient(&GlobalBackbuffer, offsetX, offsetY);
-        // RenderRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
-        // RenderRectangle(&GlobalBackbuffer, 100+offsetX, 100+offsetY, 100, 100, 255);
+        // RenderWeirdGradient(&GlobalBackbuffer, offsetX, offsetY);
+        RenderRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
+        RenderRectangle(&GlobalBackbuffer, 100+offsetX, 100+offsetY, 100, 100, 255);
 
 
         DWORD PlayCursor;

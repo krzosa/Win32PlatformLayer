@@ -1,18 +1,17 @@
-#include <stdint.h>
 #include "win32_main.h"
 
 internal void RenderRectangle(win32_offscreen_buffer* buffer, int x, int y, int width, int height, int color)
 {
-    uint8_t *Row = (uint8_t *)buffer->memory; 
+    u8 *Row = (u8 *)buffer->memory; 
     Row = Row + (y * buffer->pitch);
     for(int Y = 0; Y < height; Y++)
     {
-        uint32_t *Pixel = (uint32_t*)Row + x;
+        i32 *Pixel = (i32*)Row + x;
         for(int X = 0; X < width; X++)
         {
-            uint8_t red = 0;
-            uint8_t green = color ;
-            uint8_t blue = 0;
+            u8 red = 0;
+            u8 green = color ;
+            u8 blue = 0;
 
 
             *Pixel = ((red << 16) | (green << 8) | (blue));
@@ -24,16 +23,16 @@ internal void RenderRectangle(win32_offscreen_buffer* buffer, int x, int y, int 
 
 
 
-internal void RenderWeirdGradient(win32_offscreen_buffer* buffer, int BlueOffset, int GreenOffset)
+internal void RenderWeirdGradient(win32_offscreen_buffer* buffer, i32 BlueOffset, i32 GreenOffset)
 {    
-    uint8_t *Row = (uint8_t *)buffer->memory;    
-    for(int Y = 0; Y < buffer->height; ++Y)
+    u8 *Row = (u8 *)buffer->memory;    
+    for(i32 Y = 0; Y < buffer->height; ++Y)
     {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for(int X = 0; X < buffer->width; ++X)
+        i32 *Pixel = (i32 *)Row;
+        for(i32 X = 0; X < buffer->width; ++X)
         {
-            uint8_t Blue = (X + BlueOffset);
-            uint8_t Green = (Y + GreenOffset);
+            u8 Blue = (X + BlueOffset);
+            u8 Green = (Y + GreenOffset);
             
             *Pixel++ = ((Green << 16) | (Blue << 8) );
         }
