@@ -1,13 +1,12 @@
-#include "win32_main.h"
-
-internal void RenderRectangle(win32_offscreen_buffer* buffer, int x, int y, int width, int height, int color)
+internal void 
+DrawRectangle(win32_offscreen_buffer* buffer, i32 x, i32 y, i32 width, i32 height, i32 color)
 {
     u8 *Row = (u8 *)buffer->memory; 
     Row = Row + (y * buffer->pitch);
-    for(int Y = 0; Y < height; Y++)
+    for(i32 Y = 0; Y < height; Y++)
     {
         i32 *Pixel = (i32*)Row + x;
-        for(int X = 0; X < width; X++)
+        for(i32 X = 0; X < width; X++)
         {
             u8 red = 0;
             u8 green = color ;
@@ -22,8 +21,8 @@ internal void RenderRectangle(win32_offscreen_buffer* buffer, int x, int y, int 
 }
 
 
-
-internal void RenderWeirdGradient(win32_offscreen_buffer* buffer, i32 BlueOffset, i32 GreenOffset)
+internal void 
+DrawGradient(win32_offscreen_buffer* buffer, i32 BlueOffset, i32 GreenOffset)
 {    
     u8 *Row = (u8 *)buffer->memory;    
     for(i32 Y = 0; Y < buffer->height; ++Y)
@@ -38,5 +37,14 @@ internal void RenderWeirdGradient(win32_offscreen_buffer* buffer, i32 BlueOffset
         }
 
         Row += buffer->pitch;
+    }
+}
+
+internal void
+DrawLine(v2 point1, v2 point2, Color color)
+{
+    for(f32 t = 0.; t < 1.; i+=0.01)
+    {
+        
     }
 }

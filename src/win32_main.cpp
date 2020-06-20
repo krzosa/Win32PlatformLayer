@@ -3,8 +3,9 @@
 #include <Xinput.h>
 #include <dsound.h>
 #include <math.h>
-#include "render.cpp"
 #include "win32_main.h"
+#include "render.h"
+#include "render.cpp"
 
 global_variable bool GlobalRunning = true;
 global_variable user_input GlobalUserInput;
@@ -14,9 +15,6 @@ global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 #include "audio.cpp"
 
 #define Pi32 3.14159265359f
-
-static i32 offsetX = 0;
-static i32 offsetY = 0;
 
 global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
 global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
@@ -75,17 +73,12 @@ Win32ResizeDIBSection(win32_offscreen_buffer* buffer, i32 width, i32 height)
         VirtualFree(buffer->memory, 0, MEM_RELEASE);
     }
 
+    i32 bytesPerPixel = 4;
     buffer->width = width;
     buffer->height = height;
-    i32 bytesPerPixel = 4;
-
     buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
     buffer->info.bmiHeader.biWidth = buffer->width;
-    // When the biHeight field is negative, this is the clue to
-    // Windows to treat this bitmap as top-down, not bottom-up, meaning that
-    // the first three bytes of the image are the color for the top left pixel
-    // in the bitmap, not the bottom left!
-    buffer->info.bmiHeader.biHeight = -buffer->height;
+    buffer->info.bmiHeader.biHeight = buffer->height;
     buffer->info.bmiHeader.biPlanes = 1;
     buffer->info.bmiHeader.biBitCount = 32;
     buffer->info.bmiHeader.biCompression = BI_RGB; //uncompressed RGB
@@ -234,8 +227,6 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
         case WM_PAINT:
         {
             PAINTSTRUCT Paint;
-            // The BeginPai32 function prepares the specified window for 
-            // painting and fills a PAINTSTRUCT structure with information about the painting.
             HDC DeviceContext = BeginPaint(Window, &Paint);
             window_dimension dimension = Win32GetWindowDimension(Window);
             Win32DrawBufferToScreen(DeviceContext, 
@@ -303,15 +294,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
     Win32InitDSound(Window, SoundOutput.samplesPerSecond, SoundOutput.secondaryBufferSize);
     Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.latencySampleCount*SoundOutput.bytesPerSample);
-    GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+    // GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
     
+    v2 offset = {0, 0};
     i32 musicIndex = 1;
     while(GlobalRunning)
     {
         MSG Message;
-        // GetMessage does not return until a message come in
-        // PeekMessage returns regardless whether message is in the queue
-        // Better for games
         while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
         {
             TranslateMessage(&Message);
@@ -343,11 +332,11 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
                 i16 stickX = gamepad->sThumbLX;
                 i16 stickY = gamepad->sThumbLY;
 
-                offsetX += stickX / 4096 / 2;
-                offsetY -= stickY / 4096 / 2;
+                offset.x += stickX / 4096 / 2;
+                offset.y -= stickY / 4096 / 2;
 
-                SoundOutput.toneHz = 512 + (int)(256.0f*((float)stickY / 30000.0f));
-                SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
+                // SoundOutput.toneHz = 512 + (int)(256.0f*((float)stickY / 30000.0f));
+                // SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
             }
             else
             {
@@ -355,19 +344,21 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
             }
         }
 
-        offsetY -= GlobalUserInput.up * 5;
-        offsetY += GlobalUserInput.down * 5;
-        offsetX += GlobalUserInput.right * 5;
-        offsetX -= GlobalUserInput.left * 5;
+        offset.y += GlobalUserInput.up * 5;
+        offset.y -= GlobalUserInput.down * 5;
+        offset.x += GlobalUserInput.right * 5;
+        offset.x -= GlobalUserInput.left * 5;
+        Color lineColor = {255,255,255,255};
 
 
-        // RenderWeirdGradient(&GlobalBackbuffer, offsetX, offsetY);
-        RenderRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
-        RenderRectangle(&GlobalBackbuffer, 100+offsetX, 100+offsetY, 100, 100, 255);
+        // DrawGradient(&GlobalBackbuffer, offsetX, offsetY);
+        DrawRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
+        DrawRectangle(&GlobalBackbuffer, 200 + offset.x, 200 + offset.y, 100, 100, 255);
 
 
         DWORD PlayCursor;
         DWORD WriteCursor;
+        #if 0
         if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
         {
             DWORD ByteToLock = ((SoundOutput.runningSampleIndex*SoundOutput.bytesPerSample) %
@@ -391,6 +382,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
             Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
         }
+        #endif
         
         window_dimension dimension = Win32GetWindowDimension(Window);
         Win32DrawBufferToScreen(DeviceContext, 
