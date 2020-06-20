@@ -4,7 +4,7 @@ struct v2
     f32 y;
 };
 
-struct Color
+struct v4
 {
     u8 r;
     u8 g;

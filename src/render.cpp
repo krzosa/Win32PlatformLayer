@@ -40,11 +40,33 @@ DrawGradient(win32_offscreen_buffer* buffer, i32 BlueOffset, i32 GreenOffset)
     }
 }
 
-internal void
-DrawLine(v2 point1, v2 point2, Color color)
+internal i32 *
+PixelGet(win32_offscreen_buffer* buffer, i32 x, i32 y)
 {
-    for(f32 t = 0.; t < 1.; i+=0.01)
+    i8 *row = (i8 *)buffer->memory;
+    row += (y * buffer->pitch);
+
+    i32 *pixel = (i32 *)row;
+    pixel += x;
+
+    return pixel;
+}
+
+internal void 
+PixelColor(i32 *pixel, v4 color)
+{
+    *pixel = ((color.r << 16) | (color.g << 8) | (color.b));
+}
+
+internal void
+DrawLine(win32_offscreen_buffer* buffer, v2 point1, v2 point2, v4 color)
+{
+    i32 *pixel;
+    for(f32 t = 0.; t < 1.; t += 0.001)
     {
-        
+        i32 x = point1.x + t * (point2.x - point1.x);
+        i32 y = point1.y + t * (point2.y - point1.y);
+        pixel = PixelGet(buffer, x, y);
+        PixelColor(pixel, color);
     }
 }

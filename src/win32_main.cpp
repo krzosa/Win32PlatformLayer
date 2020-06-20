@@ -348,13 +348,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         offset.y -= GlobalUserInput.down * 5;
         offset.x += GlobalUserInput.right * 5;
         offset.x -= GlobalUserInput.left * 5;
-        Color lineColor = {255,255,255,255};
+        v4 lineColor = {0,255,255,255};
 
 
         // DrawGradient(&GlobalBackbuffer, offsetX, offsetY);
         DrawRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
-        DrawRectangle(&GlobalBackbuffer, 200 + offset.x, 200 + offset.y, 100, 100, 255);
-
+        // DrawRectangle(&GlobalBackbuffer, 200 + offset.x, 200 + offset.y, 100, 100, 255);
+        DrawLine(&GlobalBackbuffer, {200, 200}, {600, 600}, lineColor);
 
         DWORD PlayCursor;
         DWORD WriteCursor;
