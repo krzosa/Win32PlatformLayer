@@ -62,6 +62,12 @@ struct user_input
     bool reset;
 };
 
+struct file
+{
+    void *contents;
+    u32 size;
+};
+
 struct win32_sound_output
 {
     i32 samplesPerSecond;

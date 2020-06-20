@@ -1,1 +1,3 @@
-build\win32_main.exe
+cd build
+win32_main.exe
+cd ..
