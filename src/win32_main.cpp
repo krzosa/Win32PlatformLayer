@@ -11,13 +11,74 @@ global_variable bool GlobalRunning = true;
 global_variable user_input GlobalUserInput;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
+global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
+global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
+#define Pi32 3.14159265359f
 
 #include "audio.cpp"
 
-#define Pi32 3.14159265359f
+struct file
+{
+    void *contents;
+    u32 size;
+};
 
-global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
-global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
+internal void
+FreeFileMemory(void *Memory)
+{
+    if(Memory)
+    {
+        VirtualFree(Memory, 0, MEM_RELEASE);
+    }
+}
+
+internal file 
+ReadEntireFile(char *filename)
+{
+    file result = {};
+    
+    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    if(fileHandle != INVALID_HANDLE_VALUE)
+    {
+        LARGE_INTEGER FileSize;
+        if(GetFileSizeEx(fileHandle, &FileSize))
+        {
+            u32 fileSize32 = (u32)FileSize.QuadPart;
+            result.contents = VirtualAlloc(0, fileSize32 + 1, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            if(result.contents)
+            {
+                DWORD BytesRead;
+                if(ReadFile(fileHandle, result.contents, fileSize32, &BytesRead, 0) && (fileSize32 == BytesRead))
+                {
+                    result.size = fileSize32;
+                    OutputDebugStringA("ReadEntireFile: Success\n");
+                }
+                else
+                {                    
+                    OutputDebugStringA("ReadEntireFile: ReadFile failed\n");
+                    FreeFileMemory(result.contents);
+                    result.contents = 0;
+                }
+            }
+            else
+            {
+                OutputDebugStringA("ReadEntireFile: NULL file contents\n");
+            }
+        }
+        else
+        {
+            OutputDebugStringA("ReadEntireFile: Failed to get file size\n");
+        }
+
+        CloseHandle(fileHandle);
+    }
+    else
+    {
+        OutputDebugStringA("ReadEntireFile: Invalid file handle name\n");
+    }
+
+    return(result);
+}
 
 internal void 
 Win32LoadXInput(void)    
@@ -304,6 +365,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.latencySampleCount*SoundOutput.bytesPerSample);
     // GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
     
+    file objFile = ReadEntireFile("obj.obj");
+    char *fileContents = (char *)objFile.contents;
+
     v2 offset = {0, 0};
     i32 musicIndex = 1;
     while(GlobalRunning)
@@ -352,10 +416,10 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
             }
         }
 
-        offset.y += GlobalUserInput.up * 5;
-        offset.y -= GlobalUserInput.down * 5;
-        offset.x += GlobalUserInput.right * 5;
-        offset.x -= GlobalUserInput.left * 5;
+        offset.y += GlobalUserInput.up;
+        offset.y -= GlobalUserInput.down;
+        offset.x += GlobalUserInput.right;
+        offset.x -= GlobalUserInput.left;
         v4 lineColor = {0,255,255,255};
         if(GlobalUserInput.reset)
         {
@@ -365,7 +429,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         // DrawGradient(&GlobalBackbuffer, offsetX, offsetY);
         // DrawLineFirst(&GlobalBackbuffer, {100, 200}, {500, 600}, lineColor);
         // DrawLineSecond(&GlobalBackbuffer, {200, 200}, {600, 600}, lineColor);
-        DrawLineThird(&GlobalBackbuffer, {120 + offset.x, 700 + offset.y}, {100, 100}, {0,200,100});
+        DrawLineFinal(&GlobalBackbuffer, 10, 100, 500 + offset.x, 500 + offset.y, {0,200,100});
 
         DWORD PlayCursor;
         DWORD WriteCursor;

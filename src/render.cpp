@@ -129,6 +129,7 @@ DrawLineThird(win32_offscreen_buffer* buffer, v2 point1, v2 point2, v4 color)
 {
     point1.y = Clamp(point1.y, 50., buffer->height - 50.);
     point2.y = Clamp(point2.y, 50., buffer->height - 50.);
+
     bool steep = false;
     if(fabsf(point1.x - point2.x) < fabsf(point1.y - point2.y))
     {
@@ -143,7 +144,11 @@ DrawLineThird(win32_offscreen_buffer* buffer, v2 point1, v2 point2, v4 color)
     }
     for(i32 x = point1.x; x <= point2.x; x++)
     {
+        // NOTE: distance from the baseX to currently drawn x 
+        // divided by the entire distance from start to end
+        // calculating the pixel number basically 
         f32 t = (x - point1.x) / (f32)(point2.x - point1.x);
+        // NOTE: Calculating y based on the pixel number
         i32 y = point1.y * (1. - t) + point2.y * t;
         if(steep)
             PixelSet(buffer, y, x, color);
@@ -154,7 +159,7 @@ DrawLineThird(win32_offscreen_buffer* buffer, v2 point1, v2 point2, v4 color)
 }
 
 internal void
-DrawLineFourth(win32_offscreen_buffer* buffer, i32 startPosX, i32 startPosY, i32 endPosX, i32 endPosY, v4 color)
+DrawLineFinal(win32_offscreen_buffer* buffer, i32 startPosX, i32 startPosY, i32 endPosX, i32 endPosY, v4 color)
 {
     bool steep = false;
     if(abs(startPosX - endPosX) < abs(startPosY - endPosY))
@@ -168,14 +173,26 @@ DrawLineFourth(win32_offscreen_buffer* buffer, i32 startPosX, i32 startPosY, i32
         Swap(&startPosX, &endPosX);
         Swap(&startPosY, &endPosY);
     }
-    for(i32 x = startPosX; x <= endPosX; x++)
-    {
-        f32 t = (x - startPosX) / (f32)(endPosX - startPosX);
-        i32 y = startPosY * (1. - t) + endPosY * t;
-        if(steep)
-            PixelSet(buffer, y, x, color);
-        else
-            PixelSet(buffer, x, y, color);
 
-    }
+    i32 lineLengthX = endPosX - startPosX;
+    i32 y = startPosY;
+    if(steep)
+        for(i32 x = startPosX; x <= endPosX; x++)
+        {
+            // NOTE: distance from the baseX to currently drawn x 
+            // divided by the entire distance from start to end
+            // calculating the pixel number basically 
+            f32 t = (x - startPosX) / (f32)(endPosX - startPosX);
+            // NOTE: Calculating y based on the pixel number
+            i32 y = startPosY * (1. - t) + endPosY * t;
+            PixelSet(buffer, y, x, color);
+        }
+    else
+        for(i32 x = startPosX; x <= endPosX; x++)
+        {
+            f32 t = (x - startPosX) / (f32)(endPosX - startPosX);
+            // NOTE: Calculating y based on the pixel number
+            i32 y = startPosY * (1. - t) + endPosY * t;
+            PixelSet(buffer, x, y, color);
+        }
 }
