@@ -202,6 +202,10 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
             {
                 GlobalRunning = 0;
             }
+            else if(VKCode == VK_F1)
+            {
+                GlobalUserInput.reset = 1;
+            }
             break;
         }
         case WM_KEYUP:
@@ -221,6 +225,10 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
             else if(VKCode == 'D')
             {
                 GlobalUserInput.right = 0;
+            }
+            else if(VKCode == VK_F1)
+            {
+                GlobalUserInput.reset = 0;
             }
             break;
         }
@@ -349,12 +357,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         offset.x += GlobalUserInput.right * 5;
         offset.x -= GlobalUserInput.left * 5;
         v4 lineColor = {0,255,255,255};
-
+        if(GlobalUserInput.reset)
+        {
+            DrawRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
+        }
 
         // DrawGradient(&GlobalBackbuffer, offsetX, offsetY);
-        DrawRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
-        // DrawRectangle(&GlobalBackbuffer, 200 + offset.x, 200 + offset.y, 100, 100, 255);
-        DrawLine(&GlobalBackbuffer, {200, 200}, {600, 600}, lineColor);
+        // DrawLineFirst(&GlobalBackbuffer, {100, 200}, {500, 600}, lineColor);
+        // DrawLineSecond(&GlobalBackbuffer, {200, 200}, {600, 600}, lineColor);
+        DrawLineThird(&GlobalBackbuffer, {120 + offset.x, 700 + offset.y}, {100, 100}, {0,200,100});
 
         DWORD PlayCursor;
         DWORD WriteCursor;

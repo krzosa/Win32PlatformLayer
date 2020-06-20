@@ -59,6 +59,7 @@ struct user_input
     bool down;
     bool left;
     bool right;
+    bool reset;
 };
 
 struct win32_sound_output
