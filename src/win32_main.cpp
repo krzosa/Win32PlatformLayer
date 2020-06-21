@@ -3,76 +3,18 @@
 #include <Xinput.h>
 #include <dsound.h>
 #include <math.h>
+#include "typedefines.c"
 #include "win32_main.h"
-#include "render.h"
-#include "render.cpp"
 
-global_variable bool GlobalRunning = true;
-global_variable user_input GlobalUserInput;
-global_variable win32_offscreen_buffer GlobalBackbuffer;
-global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
-global_variable x_input_get_state *XInputGetStateFunction = XInputGetStateStub;
-global_variable x_input_set_state *XInputSetStateFunction = XInputSetStateStub;
+Global bool GlobalRunning = true;
+Global user_input GlobalUserInput;
+Global win32_offscreen_buffer GlobalBackbuffer;
+Global LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
+
+#include "software_render.cpp"
+#include "win32_fileio.cpp"
+
 #define Pi32 3.14159265359f
-
-#include "audio.cpp"
-
-internal void
-FreeFileMemory(void *Memory)
-{
-    if(Memory)
-    {
-        VirtualFree(Memory, 0, MEM_RELEASE);
-    }
-}
-
-internal file 
-ReadEntireFile(char *filename)
-{
-    file result = {};
-    
-    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    if(fileHandle != INVALID_HANDLE_VALUE)
-    {
-        LARGE_INTEGER FileSize;
-        if(GetFileSizeEx(fileHandle, &FileSize))
-        {
-            u32 fileSize32 = (u32)FileSize.QuadPart;
-            result.contents = VirtualAlloc(0, fileSize32 + 1, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-            if(result.contents)
-            {
-                DWORD BytesRead;
-                if(ReadFile(fileHandle, result.contents, fileSize32, &BytesRead, 0) && (fileSize32 == BytesRead))
-                {
-                    result.size = fileSize32;
-                    OutputDebugStringA("ReadEntireFile: Success\n");
-                }
-                else
-                {                    
-                    OutputDebugStringA("ReadEntireFile: ReadFile failed\n");
-                    FreeFileMemory(result.contents);
-                    result.contents = 0;
-                }
-            }
-            else
-            {
-                OutputDebugStringA("ReadEntireFile: NULL file contents\n");
-            }
-        }
-        else
-        {
-            OutputDebugStringA("ReadEntireFile: Failed to get file size\n");
-        }
-
-        CloseHandle(fileHandle);
-    }
-    else
-    {
-        OutputDebugStringA("ReadEntireFile: Invalid file handle name\n");
-    }
-
-    return(result);
-}
 
 window_dimension 
 Win32GetWindowDimension(HWND Window)
@@ -232,8 +174,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
     return Result;
 }
 
-
-i32 CALLBACK 
+int 
 WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowCode)
 {
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
@@ -268,9 +209,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
     HDC DeviceContext = GetDC(Window);
 
+    // NOTE: Read obj file
     file objFile = ReadEntireFile("obj.obj");
-    char *fileContents = (char *)objFile.contents;
-    fileContents[objFile.size] = '\0';
+    OutputDebugStringA((LPCSTR)objFile.contents);
 
     v2 offset = {0, 0};
     i32 musicIndex = 1;
@@ -289,15 +230,12 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         offset.x -= GlobalUserInput.left;
         v4 lineColor = {0,255,255,255};
 
-        if(GlobalUserInput.reset)
-        {
-            DrawRectangle(&GlobalBackbuffer, 0, 0, 1280, 720, 0);
-        }
+        DrawRectangle(0, 0, 1280, 720, 0);
 
-        // DrawGradient(&GlobalBackbuffer, offsetX, offsetY);
-        // DrawLineFirst(&GlobalBackbuffer, {100, 200}, {500, 600}, lineColor);
-        // DrawLineSecond(&GlobalBackbuffer, {200, 200}, {600, 600}, lineColor);
-        DrawLineFinal(&GlobalBackbuffer, 10, 100, 500 + offset.x, 500 + offset.y, {0,200,100});
+        // DrawGradient(offsetX, offsetY);
+        // DrawLineFirst({100, 200}, {500, 600}, lineColor);
+        // DrawLineSecond({200, 200}, {600, 600}, lineColor);
+        DrawLineFinal(10, 100, 500 + offset.x, 500 + offset.y, {0,200,100});
 
         window_dimension dimension = Win32GetWindowDimension(Window);
         Win32DrawBufferToScreen(DeviceContext, 
