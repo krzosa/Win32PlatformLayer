@@ -1,4 +1,17 @@
 #if 0
+struct win32_sound_output
+{
+    i32 samplesPerSecond;
+    i32 toneHz;
+    i16 toneVolume;
+    i32 runningSampleIndex;
+    i32 wavePeriod;
+    i32 bytesPerSample;
+    i32 secondaryBufferSize;
+    f32 tSine;
+    i32 latencySampleCount;
+};
+
 // TODO: test going up to direct sound 8
 internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t bufferSize)
 {
@@ -158,7 +171,7 @@ if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor
 
     Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
 }
-#endif
+
 
 DWORD xinputState;    
 // i = controller index
@@ -230,3 +243,4 @@ Win32LoadXInput(void)
         // TODO: 
     }
 }
+#endif

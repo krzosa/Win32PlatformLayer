@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define Global static
 #define LocallyScopedGlobal static
 // Function internal to the obj, file 

@@ -29,15 +29,3 @@ struct file
     u32 size;
 };
 
-struct win32_sound_output
-{
-    i32 samplesPerSecond;
-    i32 toneHz;
-    i16 toneVolume;
-    i32 runningSampleIndex;
-    i32 wavePeriod;
-    i32 bytesPerSample;
-    i32 secondaryBufferSize;
-    f32 tSine;
-    i32 latencySampleCount;
-};

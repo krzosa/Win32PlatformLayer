@@ -51,6 +51,9 @@ PixelColor(i32 *pixel, v4 color)
 internal void
 PixelSet(i32 x, i32 y, v4 color)
 {
+    if(x <= 0 || y <= 0) return;
+    if(x >= GlobalBackbuffer.width - 1 || y >= GlobalBackbuffer.height) return;
+
     i8 *pixelQuarter = (i8 *)GlobalBackbuffer.memory;
 
     pixelQuarter += (y * GlobalBackbuffer.pitch);
@@ -104,7 +107,7 @@ DrawGradient(i32 BlueOffset, i32 GreenOffset)
 }
 
 internal void
-DrawLineFinal(i32 startPosX, i32 startPosY, i32 endPosX, i32 endPosY, v4 color)
+DrawLine(i32 startPosX, i32 startPosY, i32 endPosX, i32 endPosY, v4 color)
 {
     bool steep = false;
     if(abs(startPosX - endPosX) < abs(startPosY - endPosY))

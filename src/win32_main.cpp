@@ -1,15 +1,19 @@
 #include <windows.h>
-#include <stdint.h>
 #include <Xinput.h>
 #include <dsound.h>
 #include <math.h>
+#include <gl/GL.h>
+#include "opengl/wglext.h"
+#include "opengl/glext.h"
+
+
 #include "typedefines.c"
+#include "stringlib.c"
 #include "win32_main.h"
 
 Global bool GlobalRunning = true;
 Global user_input GlobalUserInput;
 Global win32_offscreen_buffer GlobalBackbuffer;
-Global LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 #include "software_render.cpp"
 #include "win32_fileio.cpp"
@@ -69,6 +73,25 @@ Win32DrawBufferToScreen(HDC DeviceContext, i32 windowWidth, i32 windowHeight, wi
         buffer->memory,
         &buffer->info,
         DIB_RGB_COLORS, SRCCOPY);
+}
+
+internal void
+PrintLastErrorMessage(void)
+{
+    DWORD dLastError = GetLastError();
+    LPSTR strErrorMessage = NULL;
+    
+    FormatMessage(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+        NULL,
+        dLastError,
+        0,
+        strErrorMessage,
+        0,
+        NULL);
+
+    //Prints debug output to the console
+    OutputDebugString(strErrorMessage);
 }
 
 LRESULT CALLBACK 
@@ -174,44 +197,145 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
     return Result;
 }
 
+internal void * 
+GetAnyGLFuncAddress(const char *name)
+{
+  void *p = (void *)wglGetProcAddress(name);
+  if(p == 0 ||
+    (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
+    (p == (void*)-1) )
+  {
+    HMODULE module = LoadLibraryA("opengl32.dll");
+    p = (void *)GetProcAddress(module, name);
+  }
+
+  return p;
+}
+
 int 
 WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowCode)
 {
     Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
 
-    WNDCLASSA WindowClass = {};
+    WNDCLASSA windowClass = {};
     {
-        WindowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
-        WindowClass.lpfnWndProc    = Win32MainWindowCallback;
-        WindowClass.cbClsExtra     = 0;
-        WindowClass.cbWndExtra     = 0;
-        WindowClass.hInstance      = Instance;
-        WindowClass.hIcon          = LoadIcon(Instance, IDI_APPLICATION);
-        WindowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
-        WindowClass.lpszMenuName   = NULL;
-        WindowClass.lpszClassName  = ("PLACEHOLDER");
+        windowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
+        windowClass.lpfnWndProc    = Win32MainWindowCallback;
+        windowClass.cbClsExtra     = 0;
+        windowClass.cbWndExtra     = 0;
+        windowClass.hInstance      = Instance;
+        windowClass.hIcon          = LoadIcon(Instance, IDI_APPLICATION);
+        windowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
+        windowClass.lpszMenuName   = NULL;
+        windowClass.lpszClassName  = ("PLACEHOLDER");
     }
     
-    if (!RegisterClassA(&WindowClass))
+    if (!RegisterClassA(&windowClass))
     {
-        OutputDebugStringA("FAILED to register WindowClass\n");
+        OutputDebugStringA("FAILED to register windowClass\n");
     }
 
-    HWND Window = CreateWindowExA(0, WindowClass.lpszClassName, 
+    HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, 
         "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
         CW_USEDEFAULT, NULL, NULL, Instance, NULL);
 
-    if(!Window)
+    if(!windowHandle)
     {
         OutputDebugStringA("FAILED to create a Window\n");
     }
 
-    HDC DeviceContext = GetDC(Window);
+    HDC deviceContext = GetDC(windowHandle);
+    HGLRC mainOpenglContext;
 
-    // NOTE: Read obj file
-    file objFile = ReadEntireFile("obj.obj");
-    OutputDebugStringA((LPCSTR)objFile.contents);
+    // NOTE: OPENGL
+    PIXELFORMATDESCRIPTOR pixelFormat =
+    {
+        sizeof(PIXELFORMATDESCRIPTOR),
+        1,
+        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
+        PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
+        32,                   // Colordepth of the framebuffer.
+        0, 0, 0, 0, 0, 0,
+        0,
+        0,
+        0,
+        0, 0, 0, 0,
+        24,                   // Number of bits for the depthbuffer
+        8,                    // Number of bits for the stencilbuffer
+        0,                    // Number of Aux buffers in the framebuffer.
+        PFD_MAIN_PLANE,
+        0,
+        0, 0, 0
+    };
+
+    i32 pixelFormatIndex = ChoosePixelFormat(deviceContext, &pixelFormat);
+    if(!pixelFormatIndex)
+    {
+        OutputDebugStringA("FAILED to choose pixel format\n");
+    }
+    
+    if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
+    {
+        PrintLastErrorMessage();
+    }
+    HGLRC dummyOpenglContext = wglCreateContext(deviceContext);
+    if(!dummyOpenglContext)
+    {
+        PrintLastErrorMessage();
+    }
+    if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
+    {
+        PrintLastErrorMessage();
+    }
+
+    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
+    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
+    PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB;
+    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+
+    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress ("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)wglGetProcAddress ("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress ("wglSwapIntervalEXT");
+
+    {
+        int pf_attribs_i[] =
+        {
+            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            WGL_COLOR_BITS_ARB, 32,
+            WGL_DEPTH_BITS_ARB, 24,
+            WGL_STENCIL_BITS_ARB, 8,
+            0
+        };
+        
+        UINT numFormats = 0;
+        wglChoosePixelFormatARB(deviceContext, pf_attribs_i, 
+            0, 1, &pixelFormatIndex, &numFormats);
+    }
+        
+    if(pixelFormatIndex)
+    {
+        const int contextAttribs[] =
+        {
+            WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+            WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+            0
+        };
+        
+        mainOpenglContext = wglCreateContextAttribsARB(deviceContext, dummyOpenglContext, contextAttribs);
+        if(mainOpenglContext)
+        {
+            wglMakeCurrent(deviceContext, 0);
+            wglDeleteContext(dummyOpenglContext);
+            wglMakeCurrent(deviceContext, mainOpenglContext);
+            wglSwapIntervalEXT(0);
+        }
+    }
+    
 
     v2 offset = {0, 0};
     i32 musicIndex = 1;
@@ -230,17 +354,20 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         offset.x -= GlobalUserInput.left;
         v4 lineColor = {0,255,255,255};
 
-        DrawRectangle(0, 0, 1280, 720, 0);
+        // DrawRectangle(0, 0, 1280, 720, 0);
 
         // DrawGradient(offsetX, offsetY);
         // DrawLineFirst({100, 200}, {500, 600}, lineColor);
         // DrawLineSecond({200, 200}, {600, 600}, lineColor);
-        DrawLineFinal(10, 100, 500 + offset.x, 500 + offset.y, {0,200,100});
+        // DrawLine(10, 100, 500 + offset.x, 500 + offset.y, {0,200,100});
+        glClearColor(1.0, 0, 0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        window_dimension dimension = Win32GetWindowDimension(Window);
-        Win32DrawBufferToScreen(DeviceContext, 
-                                   dimension.width, dimension.height, 
-                                   &GlobalBackbuffer);
+        // window_dimension dimension = Win32GetWindowDimension(windowHandle);
+        // Win32DrawBufferToScreen(deviceContext, 
+        //                            dimension.width, dimension.height, 
+        //                            &GlobalBackbuffer);
+        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
     }
     
     
