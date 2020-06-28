@@ -23,7 +23,7 @@ Win32LoadXInput(void)
     if(!XInputLibrary)
     {
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
-        log("xinput9_1_0.dll Failed");
+        logError("xinput9_1_0.dll Failed");
     }
 
     if(XInputLibrary)
@@ -32,7 +32,7 @@ Win32LoadXInput(void)
         if(!XInputGetStateFunctionPointer) 
         {
             XInputGetStateFunctionPointer = XInputGetStateStub; 
-            log("FAILED: to load XInput GetState\n");
+            logError("to load XInput GetState");
             return;
         }
 
@@ -40,15 +40,15 @@ Win32LoadXInput(void)
         if(!XInputSetStateFunctionPointer) 
         {
             XInputSetStateFunctionPointer = XInputSetStateStub;
-            log("FAILED: to load XInput SetState\n");
+            logError("to load XInput SetState");
             return;
         }
 
-        log("SUCCESS: XInput loaded\n");
+        logSuccess("XInput loaded");
     }
     else
     {
-        log("FAILED: XINPUT library load\n");
+        logError("XINPUT library load");
     }
 }
 

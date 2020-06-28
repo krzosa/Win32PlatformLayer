@@ -3,21 +3,22 @@
 //
 
 // Example Printout: 
-// INFO: test1 | ..\src\win32_main.cpp: WinMain 156
-// ERROR: test2 | ..\src\win32_main.cpp: WinMain 157
-// SUCCESS: test3 | ..\src\win32_main.cpp: WinMain 158
+// Win32MainWindowCallback 40 INFO: WM_ACTIVATEAPP
+// Win32LoadXInput 47 SUCCESS: XInput loaded
+// WinMain 153 INFO: OPENGL VERSION: 3.3.0 NVIDIA 445.75
+// WinMain 155 INFO: test1 12 aasafaf
+// WinMain 156 ERROR: test2
+// WinMain 157 SUCCESS: test3
 
-
-#define logInfo(text, ...) PrivateLogExtra("INFO: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
-#define logError(text, ...) PrivateLogExtra("ERROR: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
-#define logSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
+#define logInfo(text, ...) PrivateLogExtra("%s %d INFO: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logSuccess(text, ...) PrivateLogExtra("%s %d SUCCESS: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 
 #define TEXT_BUFFER_SIZE 2048
 static HANDLE GLOBALConsoleHandle;
 static char GLOBALRandomAccessTextBuffer1[TEXT_BUFFER_SIZE];
 static char GLOBALRandomAccessTextBuffer2[TEXT_BUFFER_SIZE];
-
 
 internal void 
 log(char *text, ...)
@@ -37,16 +38,13 @@ PrivateLogExtra(char *prepend, char *text, ...)
     int textLength = CharLength(text);
     int prependLength = CharLength(prepend);
 
-    sprintf(GLOBALRandomAccessTextBuffer1, prepend);
-    sprintf(GLOBALRandomAccessTextBuffer2, text);
-    sprintf(GLOBALRandomAccessTextBuffer2 + textLength, " | %%s: %%s %%d");
-
-    // length of " | %%s: %%s %%d"
-    textLength += 12;
+    memcpy(GLOBALRandomAccessTextBuffer2, prepend, prependLength);
+    memcpy(GLOBALRandomAccessTextBuffer2 + prependLength, text, textLength);
+    GLOBALRandomAccessTextBuffer2[prependLength + textLength] = '\0';
 
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer1 + prependLength, GLOBALRandomAccessTextBuffer2, args);
+    vsprintf(GLOBALRandomAccessTextBuffer1, GLOBALRandomAccessTextBuffer2, args);
     va_end(args);
 
     textLength = CharLength(GLOBALRandomAccessTextBuffer1);

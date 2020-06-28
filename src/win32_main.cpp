@@ -152,7 +152,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     // NOTE: Log OpenGL version
     logInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
-    logInfo("test1");
+    logInfo("test1 %d %s", 12, "aasafaf");
     logError("test2");
     logSuccess("test3");
     log("test");
