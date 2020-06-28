@@ -1,6 +1,5 @@
 #include <stdint.h>
 
-#define global_variable static
 #define local_global static
 // Function internal to the obj, file 
 #define internal static

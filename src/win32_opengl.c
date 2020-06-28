@@ -7,7 +7,7 @@ static PFNGLUSEPROGRAMPROC glUseProgram;
 static PFNGLBINDBUFFERARBPROC glBindBuffer;
 
 internal void * 
-GetAnyGLFuncAddress(const char *name)
+GetAnyGLFuncAddress(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
   if(p == 0 ||
@@ -24,7 +24,7 @@ GetAnyGLFuncAddress(const char *name)
 }
 
 internal void
-PrintLastErrorMessage(void)
+PrintLastErrorMessage(char *text)
 {
     DWORD dLastError = GetLastError();
     LPSTR strErrorMessage = NULL;
@@ -39,11 +39,11 @@ PrintLastErrorMessage(void)
         0,
         NULL);
 
-    log("%s\n", strErrorMessage);
+    log("%s: %s\n", text, strErrorMessage);
 }
 
 internal HGLRC
-InitOpenGL(HDC deviceContext)
+Win32InitOpenGL(HDC deviceContext)
 {
     HGLRC mainOpenglContext;
     PIXELFORMATDESCRIPTOR pixelFormat =
@@ -72,14 +72,14 @@ InitOpenGL(HDC deviceContext)
         log("FAILED to choose pixel format\n");
     
     if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
-        PrintLastErrorMessage();
+        PrintLastErrorMessage("FAILED: to set PixelFormat");
 
     HGLRC dummyOpenglContext = wglCreateContext(deviceContext);
 
     if(!dummyOpenglContext)
-        PrintLastErrorMessage();
+        PrintLastErrorMessage("FAILED: to create dummy opengl context");
     if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
-        PrintLastErrorMessage();
+        PrintLastErrorMessage("FAILED: to make dummy opengl context current");
 
     // NOTE: Load functions
     wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)GetAnyGLFuncAddress("wglChoosePixelFormatARB");

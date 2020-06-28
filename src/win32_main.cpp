@@ -2,26 +2,23 @@
 #include <windows.h>
 #include <stdio.h>
 #include <assert.h>
+#include <xinput.h>
 
 // Opengl
 #include <gl/GL.h>
 #include "opengl/wglext.h"
 #include "opengl/glext.h"
 
-// NOTE: Console attach
-static HANDLE GLOBALConsoleHandle;
-static char GLOBALRandomAccessTextBuffer[1024];
-
-#define log(text, ...) { sprintf(GLOBALRandomAccessTextBuffer, text, __VA_ARGS__); \
-        WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer, CharLength(text), 0, 0); }
-
+// Custom
 #include "typedefines.c"
-#include "stringlib.c"
+#include "string.c"
+#include "win32_debug_console.c"
 #include "win32_main.h"
 #include "win32_opengl.c"
-#include "win32_fileio.cpp"
+#include "win32_fileio.c"
+#include "win32_xinput.c"
 
-static bool32 GLOBALisRunning = true;
+static bool32 GLOBALAppStatus = true;
 static user_input GLOBALUserInput;
 
 LRESULT CALLBACK 
@@ -34,24 +31,24 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
     {
         case WM_CLOSE:
         {
-            log("WM_CLOSE\n");
-            GLOBALisRunning = false;
+            logInfo("WM_CLOSE");
+            GLOBALAppStatus = false;
             break;
         } 
         case WM_ACTIVATEAPP:
         {
-            log("WM_ACTIVATEAPP\n");
+            logInfo("WM_ACTIVATEAPP");
             break;
         } 
         case WM_DESTROY:
         {
-            log("WM_DESTROY\n");
-            GLOBALisRunning = false;
+            logInfo("WM_DESTROY");
+            GLOBALAppStatus = false;
             break;
         } 
         case WM_QUIT:
         {
-            GLOBALisRunning = false;
+            GLOBALAppStatus = false;
             break;
         }
 
@@ -75,7 +72,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
             }
             else if(VKCode == VK_ESCAPE)
             {
-                GLOBALisRunning = 0;
+                GLOBALAppStatus = 0;
             }
             else if(VKCode == VK_F1)
             {
@@ -120,12 +117,8 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 int 
 WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowCode)
 {
-    // NOTE: Console Setup
-    if(!AttachConsole(ATTACH_PARENT_PROCESS)) log("Failed to attach to console\n");
-
-    GLOBALConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if(!GLOBALConsoleHandle) log("Failed to get console handle\n");
-
+    Win32ConsoleAttach();
+    
     // NOTE: Window Setup
     WNDCLASSA windowClass = {};
     {
@@ -150,7 +143,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     if(!windowHandle) log("FAILED to create a Window\n");
 
     HDC deviceContext = GetDC(windowHandle);
-    HGLRC openglContext = InitOpenGL(deviceContext);
+    HGLRC openglContext = Win32InitOpenGL(deviceContext);
+    Win32LoadXInput();
+    
 
     v2 offset = {0, 0};
 
@@ -159,7 +154,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     log((char *)glGetString(GL_VERSION));
     log("\n");
 
-    while(GLOBALisRunning)
+    while(GLOBALAppStatus)
     {
         MSG Message;
         while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
@@ -167,6 +162,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
             TranslateMessage(&Message);
             DispatchMessageA(&Message);
         }
+        Win32UpdateXInput();
 
         offset.y += GLOBALUserInput.up;
         offset.y -= GLOBALUserInput.down;
