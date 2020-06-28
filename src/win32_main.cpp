@@ -150,9 +150,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     v2 offset = {0, 0};
 
     // NOTE: Log OpenGL version
-    log("OPENGL VERSION: ");
-    log((char *)glGetString(GL_VERSION));
-    log("\n");
+    logInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
+
+    // Win32ConsoleLog("meems %d", 1);
+    logInfo("test1");
+    logError("test2");
+    logSuccess("test3");
+    log("test");
 
     while(GLOBALAppStatus)
     {

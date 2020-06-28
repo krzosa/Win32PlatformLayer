@@ -1,13 +1,3 @@
-struct win32_offscreen_buffer
-{
-    BITMAPINFO info;
-    void *memory;
-    i32 width;
-    i32 height;
-    i32 pitch;
-    // Note: Pixels are always 32bits wide
-};
-
 struct window_dimension
 {
     i32 width;

@@ -48,7 +48,7 @@ Win32LoadXInput(void)
     }
     else
     {
-        log("FAILED: XINPUT library load\n")
+        log("FAILED: XINPUT library load\n");
     }
 }
 
