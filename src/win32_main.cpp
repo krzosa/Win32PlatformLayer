@@ -126,14 +126,14 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         windowClass.lpszClassName  = ("PLACEHOLDER");
     }
     
-    if (!RegisterClassA(&windowClass)) log("FAILED to register windowClass\n");
+    if (!RegisterClassA(&windowClass)) Log("FAILED to register windowClass\n");
 
     HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, 
         "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
         CW_USEDEFAULT, NULL, NULL, Instance, NULL);
 
-    if(!windowHandle) logError("Create Window\n");
+    if(!windowHandle) LogError("Create Window\n");
 
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
@@ -143,11 +143,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     v2 offset = {0, 0};
 
     // NOTE: Log OpenGL version
-    logInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
-    log("Vendor: %s\n", (char *)glGetString(GL_VENDOR));
-    log("Renderer: %s\n", (char *)glGetString(GL_RENDERER));
-    log("Extensions: %s\n", (char *)glGetString(GL_EXTENSIONS));
-    log("ShadingLanguageVersion: %s\n", (char *)glGetString(GL_SHADING_LANGUAGE_VERSION));
+    LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
     
     while(GLOBALAppStatus)
     {

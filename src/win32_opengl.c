@@ -41,7 +41,7 @@ PrintLastErrorMessage(char *text)
         0,
         NULL);
 
-    log("%s: %s\n", text, strErrorMessage);
+    Log("%s: %s\n", text, strErrorMessage);
 }
 
 internal HGLRC
@@ -71,7 +71,7 @@ Win32InitOpenGL(HDC deviceContext)
     i32 pixelFormatIndex = ChoosePixelFormat(deviceContext, &pixelFormat);
 
     if(!pixelFormatIndex)
-        log("FAILED to choose pixel format\n");
+        Log("FAILED to choose pixel format\n");
     
     if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
         PrintLastErrorMessage("FAILED: to set PixelFormat");

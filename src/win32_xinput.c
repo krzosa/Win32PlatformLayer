@@ -18,13 +18,13 @@ Win32LoadXInput(void)
     if(!XInputLibrary)
     {
         XInputLibrary = LoadLibraryA("xinput9_1_0.dll");
-        log("xinput1_4.dll Failed");
+        Log("xinput1_4.dll Failed");
     }
 
     if(!XInputLibrary)
     {
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
-        logError("xinput9_1_0.dll Failed");
+        LogError("xinput9_1_0.dll Failed");
     }
 
     if(XInputLibrary)
@@ -33,7 +33,7 @@ Win32LoadXInput(void)
         if(!XInputGetStateFunctionPointer) 
         {
             XInputGetStateFunctionPointer = XInputGetStateStub; 
-            logError("to load XInput GetState");
+            LogError("to load XInput GetState");
             return;
         }
 
@@ -41,15 +41,15 @@ Win32LoadXInput(void)
         if(!XInputSetStateFunctionPointer) 
         {
             XInputSetStateFunctionPointer = XInputSetStateStub;
-            logError("to load XInput SetState");
+            LogError("to load XInput SetState");
             return;
         }
 
-        logSuccess("XInput loaded");
+        LogSuccess("XInput loaded");
     }
     else
     {
-        logError("XINPUT library load");
+        LogError("XINPUT library load");
     }
 }
 
@@ -80,11 +80,11 @@ Win32UpdateXInput(void)
 
             i16 stickX = gamepad->sThumbLX;
             i16 stickY = gamepad->sThumbLY;
-            // logInfo("Controller %d conntected\n", i);
+            // LogInfo("Controller %d conntected\n", i);
         }
         else
         {
-            // logInfo("Controller %d not connected ", i);
+            // LogInfo("Controller %d not connected ", i);
         }
     }
 }

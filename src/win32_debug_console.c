@@ -1,6 +1,6 @@
 //
 // NOTE: Only for debugging, danger of overflowing the buffer
-// Use exactly like logInfo("test test %d", 123);
+// Use exactly like LogInfo("test test %d", 123);
 //
 
 // Example Printout: 
@@ -11,9 +11,9 @@
 // WinMain 156 ERROR: test2
 // WinMain 157 SUCCESS: test3
 
-#define logInfo(text, ...) PrivateLogExtra("%s %d INFO: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define logError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define logSuccess(text, ...) PrivateLogExtra("%s %d SUCCESS: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define LogInfo(text, ...) PrivateLogExtra("INFO: ", text, __VA_ARGS__)
+#define LogSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__)
+#define LogError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 
 #define TEXT_BUFFER_SIZE 2048
@@ -22,7 +22,7 @@ static char GLOBALRandomAccessTextBuffer1[TEXT_BUFFER_SIZE];
 static char GLOBALRandomAccessTextBuffer2[TEXT_BUFFER_SIZE];
 
 internal void 
-log(char *text, ...)
+Log(char *text, ...)
 {
     va_list args;
     va_start(args, text);

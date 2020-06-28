@@ -26,30 +26,30 @@ ReadEntireFile(char *filename)
                 if(ReadFile(fileHandle, result.contents, fileSize32, &BytesRead, 0) && (fileSize32 == BytesRead))
                 {
                     result.size = fileSize32;
-                    log("ReadEntireFile: Success\n");
+                    Log("ReadEntireFile: Success\n");
                 }
                 else
                 {                    
-                    log("ReadEntireFile: ReadFile failed\n");
+                    Log("ReadEntireFile: ReadFile failed\n");
                     FreeFileMemory(result.contents);
                     result.contents = 0;
                 }
             }
             else
             {
-                log("ReadEntireFile: NULL file contents\n");
+                Log("ReadEntireFile: NULL file contents\n");
             }
         }
         else
         {
-            log("ReadEntireFile: Failed to get file size\n");
+            Log("ReadEntireFile: Failed to get file size\n");
         }
 
         CloseHandle(fileHandle);
     }
     else
     {
-        log("ReadEntireFile: Invalid file handle name\n");
+        Log("ReadEntireFile: Invalid file handle name\n");
     }
 
     return(result);
