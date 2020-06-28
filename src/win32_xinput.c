@@ -1,11 +1,12 @@
-// Functions as types
+// NOTE: Functions as types
 typedef DWORD WINAPI XInputGetStateProc(DWORD dw_user_index, XINPUT_STATE *p_state);
 typedef DWORD WINAPI XInputSetStateProc(DWORD dw_user_index, XINPUT_VIBRATION *p_vibration);
 
-// Empty (stub) functions as replacements
+// NOTE: Empty (stub) functions as replacements
 DWORD WINAPI XInputGetStateStub(DWORD dw_user_index, XINPUT_STATE *p_state){return ERROR_DEVICE_NOT_CONNECTED;}
 DWORD WINAPI XInputSetStateStub(DWORD dw_user_index, XINPUT_VIBRATION *p_vibration){return ERROR_DEVICE_NOT_CONNECTED;}
 
+// NOTE: Pointers to loaded functions
 static XInputSetStateProc *XInputSetStateFunctionPointer = XInputSetStateStub;
 static XInputGetStateProc *XInputGetStateFunctionPointer = XInputGetStateStub;
 

@@ -1,4 +1,12 @@
-handmade/
-build/
 .vscode/
-watch.bat
+.vs/
+*.pdb
+*.exe
+*.ilk
+*.obj
+*.rdbg
+
+handmade/
+b.bat
+r.bat
+br.bat

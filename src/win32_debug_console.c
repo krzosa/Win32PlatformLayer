@@ -1,5 +1,6 @@
 //
 // NOTE: Only for debugging, danger of overflowing the buffer
+// Use exactly like logInfo("test test %d", 123);
 //
 
 // Example Printout: 

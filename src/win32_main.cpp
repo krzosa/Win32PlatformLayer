@@ -31,18 +31,11 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
     {
         case WM_CLOSE:
         {
-            logInfo("WM_CLOSE");
             GLOBALAppStatus = false;
-            break;
-        } 
-        case WM_ACTIVATEAPP:
-        {
-            logInfo("WM_ACTIVATEAPP");
             break;
         } 
         case WM_DESTROY:
         {
-            logInfo("WM_DESTROY");
             GLOBALAppStatus = false;
             break;
         } 
@@ -151,12 +144,11 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
     // NOTE: Log OpenGL version
     logInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
-
-    logInfo("test1 %d %s", 12, "aasafaf");
-    logError("test2");
-    logSuccess("test3");
-    log("test");
-
+    log("Vendor: %s\n", (char *)glGetString(GL_VENDOR));
+    log("Renderer: %s\n", (char *)glGetString(GL_RENDERER));
+    log("Extensions: %s\n", (char *)glGetString(GL_EXTENSIONS));
+    log("ShadingLanguageVersion: %s\n", (char *)glGetString(GL_SHADING_LANGUAGE_VERSION));
+    
     while(GLOBALAppStatus)
     {
         MSG Message;
@@ -175,6 +167,12 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
         glClearColor(0 + offset.x / 2000 - offset.y / 2000, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        // GLuint positionBufferObject;
+        // glGenBuffers(1, &positionBufferObject);
+        // glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
+        // glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);

@@ -1,13 +1,15 @@
-// OPENGL Loaded Functions
-static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
-static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
-static PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB;
-static PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-static PFNGLUSEPROGRAMPROC glUseProgram;
-static PFNGLBINDBUFFERARBPROC glBindBuffer;
+#define GLProc(name, type) PFNGL##type##PROC gl##name = 0;
+#define GLLoad(name, type) gl##name = (PFNGL##type##PROC)LoadOpenGLFunction("gl" #name)
+
+// OPENGL Pointers to functions
+// expands to PFNGLBUFFERDATAPROC glBufferData = 0;
+GLProc(UseProgram, USEPROGRAM)
+GLProc(BindBuffer, BINDBUFFER)
+GLProc(GenBuffers, GENBUFFERS)
+GLProc(BufferData, BUFFERDATA)
 
 internal void * 
-GetAnyGLFuncAddress(char *name)
+LoadOpenGLFunction(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
   if(p == 0 ||
@@ -81,31 +83,40 @@ Win32InitOpenGL(HDC deviceContext)
     if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
         PrintLastErrorMessage("FAILED: to make dummy opengl context current");
 
-    // NOTE: Load functions
-    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)GetAnyGLFuncAddress("wglChoosePixelFormatARB");
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)GetAnyGLFuncAddress ("wglCreateContextAttribsARB");
-    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)GetAnyGLFuncAddress ("wglMakeContextCurrentARB");
-    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)GetAnyGLFuncAddress ("wglSwapIntervalEXT");
-    glUseProgram = (PFNGLUSEPROGRAMPROC)GetAnyGLFuncAddress ("glUseProgram");
-    glBindBuffer = (PFNGLBINDBUFFERARBPROC)GetAnyGLFuncAddress ("glBindBuffer");
+    // NOTE: Pointers to windows opengl functions
+    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = 0;
+    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = 0;
+    PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB = 0;
+    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
 
+    // NOTE: Load windows opengl functions
+    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)LoadOpenGLFunction("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)LoadOpenGLFunction("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)LoadOpenGLFunction("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)LoadOpenGLFunction("wglSwapIntervalEXT");
+
+    // NOTE: Load main OpenGL functions
+    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
+    GLLoad(UseProgram, USEPROGRAM);
+    GLLoad(BindBuffer, BINDBUFFER);
+    GLLoad(BufferData, BUFFERDATA);
+    GLLoad(GenBuffers, GENBUFFERS);
+
+    int attribList[] =
     {
-        int attribList[] =
-        {
-            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-            WGL_COLOR_BITS_ARB, 32,
-            WGL_DEPTH_BITS_ARB, 24,
-            WGL_STENCIL_BITS_ARB, 8,
-            0
-        };
+        WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+        WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+        WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+        WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+        WGL_COLOR_BITS_ARB, 32,
+        WGL_DEPTH_BITS_ARB, 24,
+        WGL_STENCIL_BITS_ARB, 8,
+        0
+    };
 
-        UINT numFormats = 0;
-        wglChoosePixelFormatARB(deviceContext, attribList, 
-            0, 1, &pixelFormatIndex, &numFormats);
-    }
+    UINT numFormats = 0;
+    wglChoosePixelFormatARB(deviceContext, attribList, 
+        0, 1, &pixelFormatIndex, &numFormats);
         
     if(pixelFormatIndex)
     {
