@@ -1,13 +1,3 @@
-#define GLProc(name, type) PFNGL##type##PROC gl##name = 0;
-#define GLLoad(name, type) gl##name = (PFNGL##type##PROC)LoadOpenGLFunction("gl" #name)
-
-// OPENGL Pointers to functions
-// expands to PFNGLBUFFERDATAPROC glBufferData = 0;
-GLProc(UseProgram, USEPROGRAM)
-GLProc(BindBuffer, BINDBUFFER)
-GLProc(GenBuffers, GENBUFFERS)
-GLProc(BufferData, BUFFERDATA)
-
 internal void * 
 LoadOpenGLFunction(char *name)
 {
@@ -95,12 +85,7 @@ Win32InitOpenGL(HDC deviceContext)
     wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)LoadOpenGLFunction("wglMakeContextCurrentARB");
     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)LoadOpenGLFunction("wglSwapIntervalEXT");
 
-    // NOTE: Load main OpenGL functions
-    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
-    GLLoad(UseProgram, USEPROGRAM);
-    GLLoad(BindBuffer, BINDBUFFER);
-    GLLoad(BufferData, BUFFERDATA);
-    GLLoad(GenBuffers, GENBUFFERS);
+    LoadOpenGLFunctions();
 
     int attribList[] =
     {

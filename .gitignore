@@ -7,6 +7,9 @@
 *.rdbg
 
 handmade/
+run.bat
+compileTime
+aa
 b.bat
 r.bat
 br.bat

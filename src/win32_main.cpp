@@ -12,11 +12,13 @@
 // Custom
 #include "typedefines.c"
 #include "string.c"
+#include "win32_opengl.h"
 #include "win32_debug_console.c"
 #include "win32_main.h"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
 #include "win32_xinput.c"
+#include "win32_timer.c"
 
 static bool32 GLOBALAppStatus = true;
 static user_input GLOBALUserInput;
@@ -137,8 +139,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
+    Win32Timer timer;
+    Win32TimerInit(&timer);
     Win32LoadXInput();
-    
 
     v2 offset = {0, 0};
 
@@ -147,6 +150,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     
     while(GLOBALAppStatus)
     {
+        Win32TimerBeginFrame(&timer);
         MSG Message;
         while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
         {
@@ -164,14 +168,16 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         glClearColor(0 + offset.x / 2000 - offset.y / 2000, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // GLuint positionBufferObject;
-        // glGenBuffers(1, &positionBufferObject);
+        u32 VBO;
+        gl.GenBuffers(1, &VBO); 
+        gl.BindBuffer(GL_ARRAY_BUFFER, VBO);  
         // glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
         // glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
         // glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
+        Win32TimerEndFrame(&timer, 16);
     }
     
     
