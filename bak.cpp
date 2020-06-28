@@ -73,7 +73,7 @@ internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t buf
                 BufferDescription.dwBufferBytes = bufferSize;
                 BufferDescription.lpwfxFormat = &WaveFormat;
             }
-            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &global_variableSecondaryBuffer, 0);
             if(SUCCEEDED(Error))
             {
                 OutputDebugStringA("Secondary buffer created successfully.\n");

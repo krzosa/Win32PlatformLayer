@@ -1568,7 +1568,7 @@ typedef void (APIENTRYP PFNGLCOLORP4UIPROC) (GLenum type, GLuint color);
 typedef void (APIENTRYP PFNGLCOLORP4UIVPROC) (GLenum type, const GLuint *color);
 typedef void (APIENTRYP PFNGLSECONDARYCOLORP3UIPROC) (GLenum type, GLuint color);
 typedef void (APIENTRYP PFNGLSECONDARYCOLORP3UIVPROC) (GLenum type, const GLuint *color);
-#ifdef GL_GLEXT_PROTOTYPES
+
 GLAPI void APIENTRY glBindFragDataLocationIndexed (GLuint program, GLuint colorNumber, GLuint index, const GLchar *name);
 GLAPI GLint APIENTRY glGetFragDataIndex (GLuint program, const GLchar *name);
 GLAPI void APIENTRY glGenSamplers (GLsizei count, GLuint *samplers);
@@ -1627,7 +1627,7 @@ GLAPI void APIENTRY glColorP4ui (GLenum type, GLuint color);
 GLAPI void APIENTRY glColorP4uiv (GLenum type, const GLuint *color);
 GLAPI void APIENTRY glSecondaryColorP3ui (GLenum type, GLuint color);
 GLAPI void APIENTRY glSecondaryColorP3uiv (GLenum type, const GLuint *color);
-#endif
+
 #endif /* GL_VERSION_3_3 */
 
 #ifndef GL_VERSION_4_0

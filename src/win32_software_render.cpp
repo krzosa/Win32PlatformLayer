@@ -1,3 +1,58 @@
+window_dimension 
+Win32GetWindowDimension(HWND Window)
+{
+    RECT ClientRect;
+    window_dimension windowDimension;
+    // get size of the window, without the border
+    GetClientRect(Window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+    return windowDimension;
+}
+
+internal void 
+Win32ResizeDIBSection(win32_offscreen_buffer* buffer, i32 width, i32 height)
+{
+    // if we dont free before allocating, memory will leak
+    if(buffer->memory)
+    {
+        VirtualFree(buffer->memory, 0, MEM_RELEASE);
+    }
+
+    i32 bytesPerPixel = 4;
+    buffer->width = width;
+    buffer->height = height;
+    buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
+    buffer->info.bmiHeader.biWidth = buffer->width;
+    buffer->info.bmiHeader.biHeight = buffer->height;
+    buffer->info.bmiHeader.biPlanes = 1;
+    buffer->info.bmiHeader.biBitCount = 32;
+    buffer->info.bmiHeader.biCompression = BI_RGB; //uncompressed RGB
+
+    
+    i32 bitmapMemorySize = bytesPerPixel * (buffer->width * buffer->height);
+    buffer->memory = VirtualAlloc(0, bitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    buffer->pitch = width * bytesPerPixel;
+}
+
+internal void 
+Win32DrawBufferToScreen(HDC DeviceContext, i32 windowWidth, i32 windowHeight, win32_offscreen_buffer* buffer)
+{
+    // The StretchDIBits function copies the color data for a rectangle of pixels in a DIB, 
+    // to the specified destination rectangle. 
+    // If the destination rectangle is larger than the source rectangle, 
+    // this function stretches the rows and columns of color data to fit the destination rectangle. 
+    // If the destination rectangle is smaller than the source rectangle, 
+    // this function compresses the rows and columns by using the specified raster operation.
+    StretchDIBits(
+        DeviceContext,
+        0, 0, windowWidth, windowHeight,
+        0, 0, buffer->width, buffer->height,
+        buffer->memory,
+        &buffer->info,
+        DIB_RGB_COLORS, SRCCOPY);
+}
+
 internal void 
 Swap(f32 *a, f32 *b)
 {
