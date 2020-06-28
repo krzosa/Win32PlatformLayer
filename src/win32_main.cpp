@@ -147,7 +147,43 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
 
     // NOTE: Log OpenGL version
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
-    
+
+    char *vertexShaderSource = 
+        "#version 330 core\n"
+        "layout (location = 0) in vec3 aPos;"
+        "void main()"
+        "{"
+        "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+        "}\0";
+
+    char *fragmentShaderSource =
+        "#version 330 core\n"
+        "out vec4 FragColor;"
+        "void main(){"
+            "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
+
+    u32 vertexShader;
+    vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
+    gl.ShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    gl.CompileShader(vertexShader);
+
+    u32 fragmentShader;
+    fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
+    gl.ShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    gl.CompileShader(fragmentShader);
+
+    u32 shaderProgram;
+    shaderProgram = gl.CreateProgram();
+
+    gl.AttachShader(shaderProgram, vertexShader);
+    gl.AttachShader(shaderProgram, fragmentShader);
+    gl.LinkProgram(shaderProgram);
+
+    gl.UseProgram(shaderProgram);
+
+    gl.DeleteShader(vertexShader);
+    gl.DeleteShader(fragmentShader);  
+
     while(GLOBALAppStatus)
     {
         Win32TimerBeginFrame(&timer);
@@ -171,9 +207,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         u32 VBO;
         gl.GenBuffers(1, &VBO); 
         gl.BindBuffer(GL_ARRAY_BUFFER, VBO);  
-        // glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
-        // glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
-        // glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        f32 vertices[] = {
+            -0.5f, -0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+            0.0f,  0.5f, 0.0f
+        };  
+
+        // NOTE: GL_
+        gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
