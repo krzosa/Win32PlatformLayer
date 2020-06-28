@@ -1,40 +1,58 @@
+//
+// NOTE: Only for debugging, danger of overflowing the buffer
+//
+
+// Example Printout: 
+// INFO: test1 | ..\src\win32_main.cpp: WinMain 156
+// ERROR: test2 | ..\src\win32_main.cpp: WinMain 157
+// SUCCESS: test3 | ..\src\win32_main.cpp: WinMain 158
+
+
+#define logInfo(text, ...) PrivateLogExtra("INFO: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
+#define logError(text, ...) PrivateLogExtra("ERROR: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
+#define logSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__, __FILE__,  __FUNCTION__, __LINE__)
+
+
 #define TEXT_BUFFER_SIZE 2048
 static HANDLE GLOBALConsoleHandle;
-static char GLOBALRandomAccessTextBuffer[TEXT_BUFFER_SIZE];
+static char GLOBALRandomAccessTextBuffer1[TEXT_BUFFER_SIZE];
+static char GLOBALRandomAccessTextBuffer2[TEXT_BUFFER_SIZE];
 
-// NOTE: Only for debugging, danger of overflowing the buffer
-
-#define logInfo(text, ...) logPrepend("INFO: ", text, __VA_ARGS__)
-#define logError(text, ...) logPrepend("ERROR: ", text, __VA_ARGS__)
-#define logSuccess(text, ...) logPrepend("SUCCESS: ", text, __VA_ARGS__)
 
 internal void 
 log(char *text, ...)
 {
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer, text, args);
+    vsprintf(GLOBALRandomAccessTextBuffer1, text, args);
     va_end(args);
 
-    int textLength = CharLength(GLOBALRandomAccessTextBuffer);
-    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer, textLength, 0, 0);
+    int textLength = CharLength(GLOBALRandomAccessTextBuffer1);
+    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength, 0, 0);
 }
 
 internal void
-logPrepend(char *prepend, char *text, ...)
+PrivateLogExtra(char *prepend, char *text, ...)
 {
-    size_t prependSize = CharLength(prepend);
-    sprintf(GLOBALRandomAccessTextBuffer, prepend);
+    int textLength = CharLength(text);
+    int prependLength = CharLength(prepend);
+
+    sprintf(GLOBALRandomAccessTextBuffer1, prepend);
+    sprintf(GLOBALRandomAccessTextBuffer2, text);
+    sprintf(GLOBALRandomAccessTextBuffer2 + textLength, " | %%s: %%s %%d");
+
+    // length of " | %%s: %%s %%d"
+    textLength += 12;
 
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer + prependSize, text, args);
+    vsprintf(GLOBALRandomAccessTextBuffer1 + prependLength, GLOBALRandomAccessTextBuffer2, args);
     va_end(args);
 
-    int textLength = CharLength(GLOBALRandomAccessTextBuffer);
-    GLOBALRandomAccessTextBuffer[textLength] = '\n';
+    textLength = CharLength(GLOBALRandomAccessTextBuffer1);
+    GLOBALRandomAccessTextBuffer1[textLength] = '\n';
 
-    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer, textLength + 1, 0, 0);
+    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength + 1, 0, 0);
 }
 
 internal void

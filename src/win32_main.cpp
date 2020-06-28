@@ -140,7 +140,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
         CW_USEDEFAULT, NULL, NULL, Instance, NULL);
 
-    if(!windowHandle) log("FAILED to create a Window\n");
+    if(!windowHandle) logError("Create Window\n");
 
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
@@ -152,7 +152,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     // NOTE: Log OpenGL version
     logInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
-    // Win32ConsoleLog("meems %d", 1);
     logInfo("test1");
     logError("test2");
     logSuccess("test3");
