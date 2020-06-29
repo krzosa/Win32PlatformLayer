@@ -125,3 +125,18 @@ Win32InitOpenGL(HDC deviceContext)
     return mainOpenglContext;
     
 }
+
+internal void
+Win32MaintainAspectRatio(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
+{
+    RECT ClientRect;
+    // NOTE: get size of the window, without the border
+    GetClientRect(windowHandle, &ClientRect);
+    i32 width = ClientRect.right - ClientRect.left;
+    i32 height = ClientRect.bottom - ClientRect.top;
+    // NOTE: keep aspect ratio of 16:9
+    i32 transformedWidth = height * ratioWidth / ratioHeight;
+    i32 centerTheThing = (width - transformedWidth) / 2;
+
+    glViewport(centerTheThing, 0, transformedWidth, height);
+}

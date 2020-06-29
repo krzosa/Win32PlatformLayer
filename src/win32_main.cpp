@@ -48,15 +48,10 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
         // NOTE: resize opengl viewport on window resize
-        case WM_SIZING:
+        case WM_WINDOWPOSCHANGING:
+        case WM_SIZE:
         {
-            RECT ClientRect;
-            // NOTE: get size of the window, without the border
-            GetClientRect(window, &ClientRect);
-            int width = ClientRect.right - ClientRect.left;
-            int height = ClientRect.bottom - ClientRect.top;
-
-            glViewport(0, 0, width, height);
+            Win32MaintainAspectRatio(window, 16, 9);
             break;
         }
 
@@ -141,25 +136,28 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         windowClass.lpszClassName  = ("PLACEHOLDER");
     }
     
-    if (!RegisterClassA(&windowClass)) Log("FAILED to register windowClass\n");
+    if (!RegisterClassA(&windowClass)) LogError("Register windowClass");
 
     HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, 
         "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
         CW_USEDEFAULT, NULL, NULL, instance, NULL);
 
-    if(!windowHandle) LogError("Create Window\n");
+    if(!windowHandle) LogError("Create Window");
 
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
     Win32Timer timer;
     Win32TimerInit(&timer);
     Win32LoadXInput();
+    Win32MaintainAspectRatio(windowHandle, 16, 9);
 
     v2 offset = {0, 0};
 
     // NOTE: Log OpenGL version
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
+
+
 
     char *vertexShaderSource = 
         "#version 330 core\n"
