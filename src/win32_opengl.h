@@ -5,12 +5,17 @@ internal void *LoadOpenGLFunction(char *name);
 internal void PrintLastErrorMessage(char *text);
 internal HGLRC Win32InitOpenGL(HDC deviceContext);
 
+typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode,
+ 	GLint  	first,
+ 	GLsizei  	count);
+
 // OPENGL Pointers to functions
 typedef struct OpenGLFunctions
 {
     GLProc(BindBuffer, BINDBUFFER)
     GLProc(GenBuffers, GENBUFFERS)
     GLProc(BufferData, BUFFERDATA)
+    GLProc(BindVertexArray, BINDVERTEXARRAY)
 
     GLProc(CreateShader, CREATESHADER)
     GLProc(CompileShader, COMPILESHADER)
@@ -21,6 +26,16 @@ typedef struct OpenGLFunctions
     GLProc(CreateProgram, CREATEPROGRAM)
     GLProc(LinkProgram, LINKPROGRAM)
     GLProc(UseProgram, USEPROGRAM)
+
+    GLProc(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+    GLProc(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+    GLProc(VertexAttribPointer, VERTEXATTRIBPOINTER)
+
+    GLProc(DrawArrays, DRAWARRAYS)
+    GLProc(GetShaderiv, GETSHADERIV)
+    GLProc(GetShaderInfoLog, GETSHADERINFOLOG)
+    GLProc(GetProgramInfoLog, GETPROGRAMINFOLOG)
+    GLProc(GenVertexArrays, GENVERTEXARRAYS)
 } OpenGLFunctions;
 
 static OpenGLFunctions gl = {0}; 
@@ -35,15 +50,29 @@ LoadOpenGLFunctions()
 
     // NOTE: Load main OpenGL functions
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
-    GLProc(UseProgram, USEPROGRAM)
     GLProc(BindBuffer, BINDBUFFER)
     GLProc(GenBuffers, GENBUFFERS)
     GLProc(BufferData, BUFFERDATA)
+    GLProc(BindVertexArray, BINDVERTEXARRAY)
+
     GLProc(CreateShader, CREATESHADER)
     GLProc(CompileShader, COMPILESHADER)
     GLProc(ShaderSource, SHADERSOURCE)
     GLProc(AttachShader, ATTACHSHADER)
-    GLProc(LinkProgram, LINKPROGRAM)
-    GLProc(CreateProgram, CREATEPROGRAM)
     GLProc(DeleteShader, DELETESHADER)
+
+    GLProc(CreateProgram, CREATEPROGRAM)
+    GLProc(LinkProgram, LINKPROGRAM)
+    GLProc(UseProgram, USEPROGRAM)
+
+    GLProc(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+    GLProc(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+    GLProc(VertexAttribPointer, VERTEXATTRIBPOINTER)
+
+    GLProc(DrawArrays, DRAWARRAYS)
+    GLProc(GetShaderiv, GETSHADERIV)
+    GLProc(GetShaderInfoLog, GETSHADERINFOLOG)
+    GLProc(GetProgramInfoLog, GETPROGRAMINFOLOG)
+    GLProc(GenVertexArrays, GENVERTEXARRAYS)
+    GLProc(BindVertexArray, BINDVERTEXARRAY)
 }

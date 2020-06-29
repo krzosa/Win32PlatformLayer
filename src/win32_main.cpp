@@ -24,12 +24,12 @@ static bool32 GLOBALAppStatus = true;
 static user_input GLOBALUserInput;
 
 LRESULT CALLBACK 
-Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
+Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT Result = 0;
 
-    uint32_t VKCode = WParam;
-    switch (Message) 
+    uint32_t VKCode = wParam;
+    switch (message) 
     {
         case WM_CLOSE:
         {
@@ -44,6 +44,19 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
         case WM_QUIT:
         {
             GLOBALAppStatus = false;
+            break;
+        }
+
+        // NOTE: resize opengl viewport on window resize
+        case WM_SIZING:
+        {
+            RECT ClientRect;
+            // NOTE: get size of the window, without the border
+            GetClientRect(window, &ClientRect);
+            int width = ClientRect.right - ClientRect.left;
+            int height = ClientRect.bottom - ClientRect.top;
+
+            glViewport(0, 0, width, height);
             break;
         }
 
@@ -101,7 +114,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
         }
         default:
         {
-            Result = DefWindowProc(Window, Message, WParam, LParam);
+            Result = DefWindowProc(window, message, wParam, lParam);
         } break;
         
     }
@@ -110,7 +123,7 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 }
 
 int 
-WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowCode)
+WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
     Win32ConsoleAttach();
     
@@ -121,8 +134,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         windowClass.lpfnWndProc    = Win32MainWindowCallback;
         windowClass.cbClsExtra     = 0;
         windowClass.cbWndExtra     = 0;
-        windowClass.hInstance      = Instance;
-        windowClass.hIcon          = LoadIcon(Instance, IDI_APPLICATION);
+        windowClass.hInstance      = instance;
+        windowClass.hIcon          = LoadIcon(instance, IDI_APPLICATION);
         windowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
         windowClass.lpszMenuName   = NULL;
         windowClass.lpszClassName  = ("PLACEHOLDER");
@@ -133,7 +146,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
     HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, 
         "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
-        CW_USEDEFAULT, NULL, NULL, Instance, NULL);
+        CW_USEDEFAULT, NULL, NULL, instance, NULL);
 
     if(!windowHandle) LogError("Create Window\n");
 
@@ -162,27 +175,65 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         "void main(){"
             "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
 
-    u32 vertexShader;
-    vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
+    
+    // glViewport(1000, 0, 100, 100);
+    u32 vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
     gl.ShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     gl.CompileShader(vertexShader);
 
-    u32 fragmentShader;
-    fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
+    i32 success;
+    char log[512];
+    gl.GetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        gl.GetShaderInfoLog(vertexShader, 512, NULL, log);
+        LogError("SHADER::VERTEX::COMPILATION_FAILED %s", log);
+    }
+
+
+    u32 fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
     gl.ShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     gl.CompileShader(fragmentShader);
+
+    gl.GetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        gl.GetShaderInfoLog(fragmentShader, 512, NULL, log);
+        LogError("SHADER::FRAGMENT::COMPILATION_FAILED %s", log);
+    }
 
     u32 shaderProgram;
     shaderProgram = gl.CreateProgram();
 
     gl.AttachShader(shaderProgram, vertexShader);
     gl.AttachShader(shaderProgram, fragmentShader);
-    gl.LinkProgram(shaderProgram);
 
-    gl.UseProgram(shaderProgram);
+    gl.LinkProgram(shaderProgram);
+    gl.GetShaderiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        gl.GetProgramInfoLog(shaderProgram, 512, NULL, log);
+        LogError("SHADER VERTEX LINKING %s", log);
+    }
 
     gl.DeleteShader(vertexShader);
     gl.DeleteShader(fragmentShader);  
+
+    u32 vertexBufferObject, vertexArrayObject;
+    gl.GenVertexArrays(1, &vertexArrayObject);
+    gl.GenBuffers(1, &vertexBufferObject); 
+
+    f32 vertices[] = {
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        0.0f,  0.5f, 0.0f
+    }; 
+
+    gl.BindVertexArray(vertexArrayObject);
+    gl.BindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+    gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    gl.EnableVertexAttribArray(0);
 
     while(GLOBALAppStatus)
     {
@@ -204,19 +255,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandLine, i32 ShowC
         glClearColor(0 + offset.x / 2000 - offset.y / 2000, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        u32 VBO;
-        gl.GenBuffers(1, &VBO); 
-        gl.BindBuffer(GL_ARRAY_BUFFER, VBO);  
-
-        f32 vertices[] = {
-            -0.5f, -0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            0.0f,  0.5f, 0.0f
-        };  
-
-        // NOTE: GL_
-        gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+        gl.UseProgram(shaderProgram);
+        gl.DrawArrays(GL_TRIANGLES, 0, 3);
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         Win32TimerEndFrame(&timer, 16);
