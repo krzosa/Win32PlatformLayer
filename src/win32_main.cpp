@@ -20,6 +20,8 @@
 #include "win32_xinput.c"
 #include "win32_timer.c"
 
+#include "opengl.c"
+
 static bool32 GLOBALAppStatus = true;
 static user_input GLOBALUserInput;
 
@@ -175,47 +177,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     
     // glViewport(1000, 0, 100, 100);
-    u32 vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
-    gl.ShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    gl.CompileShader(vertexShader);
+    u32 shaders[2];
+    u32 shaderCount = 0;
 
-    i32 success;
-    char log[512];
-    gl.GetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        gl.GetShaderInfoLog(vertexShader, 512, NULL, log);
-        LogError("SHADER::VERTEX::COMPILATION_FAILED %s", log);
-    }
+    shaders[shaderCount++] = CreateShader(GL_VERTEX_SHADER, &vertexShaderSource);
+    shaders[shaderCount++] = CreateShader(GL_FRAGMENT_SHADER, &fragmentShaderSource);
 
-
-    u32 fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
-    gl.ShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    gl.CompileShader(fragmentShader);
-
-    gl.GetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        gl.GetShaderInfoLog(fragmentShader, 512, NULL, log);
-        LogError("SHADER::FRAGMENT::COMPILATION_FAILED %s", log);
-    }
-
-    u32 shaderProgram;
-    shaderProgram = gl.CreateProgram();
-
-    gl.AttachShader(shaderProgram, vertexShader);
-    gl.AttachShader(shaderProgram, fragmentShader);
-
-    gl.LinkProgram(shaderProgram);
-    gl.GetShaderiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        gl.GetProgramInfoLog(shaderProgram, 512, NULL, log);
-        LogError("SHADER VERTEX LINKING %s", log);
-    }
-
-    gl.DeleteShader(vertexShader);
-    gl.DeleteShader(fragmentShader);  
+    u32 shaderProgram = CreateProgram(shaders, shaderCount);
 
     u32 vertexBufferObject, vertexArrayObject;
     gl.GenVertexArrays(1, &vertexArrayObject);
