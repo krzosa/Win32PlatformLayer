@@ -11,10 +11,10 @@
 // WinMain 156 ERROR: test2
 // WinMain 157 SUCCESS: test3
 
+internal void Log(char *text, ...);
 #define LogInfo(text, ...) PrivateLogExtra("INFO: ", text, __VA_ARGS__)
 #define LogSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
-
 
 #define TEXT_BUFFER_SIZE 2048
 static HANDLE GLOBALConsoleHandle;

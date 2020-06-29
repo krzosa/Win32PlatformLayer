@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <xinput.h>
+#include <intrin.h>
 
 // Opengl
 #include <gl/GL.h>
@@ -149,16 +150,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
-    Win32Timer timer;
-    Win32TimerInit(&timer);
-    Win32LoadXInput();
     Win32MaintainAspectRatio(windowHandle, 16, 9);
+    Win32LoadXInput();
 
-    v2 offset = {0, 0};
-
-    // NOTE: Log OpenGL version
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
-
 
 
     char *vertexShaderSource = 
@@ -175,8 +170,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         "void main(){"
             "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
 
-    
-    // glViewport(1000, 0, 100, 100);
     u32 shaders[2];
     u32 shaderCount = 0;
 
@@ -201,9 +194,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     gl.EnableVertexAttribArray(0);
 
+    LARGE_INTEGER performanceCounterFrequencyResult;
+    QueryPerformanceFrequency(&performanceCounterFrequencyResult);
+    i64 performanceCounterFrequency = performanceCounterFrequencyResult.QuadPart;
+
+    LARGE_INTEGER startCount;
+    QueryPerformanceCounter(&startCount);
+    LARGE_INTEGER beginFrame = startCount;
+
+    u64 startCycles = __rdtsc();
+    u64 beginFrameCycles = startCycles;
+
     while(GLOBALAppStatus)
     {
-        Win32TimerBeginFrame(&timer);
         MSG Message;
         while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
         {
@@ -212,20 +215,29 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
         Win32UpdateXInput();
 
-        offset.y += GLOBALUserInput.up;
-        offset.y -= GLOBALUserInput.down;
-        offset.x += GLOBALUserInput.right;
-        offset.x -= GLOBALUserInput.left;
-        v4 lineColor = {0,255,255,255};
-
-        glClearColor(0 + offset.x / 2000 - offset.y / 2000, 0.5, 0.5, 1.0);
+        glClearColor(0, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         gl.UseProgram(shaderProgram);
         gl.DrawArrays(GL_TRIANGLES, 0, 3);
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        Win32TimerEndFrame(&timer, 16);
+
+        u64 endFrameCycles = __rdtsc();
+        LARGE_INTEGER endFrame;
+        QueryPerformanceCounter(&endFrame);
+
+        u64 totalFrameCycles = endFrameCycles - beginFrameCycles;
+        i64 totalFrameCount = endFrame.QuadPart - beginFrame.QuadPart;
+
+        beginFrameCycles = endFrameCycles;
+        beginFrame = endFrame;
+
+        f32 framesPerSec = (f32)performanceCounterFrequency / (f32)totalFrameCount;
+        f32 msPerFrame = (f32)(totalFrameCount * 1000.0f) / (f32)performanceCounterFrequency;
+        u64 cyclesPerFrame = totalFrameCycles;
+
+        Log("frame = %ffps %lu %fms\n", framesPerSec, cyclesPerFrame, msPerFrame);
     }
     
     
