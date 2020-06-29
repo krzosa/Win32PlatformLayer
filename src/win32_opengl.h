@@ -5,11 +5,10 @@ internal void *LoadOpenGLFunction(char *name);
 internal void PrintLastErrorMessage(char *text);
 internal HGLRC Win32InitOpenGL(HDC deviceContext);
 
-typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode,
- 	GLint  	first,
- 	GLsizei  	count);
+// NOTE: OpenGL function prototypes not included in opengl header files
+typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);
 
-// OPENGL Pointers to functions
+// NOTE: OPENGL Pointers to functions
 typedef struct OpenGLFunctions
 {
     GLProc(BindBuffer, BINDBUFFER)
@@ -33,6 +32,7 @@ typedef struct OpenGLFunctions
 
     GLProc(DrawArrays, DRAWARRAYS)
     GLProc(GetShaderiv, GETSHADERIV)
+    GLProc(GetProgramiv, GETPROGRAMIV)
     GLProc(GetShaderInfoLog, GETSHADERINFOLOG)
     GLProc(GetProgramInfoLog, GETPROGRAMINFOLOG)
     GLProc(GenVertexArrays, GENVERTEXARRAYS)
@@ -72,6 +72,7 @@ LoadOpenGLFunctions()
     GLProc(DrawArrays, DRAWARRAYS)
     GLProc(GetShaderiv, GETSHADERIV)
     GLProc(GetShaderInfoLog, GETSHADERINFOLOG)
+    GLProc(GetProgramiv, GETPROGRAMIV)
     GLProc(GetProgramInfoLog, GETPROGRAMINFOLOG)
     GLProc(GenVertexArrays, GENVERTEXARRAYS)
     GLProc(BindVertexArray, BINDVERTEXARRAY)

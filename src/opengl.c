@@ -1,4 +1,5 @@
 // TODO: move maybe to dynamically allocated string, but probably I need a custom allocator first
+#define ERROR_BUFFER_SIZE 2048
 
 internal u32 
 CreateShader(GLenum shaderType, char **nullTerminatedShaderFile)
@@ -7,12 +8,13 @@ CreateShader(GLenum shaderType, char **nullTerminatedShaderFile)
     gl.ShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
     gl.CompileShader(shader);
 
-    char log[2048];
     i32 status;
     gl.GetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
     if (!status)
     {
-        gl.GetShaderInfoLog(shader, 512, NULL, log);
+        char log[ERROR_BUFFER_SIZE];
+        gl.GetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
+
         char *strShaderType = NULL;
         switch(shaderType)
         {
@@ -34,16 +36,20 @@ CreateProgram(u32 shaders[], u32 shaderCount)
     for(u32 i = 0; i != shaderCount; i++)
         gl.AttachShader(shaderProgram, shaders[i]);
 
-    i32 status;
-    char log[2048];
     gl.LinkProgram(shaderProgram);
-    gl.GetShaderiv(shaderProgram, GL_LINK_STATUS, &status);
+
+    i32 status;
+    gl.GetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
     if (!status)
     {
-        gl.GetProgramInfoLog(shaderProgram, 512, NULL, log);
-        LogError("SHADER VERTEX LINKING %s", log);
+        char log[ERROR_BUFFER_SIZE];
+        gl.GetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
+
+        LogError("Create program %s", log);
     }
 
-    gl.DeleteShader(vertexShader);
-    gl.DeleteShader(fragmentShader); 
+    for(u32 i = 0; i != shaderCount; i++)
+        gl.DeleteShader(shaders[i]); 
+
+    return shaderProgram;
 }
