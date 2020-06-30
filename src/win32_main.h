@@ -13,11 +13,11 @@ typedef struct user_input
     bool8 reset;
 } user_input;
 
-typedef struct file
+typedef struct file_data
 {
     void *contents;
     u32 size;
-} file;
+} file_data;
 
 typedef struct time_data
 {
@@ -42,5 +42,5 @@ typedef struct time_data
     // Length of the update, with sleep
     u64 totalFrameCycles;
     i64 totalFrameCount;
-
+    
 } time_data;

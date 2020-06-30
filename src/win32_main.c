@@ -10,8 +10,8 @@
 
 // Opengl
 #include <gl/GL.h>
-#include "opengl/wglext.h"
-#include "opengl/glext.h"
+#include "opengl_headers/wglext.h"
+#include "opengl_headers/glext.h"
 
 static time_data GLOBALTime;
 static bool32 GLOBALAppStatus;
@@ -25,113 +25,20 @@ static user_input GLOBALUserInput;
 #include "win32_fileio.c"
 #include "win32_xinput.c"
 #include "win32_timer.c"
+#include "win32_callback.c"
 
 #include "opengl.c"
 
 
 /* TODO: 
- * add abstractions for timers
+ * add better abstractions for timers
+ * os status abstraction
  * add wasapi audio init
  * add better input handling 
  * either implement string lib in platform or abandon all typedefines etc.
- * move platform layer to c maybe
  * hot reload
  * memory stuff
 */
-
-LRESULT CALLBACK 
-Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT Result = 0;
-
-    uint32_t VKCode = wParam;
-    switch (message) 
-    {
-        case WM_CLOSE:
-        {
-            GLOBALAppStatus = false;
-            break;
-        } 
-        case WM_DESTROY:
-        {
-            GLOBALAppStatus = false;
-            break;
-        } 
-        case WM_QUIT:
-        {
-            GLOBALAppStatus = false;
-            break;
-        }
-
-        // NOTE: resize opengl viewport on window resize
-        case WM_WINDOWPOSCHANGING:
-        case WM_SIZE:
-        {
-            Win32MaintainAspectRatio(window, 16, 9);
-            break;
-        }
-
-        case WM_KEYDOWN:
-        {
-            if(VKCode == 'W')
-            {
-                GLOBALUserInput.up = 1;
-            }
-            else if(VKCode == 'S')
-            {
-                GLOBALUserInput.down = 1;
-            }
-            if(VKCode == 'A')
-            {
-                GLOBALUserInput.left = 1;
-            }
-            else if(VKCode == 'D')
-            {
-                GLOBALUserInput.right = 1;
-            }
-            else if(VKCode == VK_ESCAPE)
-            {
-                GLOBALAppStatus = 0;
-            }
-            else if(VKCode == VK_F1)
-            {
-                GLOBALUserInput.reset = 1;
-            }
-            break;
-        }
-        case WM_KEYUP:
-        {
-            if(VKCode == 'W')
-            {
-                GLOBALUserInput.up = 0;
-            }
-            else if(VKCode == 'S')
-            {
-                GLOBALUserInput.down = 0;
-            }
-            if(VKCode == 'A')
-            {
-                GLOBALUserInput.left = 0;
-            }
-            else if(VKCode == 'D')
-            {
-                GLOBALUserInput.right = 0;
-            }
-            else if(VKCode == VK_F1)
-            {
-                GLOBALUserInput.reset = 0;
-            }
-            break;
-        }
-        default:
-        {
-            Result = DefWindowProc(window, message, wParam, lParam);
-        } break;
-        
-    }
-
-    return Result;
-}
 
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
@@ -273,8 +180,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         beginFrame = Win32GetPerformanceCount();
         beginFrameCycles = GetProcessorClockCycles();
     }
-    
-    
     
     return(0);
 }

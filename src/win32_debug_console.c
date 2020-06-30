@@ -16,6 +16,7 @@ internal void Log(char *text, ...);
 #define LogSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
 
+
 #define TEXT_BUFFER_SIZE 2048
 static HANDLE GLOBALConsoleHandle;
 static char GLOBALRandomAccessTextBuffer1[TEXT_BUFFER_SIZE];
