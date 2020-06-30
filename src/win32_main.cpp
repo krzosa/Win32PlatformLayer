@@ -1,3 +1,6 @@
+#include "typedefines.c"
+#include "win32_main.h"
+
 // CStandard Lib and Windows
 #include <windows.h>
 #include <stdio.h>
@@ -10,12 +13,14 @@
 #include "opengl/wglext.h"
 #include "opengl/glext.h"
 
+static i64 GLOBALPerformanceCounterFrequency;
+static bool32 GLOBALAppStatus = true;
+static user_input GLOBALUserInput;
+
 // Custom
-#include "typedefines.c"
 #include "string.c"
 #include "win32_opengl.h"
 #include "win32_debug_console.c"
-#include "win32_main.h"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
 #include "win32_xinput.c"
@@ -23,8 +28,17 @@
 
 #include "opengl.c"
 
-static bool32 GLOBALAppStatus = true;
-static user_input GLOBALUserInput;
+
+/* TODO: 
+ * add timed frames
+ * add abstractions for timers
+ * add wasapi audio init
+ * add better input handling 
+ * either implement string lib in platform or abandon all typedefines etc.
+ * move platform layer to c maybe
+ * hot reload
+ * memory stuff
+*/
 
 LRESULT CALLBACK 
 Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -120,9 +134,31 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     return Result;
 }
 
+inline internal f32
+PerformanceCountToMilliseconds(i64 count)
+{
+    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALPerformanceCounterFrequency;
+    return result;
+}
+
+inline internal f32
+PerformanceCountToSeconds(i64 count)
+{
+    f32 result = (f32)count / (f32)GLOBALPerformanceCounterFrequency;
+    return result;
+}
+
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
+    u64 startAppCycles = __rdtsc();
+    i64 startAppCount = Win32GetPerformanceCount();
+
+    // NOTE: set windows scheduler to wake up every millisecond
+    bool32 sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+    GLOBALPerformanceCounterFrequency = Win32GetPerformanceFrequency();
+
+
     Win32ConsoleAttach();
     
     // NOTE: Window Setup
@@ -194,16 +230,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     gl.EnableVertexAttribArray(0);
 
-    LARGE_INTEGER performanceCounterFrequencyResult;
-    QueryPerformanceFrequency(&performanceCounterFrequencyResult);
-    i64 performanceCounterFrequency = performanceCounterFrequencyResult.QuadPart;
 
-    LARGE_INTEGER startCount;
-    QueryPerformanceCounter(&startCount);
-    LARGE_INTEGER beginFrame = startCount;
-
-    u64 startCycles = __rdtsc();
-    u64 beginFrameCycles = startCycles;
+    
+    i64 beginFrame = Win32GetPerformanceCount();
+    u64 beginFrameCycles = __rdtsc();
+    f32 targetMsPerFrame = 16.6f;
 
     while(GLOBALAppStatus)
     {
@@ -223,21 +254,27 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
 
-        u64 endFrameCycles = __rdtsc();
-        LARGE_INTEGER endFrame;
-        QueryPerformanceCounter(&endFrame);
 
-        u64 totalFrameCycles = endFrameCycles - beginFrameCycles;
-        i64 totalFrameCount = endFrame.QuadPart - beginFrame.QuadPart;
+        u64 updateFrameCycles = __rdtsc() - beginFrameCycles;
+        i64 updateFrameCount = Win32GetPerformanceCount() - beginFrame;
 
-        beginFrameCycles = endFrameCycles;
-        beginFrame = endFrame;
+        f32 msPerUpdate = PerformanceCountToMilliseconds(updateFrameCount);
+        if(msPerUpdate < targetMsPerFrame)
+        {
+            if(sleepIsGranular)
+                Sleep(targetMsPerFrame - msPerUpdate);
+        }
+        else
+            LogError("Missed framerate!");
 
-        f32 framesPerSec = (f32)performanceCounterFrequency / (f32)totalFrameCount;
-        f32 msPerFrame = (f32)(totalFrameCount * 1000.0f) / (f32)performanceCounterFrequency;
-        u64 cyclesPerFrame = totalFrameCycles;
+        i64 totalFrameCount = Win32GetPerformanceCount() - beginFrame;
+        u64 totalFrameCycles = __rdtsc() - beginFrameCycles;
+        f32 totalMsPerFrame = PerformanceCountToMilliseconds(totalFrameCount);
+        f32 framesPerSec = 1 / PerformanceCountToSeconds(totalFrameCount); 
 
-        Log("frame = %ffps %lu %fms\n", framesPerSec, cyclesPerFrame, msPerFrame);
+        Log("frame = %ffps %lucycles %fms\n", framesPerSec, totalFrameCycles, totalMsPerFrame);
+        beginFrame = Win32GetPerformanceCount();
+        beginFrameCycles = __rdtsc();
     }
     
     

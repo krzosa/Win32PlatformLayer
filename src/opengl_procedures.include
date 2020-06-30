@@ -1,0 +1,25 @@
+GLLoad(BindBuffer, BINDBUFFER)
+GLLoad(GenBuffers, GENBUFFERS)
+GLLoad(BufferData, BUFFERDATA)
+GLLoad(BindVertexArray, BINDVERTEXARRAY)
+
+GLLoad(CreateShader, CREATESHADER)
+GLLoad(CompileShader, COMPILESHADER)
+GLLoad(ShaderSource, SHADERSOURCE)
+GLLoad(AttachShader, ATTACHSHADER)
+GLLoad(DeleteShader, DELETESHADER)
+
+GLLoad(CreateProgram, CREATEPROGRAM)
+GLLoad(LinkProgram, LINKPROGRAM)
+GLLoad(UseProgram, USEPROGRAM)
+
+GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
+
+GLLoad(DrawArrays, DRAWARRAYS)
+GLLoad(GetShaderiv, GETSHADERIV)
+GLLoad(GetProgramiv, GETPROGRAMIV)
+GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
+GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
+GLLoad(GenVertexArrays, GENVERTEXARRAYS)
