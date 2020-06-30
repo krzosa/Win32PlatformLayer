@@ -3,6 +3,8 @@
 #define local_global static
 // Function internal to the obj, file 
 #define internal static
+#define true 1
+#define false 0
 
 typedef int8_t   i8;
 typedef int16_t  i16;

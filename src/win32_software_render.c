@@ -8,6 +8,18 @@ struct win32_offscreen_buffer
     // Note: Pixels are always 32bits wide
 };
 
+window_dimension 
+Win32GetWindowDimension(HWND Window)
+{
+    RECT ClientRect;
+    window_dimension windowDimension;
+    // get size of the window, without the border
+    GetClientRect(Window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+    return windowDimension;
+}
+
 internal void 
 Win32ResizeDIBSection(win32_offscreen_buffer* buffer, i32 width, i32 height)
 {

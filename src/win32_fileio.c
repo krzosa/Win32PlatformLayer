@@ -10,7 +10,7 @@ FreeFileMemory(void *Memory)
 internal file 
 ReadEntireFile(char *filename)
 {
-    file result = {};
+    file result = {0};
     
     HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
     if(fileHandle != INVALID_HANDLE_VALUE)

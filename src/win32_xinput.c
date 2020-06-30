@@ -65,18 +65,18 @@ Win32UpdateXInput(void)
         if(XInputGetStateFunctionPointer( i, &state ) == ERROR_SUCCESS)
         {
             XINPUT_GAMEPAD *gamepad = &state.Gamepad;
-            bool up = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-            bool down = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-            bool left = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-            bool right = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-            bool start = (gamepad->wButtons & XINPUT_GAMEPAD_START);
-            bool back = (gamepad->wButtons & XINPUT_GAMEPAD_BACK);
-            bool leftShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
-            bool rightShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-            bool AButton = (gamepad->wButtons & XINPUT_GAMEPAD_A);
-            bool BButton = (gamepad->wButtons & XINPUT_GAMEPAD_B);
-            bool XButton = (gamepad->wButtons & XINPUT_GAMEPAD_X);
-            bool YButton = (gamepad->wButtons & XINPUT_GAMEPAD_Y);
+            bool8 up = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+            bool8 down = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+            bool8 left = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+            bool8 right = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+            bool8 start = (gamepad->wButtons & XINPUT_GAMEPAD_START);
+            bool8 back = (gamepad->wButtons & XINPUT_GAMEPAD_BACK);
+            bool8 leftShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+            bool8 rightShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+            bool8 AButton = (gamepad->wButtons & XINPUT_GAMEPAD_A);
+            bool8 BButton = (gamepad->wButtons & XINPUT_GAMEPAD_B);
+            bool8 XButton = (gamepad->wButtons & XINPUT_GAMEPAD_X);
+            bool8 YButton = (gamepad->wButtons & XINPUT_GAMEPAD_Y);
 
             i16 stickX = gamepad->sThumbLX;
             i16 stickY = gamepad->sThumbLY;

@@ -30,7 +30,6 @@ static user_input GLOBALUserInput;
 
 
 /* TODO: 
- * add timed frames
  * add abstractions for timers
  * add wasapi audio init
  * add better input handling 
@@ -134,35 +133,21 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     return Result;
 }
 
-inline internal f32
-PerformanceCountToMilliseconds(i64 count)
-{
-    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALPerformanceCounterFrequency;
-    return result;
-}
-
-inline internal f32
-PerformanceCountToSeconds(i64 count)
-{
-    f32 result = (f32)count / (f32)GLOBALPerformanceCounterFrequency;
-    return result;
-}
-
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
+    // NOTE: Set timers to application start
     u64 startAppCycles = __rdtsc();
     i64 startAppCount = Win32GetPerformanceCount();
 
-    // NOTE: set windows scheduler to wake up every millisecond
+    // NOTE: Set windows scheduler to wake up every 1 millisecond
     bool32 sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
     GLOBALPerformanceCounterFrequency = Win32GetPerformanceFrequency();
-
 
     Win32ConsoleAttach();
     
     // NOTE: Window Setup
-    WNDCLASSA windowClass = {};
+    WNDCLASSA windowClass = {0};
     {
         windowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
         windowClass.lpfnWndProc    = Win32MainWindowCallback;
@@ -184,6 +169,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     if(!windowHandle) LogError("Create Window");
 
+    // NOTE: Window context setup and opengl context setup
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32InitOpenGL(deviceContext);
     Win32MaintainAspectRatio(windowHandle, 16, 9);
@@ -229,7 +215,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     gl.EnableVertexAttribArray(0);
-
+    gl.UseProgram(shaderProgram);
 
     
     i64 beginFrame = Win32GetPerformanceCount();
@@ -249,7 +235,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         glClearColor(0, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        gl.UseProgram(shaderProgram);
+        
         gl.DrawArrays(GL_TRIANGLES, 0, 3);
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);

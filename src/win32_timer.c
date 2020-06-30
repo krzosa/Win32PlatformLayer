@@ -15,15 +15,16 @@ Win32GetPerformanceFrequency()
     return performanceCounterFrequencyResult.QuadPart;
 }
 
-inline internal f32 
-PerformanceCountToMilliseconds(i64 count, i64 frequency)
+inline internal f32
+PerformanceCountToMilliseconds(i64 count)
 {
-    f32 result = (f32)(count * 1000.0f) / (f32)frequency;
+    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALPerformanceCounterFrequency;
     return result;
 }
 
 inline internal f32
-PerformanceCountToSeconds(i64 count, i64 frequency)
+PerformanceCountToSeconds(i64 count)
 {
-    return (f32)count / (f32)GLOBALPerformanceCounterFrequency;
+    f32 result = (f32)count / (f32)GLOBALPerformanceCounterFrequency;
+    return result;
 }
