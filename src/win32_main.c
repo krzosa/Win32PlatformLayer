@@ -13,8 +13,8 @@
 #include "opengl/wglext.h"
 #include "opengl/glext.h"
 
-static i64 GLOBALPerformanceCounterFrequency;
-static bool32 GLOBALAppStatus = true;
+static time_data GLOBALTime;
+static bool32 GLOBALAppStatus;
 static user_input GLOBALUserInput;
 
 // Custom
@@ -137,13 +137,16 @@ int
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
     // NOTE: Set timers to application start
-    u64 startAppCycles = __rdtsc();
-    i64 startAppCount = Win32GetPerformanceCount();
+    GLOBALTime.startAppCycles = GetProcessorClockCycles();
+    GLOBALTime.startAppCount = Win32GetPerformanceCount();
 
     // NOTE: Set windows scheduler to wake up every 1 millisecond
-    bool32 sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-    GLOBALPerformanceCounterFrequency = Win32GetPerformanceFrequency();
+    GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+    GLOBALTime.performanceCounterFrequency = Win32GetPerformanceFrequency();
 
+    GLOBALTime.targetMsPerFrame = 16.6f;
+
+    // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
     
     // NOTE: Window Setup
@@ -219,9 +222,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     
     i64 beginFrame = Win32GetPerformanceCount();
-    u64 beginFrameCycles = __rdtsc();
-    f32 targetMsPerFrame = 16.6f;
+    u64 beginFrameCycles = GetProcessorClockCycles();
 
+    GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
         MSG Message;
@@ -241,26 +244,34 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
 
 
-        u64 updateFrameCycles = __rdtsc() - beginFrameCycles;
-        i64 updateFrameCount = Win32GetPerformanceCount() - beginFrame;
+        GLOBALTime.updateFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
+        GLOBALTime.updateFrameCount = Win32GetPerformanceCount() - beginFrame;
 
-        f32 msPerUpdate = PerformanceCountToMilliseconds(updateFrameCount);
-        if(msPerUpdate < targetMsPerFrame)
+        f32 msPerUpdate = PerformanceCountToMilliseconds(GLOBALTime.updateFrameCount);
+        if(msPerUpdate < GLOBALTime.targetMsPerFrame)
         {
-            if(sleepIsGranular)
-                Sleep(targetMsPerFrame - msPerUpdate);
+            if(GLOBALTime.sleepIsGranular)
+            {
+                Sleep(GLOBALTime.targetMsPerFrame - msPerUpdate);
+            }
+            else
+            {
+                LogError("Sleep is not granular!");
+            }
         }
         else
+        {
             LogError("Missed framerate!");
+        }
 
-        i64 totalFrameCount = Win32GetPerformanceCount() - beginFrame;
-        u64 totalFrameCycles = __rdtsc() - beginFrameCycles;
-        f32 totalMsPerFrame = PerformanceCountToMilliseconds(totalFrameCount);
-        f32 framesPerSec = 1 / PerformanceCountToSeconds(totalFrameCount); 
+        GLOBALTime.totalFrameCount = Win32GetPerformanceCount() - beginFrame;
+        GLOBALTime.totalFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
+        f32 totalMsPerFrame = PerformanceCountToMilliseconds(GLOBALTime.totalFrameCount);
+        f32 framesPerSec = 1 / PerformanceCountToSeconds(GLOBALTime.totalFrameCount); 
 
-        Log("frame = %ffps %lucycles %fms\n", framesPerSec, totalFrameCycles, totalMsPerFrame);
+        Log("frame = %ffps %lucycles %fms\n", framesPerSec, GLOBALTime.totalFrameCycles, totalMsPerFrame);
         beginFrame = Win32GetPerformanceCount();
-        beginFrameCycles = __rdtsc();
+        beginFrameCycles = GetProcessorClockCycles();
     }
     
     

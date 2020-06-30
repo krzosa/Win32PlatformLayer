@@ -1,3 +1,5 @@
+#define GetProcessorClockCycles() __rdtsc()
+
 inline internal i64
 Win32GetPerformanceCount()
 {
@@ -18,13 +20,20 @@ Win32GetPerformanceFrequency()
 inline internal f32
 PerformanceCountToMilliseconds(i64 count)
 {
-    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALPerformanceCounterFrequency;
+    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALTime.performanceCounterFrequency;
     return result;
 }
 
 inline internal f32
 PerformanceCountToSeconds(i64 count)
 {
-    f32 result = (f32)count / (f32)GLOBALPerformanceCounterFrequency;
+    f32 result = (f32)count / (f32)GLOBALTime.performanceCounterFrequency;
+    return result;
+}
+
+inline internal f32
+PerformanceCountToFramesPerSecond(i64 count)
+{
+    f32 result = 1 / ((f32)count / (f32)GLOBALTime.performanceCounterFrequency);
     return result;
 }
