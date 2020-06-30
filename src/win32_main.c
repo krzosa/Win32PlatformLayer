@@ -7,6 +7,10 @@
 #include <assert.h>
 #include <xinput.h>
 #include <intrin.h>
+#include <objbase.h>
+#include <audioclient.h>
+#include <audiopolicy.h>
+#include <mmdeviceapi.h>
 
 // Opengl
 #include <gl/GL.h>
@@ -26,32 +30,38 @@ static user_input GLOBALUserInput;
 #include "win32_xinput.c"
 #include "win32_timer.c"
 #include "win32_callback.c"
-
 #include "opengl.c"
 
-
 /* TODO: 
- * add better abstractions for timers
  * os status abstraction
  * add wasapi audio init
  * add better input handling 
- * either implement string lib in platform or abandon all typedefines etc.
+ * either implement string lib in platform or not
  * hot reload
  * memory stuff
 */
 
+static const GUID IID_IAudioClient = {0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2};
+static const GUID IID_IAudioRenderClient = {0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2};
+static const GUID CLSID_MMDeviceEnumerator = {0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E};
+static const GUID IID_IMMDeviceEnumerator = {0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6};
+static const GUID PcmSubformatGuid = {STATIC_KSDATAFORMAT_SUBTYPE_PCM};
+
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
-    // NOTE: Set timers to application start
-    GLOBALTime.startAppCycles = GetProcessorClockCycles();
-    GLOBALTime.startAppCount = Win32GetPerformanceCount();
+    // NOTE: Init time data
+    {
+        // NOTE: Set timers to application start
+        GLOBALTime.startAppCycles = GetProcessorClockCycles();
+        GLOBALTime.startAppCount = Win32GetPerformanceCount();
 
-    // NOTE: Set windows scheduler to wake up every 1 millisecond
-    GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-    GLOBALTime.performanceCounterFrequency = Win32GetPerformanceFrequency();
+        // NOTE: Set windows scheduler to wake up every 1 millisecond
+        GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+        GLOBALTime.performanceCounterFrequency = Win32GetPerformanceFrequency();
 
-    GLOBALTime.targetMsPerFrame = 16.6f;
+        GLOBALTime.targetMsPerFrame = 16.6f;
+    }
 
     // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
@@ -86,6 +96,40 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32LoadXInput();
 
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
+
+    CoInitializeEx(0, COINIT_SPEED_OVER_MEMORY);
+
+    HRESULT result;
+
+	IMMDeviceEnumerator *deviceEnum = NULL;
+	result = CoCreateInstance(
+		&CLSID_MMDeviceEnumerator, NULL,
+		CLSCTX_ALL, &IID_IMMDeviceEnumerator,
+		(LPVOID *)&deviceEnum);
+
+    if(result != S_OK)
+    {
+        LogError("CoCreateInstance");
+        return 0;
+    }
+
+    IMMDevice *device = NULL;
+	result = deviceEnum->lpVtbl->GetDefaultAudioEndpoint(deviceEnum, eRender, eConsole, &device);
+
+    if(result != S_OK)
+    {
+        LogError("GetDefaultAudioEndpoint");
+        return 0;
+    }
+
+    IAudioClient *audioClient;
+    result = device->lpVtbl->Activate(device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audioClient);
+
+    if(result != S_OK)
+    {
+        LogError("Activate audio client");
+        return 0;
+    }
 
 
     char *vertexShaderSource = 
@@ -145,40 +189,43 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         glClearColor(0, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        
         gl.DrawArrays(GL_TRIANGLES, 0, 3);
         
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
 
-
-        GLOBALTime.updateFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
-        GLOBALTime.updateFrameCount = Win32GetPerformanceCount() - beginFrame;
-
-        f32 msPerUpdate = PerformanceCountToMilliseconds(GLOBALTime.updateFrameCount);
-        if(msPerUpdate < GLOBALTime.targetMsPerFrame)
+        //
+        // NOTE: Time the frame and sleep to hit target framerate
+        //
         {
-            if(GLOBALTime.sleepIsGranular)
+            GLOBALTime.updateFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
+            GLOBALTime.updateFrameCount = Win32GetPerformanceCount() - beginFrame;
+
+            f32 msPerUpdate = PerformanceCountToMilliseconds(GLOBALTime.updateFrameCount);
+            if(msPerUpdate < GLOBALTime.targetMsPerFrame)
             {
-                Sleep(GLOBALTime.targetMsPerFrame - msPerUpdate);
+                if(GLOBALTime.sleepIsGranular)
+                {
+                    Sleep(GLOBALTime.targetMsPerFrame - msPerUpdate);
+                }
+                else
+                {
+                    LogError("Sleep is not granular!");
+                }
             }
             else
             {
-                LogError("Sleep is not granular!");
+                LogError("Missed framerate!");
             }
-        }
-        else
-        {
-            LogError("Missed framerate!");
-        }
 
-        GLOBALTime.totalFrameCount = Win32GetPerformanceCount() - beginFrame;
-        GLOBALTime.totalFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
-        f32 totalMsPerFrame = PerformanceCountToMilliseconds(GLOBALTime.totalFrameCount);
-        f32 framesPerSec = 1 / PerformanceCountToSeconds(GLOBALTime.totalFrameCount); 
+            GLOBALTime.totalFrameCount = Win32GetPerformanceCount() - beginFrame;
+            GLOBALTime.totalFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
+            f32 totalMsPerFrame = PerformanceCountToMilliseconds(GLOBALTime.totalFrameCount);
+            f32 framesPerSec = 1 / PerformanceCountToSeconds(GLOBALTime.totalFrameCount); 
 
-        Log("frame = %ffps %lucycles %fms\n", framesPerSec, GLOBALTime.totalFrameCycles, totalMsPerFrame);
-        beginFrame = Win32GetPerformanceCount();
-        beginFrameCycles = GetProcessorClockCycles();
+            Log("frame = %ffps %lucycles %fms\n", framesPerSec, GLOBALTime.totalFrameCycles, totalMsPerFrame);
+            beginFrame = Win32GetPerformanceCount();
+            beginFrameCycles = GetProcessorClockCycles();
+        }
     }
     
     return(0);
