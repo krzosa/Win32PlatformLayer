@@ -1,9 +1,12 @@
-typedef HRESULT CoCreateInstanceFunction(REFCLSID rclsid, LPUNKNOWN *pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
-typedef HRESULT CoInitializeExFunction(LPVOID pvReserved, DWORD dwCoInit);
+// NOTE: typedefines for the functions which are goint to be loaded
+typedef HRESULT CoCreateInstanceFunction (REFCLSID rclsid, LPUNKNOWN *pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
+typedef HRESULT CoInitializeExFunction (LPVOID pvReserved, DWORD dwCoInit);
 
+// NOTE: empty functions(stubs) which are used when library fails to load
 HRESULT CoCreateInstanceStub(REFCLSID rclsid, LPUNKNOWN *pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv){return 0;}
 HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit){return 0;}
 
+// NOTE: pointers to the functions from the dll
 static CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 static CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
@@ -15,7 +18,17 @@ Win32COMLoad(void)
     {
         LogSuccess("COM Ole32.dll load");
         CoCreateInstanceFunctionPointer = (CoCreateInstanceFunction *)GetProcAddress(ole32Library, "CoCreateInstance");
+        if(!CoCreateInstanceFunctionPointer)
+        {
+            LogError("CoCreateInstance load");
+            CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
+        }
         CoInitializeExFunctionPointer = (CoInitializeExFunction *)GetProcAddress(ole32Library, "CoInitializeEx");
+        if(!CoInitializeExFunctionPointer)
+        {
+            LogError("CoInitializeEx load");
+            CoInitializeExFunctionPointer = CoInitializeExStub;
+        }
     }
     else
     {
@@ -61,5 +74,8 @@ Win32WasapiInitialize()
         LogError("IAudioClient Activate");
         return;
     }
+
+    WAVEFORMATEX *waveFormat = 0;
+    audioClient->lpVtbl->GetMixFormat(audioClient, &waveFormat);
 
 }

@@ -65,9 +65,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
+    Win32COMLoad();
+    Win32XInputLoad();
+    
     // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
-    Win32COMLoad();
     
     // NOTE: Window Setup
     WNDCLASSA windowClass = {0};
@@ -95,11 +97,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Window context setup and opengl context setup
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
+    LogSuccess("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
+
     Win32AspectRatioMaintain(windowHandle, 16, 9);
     Win32WasapiInitialize();    
-    Win32XInputLoad();
-
-    LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
 
     char *vertexShaderSource = 
