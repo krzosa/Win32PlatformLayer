@@ -26,7 +26,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_WINDOWPOSCHANGING:
         case WM_SIZE:
         {
-            Win32MaintainAspectRatio(window, 16, 9);
+            Win32AspectRatioMaintain(window, 16, 9);
             break;
         }
 

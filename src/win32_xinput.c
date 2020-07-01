@@ -11,7 +11,7 @@ static XInputSetStateProc *XInputSetStateFunctionPointer = XInputSetStateStub;
 static XInputGetStateProc *XInputGetStateFunctionPointer = XInputGetStateStub;
 
 internal void 
-Win32LoadXInput(void)    
+Win32XInputLoad(void)    
 {
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
 

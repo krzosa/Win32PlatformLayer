@@ -1,18 +1,18 @@
 internal void
-LoadOpenGLFunctions()
+OpenGLFunctionsLoad()
 {
-    // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
-    #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)LoadOpenGLFunction("gl" #name);
+    // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
+    #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)OpenGLFunctionLoad("gl" #name);
 
     // NOTE: Load main OpenGL functions
-    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
+    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
     #include "opengl_procedures.include" // include OpenGL functions to load
     #undef GLLoad // undefine GLLoad macro 
 }
 
 
 internal void * 
-LoadOpenGLFunction(char *name)
+OpenGLFunctionLoad(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
   if(p == 0 ||
@@ -48,7 +48,7 @@ PrintLastErrorMessage(char *text)
 }
 
 internal HGLRC
-Win32InitOpenGL(HDC deviceContext)
+Win32OpenGLInit(HDC deviceContext)
 {
     HGLRC mainOpenglContext;
     PIXELFORMATDESCRIPTOR pixelFormat =
@@ -93,12 +93,12 @@ Win32InitOpenGL(HDC deviceContext)
     PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
 
     // NOTE: Load windows opengl functions
-    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)LoadOpenGLFunction("wglChoosePixelFormatARB");
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)LoadOpenGLFunction("wglCreateContextAttribsARB");
-    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)LoadOpenGLFunction("wglMakeContextCurrentARB");
-    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)LoadOpenGLFunction("wglSwapIntervalEXT");
+    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)OpenGLFunctionLoad("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)OpenGLFunctionLoad("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)OpenGLFunctionLoad("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)OpenGLFunctionLoad("wglSwapIntervalEXT");
 
-    LoadOpenGLFunctions();
+    OpenGLFunctionsLoad();
 
     int attribList[] =
     {
@@ -140,7 +140,7 @@ Win32InitOpenGL(HDC deviceContext)
 }
 
 internal void
-Win32MaintainAspectRatio(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
+Win32AspectRatioMaintain(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
 {
     RECT ClientRect;
     // NOTE: get size of the window, without the border

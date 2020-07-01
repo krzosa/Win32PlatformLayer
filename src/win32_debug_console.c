@@ -5,7 +5,7 @@
 
 // Example Printout: 
 // Win32MainWindowCallback 40 INFO: WM_ACTIVATEAPP
-// Win32LoadXInput 47 SUCCESS: XInput loaded
+// Win32XInputLoad 47 SUCCESS: XInput loaded
 // WinMain 153 INFO: OPENGL VERSION: 3.3.0 NVIDIA 445.75
 // WinMain 155 INFO: test1 12 aasafaf
 // WinMain 156 ERROR: test2

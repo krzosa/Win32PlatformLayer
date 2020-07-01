@@ -16,7 +16,6 @@
 #include <gl/GL.h>
 #include "opengl_headers/wglext.h"
 #include "opengl_headers/glext.h"
-
 #include "win32_opengl.h"
 
 static time_data GLOBALTime;
@@ -93,9 +92,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     // NOTE: Window context setup and opengl context setup
     HDC deviceContext = GetDC(windowHandle);
-    HGLRC openglContext = Win32InitOpenGL(deviceContext);
-    Win32MaintainAspectRatio(windowHandle, 16, 9);
-    Win32LoadXInput();
+    HGLRC openglContext = Win32OpenGLInit(deviceContext);
+    Win32AspectRatioMaintain(windowHandle, 16, 9);
+    Win32XInputLoad();
 
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
@@ -154,10 +153,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     u32 shaders[2];
     u32 shaderCount = 0;
 
-    shaders[shaderCount++] = CreateShader(GL_VERTEX_SHADER, &vertexShaderSource);
-    shaders[shaderCount++] = CreateShader(GL_FRAGMENT_SHADER, &fragmentShaderSource);
+    shaders[shaderCount++] = ShaderCreate(GL_VERTEX_SHADER, &vertexShaderSource);
+    shaders[shaderCount++] = ShaderCreate(GL_FRAGMENT_SHADER, &fragmentShaderSource);
 
-    u32 shaderProgram = CreateProgram(shaders, shaderCount);
+    u32 shaderProgram = ProgramCreate(shaders, shaderCount);
 
     u32 vertexBufferObject, vertexArrayObject;
     gl.GenVertexArrays(1, &vertexArrayObject);
@@ -182,7 +181,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     Win32DLLCode dllCode = {0};
     AppMemory memory = {0};
-    dllCode = Win32LoadDLLCode(mainDLLPath, tempDLLPath);
+    dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(&memory);
     
     i64 beginFrame = Win32GetPerformanceCount();
@@ -191,11 +190,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
-        FILETIME newDLLWriteTime = Win32GetLastWriteTime(mainDLLPath);
+        FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
         if(CompareFileTime(&newDLLWriteTime, &dllCode.lastDllWriteTime) != 0)
         {
-            Win32UnloadDLLCode(&dllCode);
-            dllCode = Win32LoadDLLCode(mainDLLPath, tempDLLPath);
+            Win32DLLCodeUnload(&dllCode);
+            dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
             dllCode.hotReload(&memory);
         }
 

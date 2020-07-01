@@ -2,9 +2,9 @@
 #define GLLoad(name, type) PFNGL##type##PROC name;
 
 // NOTE: forward declarations
-internal void *LoadOpenGLFunction(char *name);
-internal void PrintLastErrorMessage(char *text);
-internal HGLRC Win32InitOpenGL(HDC deviceContext);
+internal void *OpenGLFunctionLoad(char *name);
+internal void ErrorMessageLastPrint(char *text);
+internal HGLRC Win32OpenGLInit(HDC deviceContext);
 
 // NOTE: OpenGL function prototypes not included in opengl header files
 typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);

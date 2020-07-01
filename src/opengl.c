@@ -2,7 +2,7 @@
 #define ERROR_BUFFER_SIZE 2048
 
 internal u32 
-CreateShader(GLenum shaderType, char **nullTerminatedShaderFile)
+ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
 {
     u32 shader = gl.CreateShader(shaderType);
     gl.ShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
@@ -29,7 +29,7 @@ CreateShader(GLenum shaderType, char **nullTerminatedShaderFile)
 }
 
 internal u32
-CreateProgram(u32 shaders[], u32 shaderCount)
+ProgramCreate(u32 shaders[], u32 shaderCount)
 {
     u32 shaderProgram = gl.CreateProgram();
 

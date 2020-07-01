@@ -24,7 +24,7 @@ typedef struct Win32DLLCode
 /* Searches for a file, extracts properties and returns the time
     the file was last written to  */
 internal FILETIME 
-Win32GetLastWriteTime(char* file)
+Win32LastWriteTimeGet(char* file)
 {
     FILETIME lastWriteTime = {0};
     WIN32_FIND_DATAA data;
@@ -45,10 +45,10 @@ Win32GetLastWriteTime(char* file)
 // Creates a copy of the main dll, and loads that copy
 // if load fails it substitutes the loaded function with a stub(empty function)
 internal Win32DLLCode
-Win32LoadDLLCode(char *mainDllPath, char *tempDllPath)
+Win32DLLCodeLoad(char *mainDllPath, char *tempDllPath)
 {
     Win32DLLCode result;
-    result.lastDllWriteTime = Win32GetLastWriteTime(tempDllPath);
+    result.lastDllWriteTime = Win32LastWriteTimeGet(tempDllPath);
 
     CopyFileA((LPCSTR)mainDllPath, (LPCSTR)tempDllPath, FALSE);
     
@@ -83,7 +83,7 @@ Win32LoadDLLCode(char *mainDllPath, char *tempDllPath)
 
 /* Unloads the dll and nulls the pointers to functions from the dll */
 internal void
-Win32UnloadDLLCode(Win32DLLCode *dllCode)
+Win32DLLCodeUnload(Win32DLLCode *dllCode)
 {
     if (dllCode->library)
     {
