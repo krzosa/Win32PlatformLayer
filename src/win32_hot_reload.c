@@ -74,10 +74,10 @@ Win32DLLCodeLoad(char *mainDllPath, char *tempDllPath)
         result.initialize = InitializeStub;
         result.hotReload = HotReloadStub;
         
-        LogError("FAILED TO LOAD LIBRARY");
+        LogError("MainDLLCode Load");
     }
 
-    LogInfo("DLLCode valid? = %d", result.isValid);
+    LogInfo("MainDLLCode Load");
     return result;
 }
 
@@ -92,7 +92,7 @@ Win32DLLCodeUnload(Win32DLLCode *dllCode)
         dllCode->initialize = InitializeStub;
         dllCode->hotReload = HotReloadStub;
         dllCode->update = UpdateStub;
-        LogInfo("Unload game code");
+        LogInfo("MainDLLCode Unload");
     }
 
     dllCode->isValid = false;

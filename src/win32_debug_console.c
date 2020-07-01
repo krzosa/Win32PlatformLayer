@@ -55,11 +55,19 @@ PrivateLogExtra(char *prepend, char *text, ...)
     WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength + 1, 0, 0);
 }
 
+// TODO: create a console when failed to attach
 internal void
 Win32ConsoleAttach(void)
 {
     // NOTE: Console Setup
-    if(!AttachConsole(ATTACH_PARENT_PROCESS)) OutputDebugStringA("Failed to attach to console\n");
+    if(!AttachConsole(ATTACH_PARENT_PROCESS)) 
+    {
+        OutputDebugStringA("Failed to attach to console\n");
+        if(!AllocConsole())
+        {
+            OutputDebugStringA("Failed to create a console\n");
+        }
+    }
 
     GLOBALConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     if(!GLOBALConsoleHandle) OutputDebugStringA("Failed to get console handle\n");

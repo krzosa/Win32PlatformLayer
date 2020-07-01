@@ -16,6 +16,8 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 static CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 static CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
+// NOTE: Load COM Library functions dynamically, 
+//       this way sound is not necessary to run the game
 internal void
 Win32COMLoad(void)
 {
@@ -52,12 +54,11 @@ Win32WasapiInitialize()
 
     if(result != S_OK)
     {
-        LogError("CoInitializeExFunction returned 0");
+        LogError("CoInitializeExFunction");
     }
 
 
     IMMDeviceEnumerator *deviceEnum = NULL;
-
     result = CoCreateInstanceFunctionPointer(
         &CLSID_MMDeviceEnumerator, NULL,
         CLSCTX_ALL, &IID_IMMDeviceEnumerator,
@@ -87,17 +88,16 @@ Win32WasapiInitialize()
         return;
     }
 
-    // WAVEFORMATEX *currWaveFormat = 0;
-    // audioClient->lpVtbl->GetMixFormat(audioClient, &currWaveFormat);
-
     WAVEFORMATEX waveFormat = {0};
-    waveFormat.wFormatTag = WAVE_FORMAT_PCM;
-    waveFormat.nChannels = 2;
-    waveFormat.nSamplesPerSec = 48000;
-    waveFormat.wBitsPerSample = 16;
-    waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
-    waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
-    waveFormat.cbSize = 0;
+    {
+        waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+        waveFormat.nChannels = 2;
+        waveFormat.nSamplesPerSec = 48000;
+        waveFormat.wBitsPerSample = 16;
+        waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
+        waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
+        waveFormat.cbSize = 0;
+    }
 
     #define REFERENCE_TIMES_PER_SEC 10000000
     REFERENCE_TIME requestedBufferDuration = REFERENCE_TIMES_PER_SEC * 2;
@@ -151,6 +151,9 @@ Win32WasapiInitialize()
         LogError("IAudioClient Start");
         return;
     }
+
+    u32 audioBufferSize = 0;
+    audioClient->lpVtbl->GetBufferSize(audioClient, &audioBufferSize);
 
     LogSuccess("WASAPI Initialized");
 
