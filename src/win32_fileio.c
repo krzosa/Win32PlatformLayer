@@ -56,7 +56,7 @@ ReadEntireFile(char *filename)
 }
 
 internal str *
-ExecutablePathGet()
+Win32ExecutableDirectoryPathGet()
 {
     char fileName[MAX_PATH];
     DWORD result = GetModuleFileNameA(0, fileName, MAX_PATH);

@@ -4,7 +4,7 @@ OpenGLFunctionsLoad()
     // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
     #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)OpenGLFunctionLoad("gl" #name);
 
-    // NOTE: Load main OpenGL functions
+    // NOTE: Load main OpenGL functions using a macro
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
     #include "opengl_procedures.include" // include OpenGL functions to load
     #undef GLLoad // undefine GLLoad macro 
@@ -26,25 +26,6 @@ OpenGLFunctionLoad(char *name)
   assert(p != 0);
 
   return p;
-}
-
-internal void
-PrintLastErrorMessage(char *text)
-{
-    DWORD dLastError = GetLastError();
-    LPSTR strErrorMessage = NULL;
-    
-    FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | 
-        FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-        NULL,
-        dLastError,
-        0,
-        strErrorMessage,
-        0,
-        NULL);
-
-    Log("%s: %s\n", text, strErrorMessage);
 }
 
 internal HGLRC
@@ -77,14 +58,14 @@ Win32OpenGLInit(HDC deviceContext)
         Log("FAILED to choose pixel format\n");
     
     if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
-        PrintLastErrorMessage("FAILED: to set PixelFormat");
+        Win32LastErrorMessagePrint("FAILED: to set PixelFormat");
 
     HGLRC dummyOpenglContext = wglCreateContext(deviceContext);
 
     if(!dummyOpenglContext)
-        PrintLastErrorMessage("FAILED: to create dummy opengl context");
+        Win32LastErrorMessagePrint("FAILED: to create dummy opengl context");
     if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
-        PrintLastErrorMessage("FAILED: to make dummy opengl context current");
+        Win32LastErrorMessagePrint("FAILED: to make dummy opengl context current");
 
     // NOTE: Pointers to windows opengl functions
     PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = 0;

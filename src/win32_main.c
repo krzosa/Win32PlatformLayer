@@ -32,6 +32,7 @@ static OpenGLFunctions gl = {0};
 #include "win32_timer.c"
 #include "win32_callback.c"
 #include "win32_hot_reload.c"
+#include "win32_wasapi.c"
 #include "opengl.c"
 
 /* TODO: 
@@ -66,6 +67,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
+    Win32COMLoad();
     
     // NOTE: Window Setup
     WNDCLASSA windowClass = {0};
@@ -94,47 +96,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
     Win32AspectRatioMaintain(windowHandle, 16, 9);
+    Win32WasapiInitialize();    
     Win32XInputLoad();
 
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
-    // TODO:
-
-    // CoInitializeEx(0, COINIT_SPEED_OVER_MEMORY);
-
-    // HRESULT result;
-
-	// IMMDeviceEnumerator *deviceEnum = NULL;
-	// result = CoCreateInstance(
-	// 	&CLSID_MMDeviceEnumerator, NULL,
-	// 	CLSCTX_ALL, &IID_IMMDeviceEnumerator,
-	// 	(LPVOID *)&deviceEnum);
-
-    // if(result != S_OK)
-    // {
-    //     LogError("CoCreateInstance");
-    //     goto wasapiInitEnd;
-    // }
-
-    // IMMDevice *device = NULL;
-	// result = deviceEnum->lpVtbl->GetDefaultAudioEndpoint(deviceEnum, eRender, eConsole, &device);
-
-    // if(result != S_OK)
-    // {
-    //     LogError("GetDefaultAudioEndpoint");
-    //     goto wasapiInitEnd;
-    // }
-
-    // IAudioClient *audioClient;
-    // result = device->lpVtbl->Activate(device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audioClient);
-
-    // if(result != S_OK)
-    // {
-    //     LogError("IAudioClient Activate");
-    //     goto wasapiInitEnd;
-    // }
-
-    // wasapiInitEnd:;
 
     char *vertexShaderSource = 
         "#version 330 core\n"
@@ -175,9 +141,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.EnableVertexAttribArray(0);
     gl.UseProgram(shaderProgram);
 
-    str *pathToExe = ExecutablePathGet();
-    str *mainDLLPath = StringConcatChar(pathToExe, "\\app_code.dll");
-    str *tempDLLPath = StringConcatChar(pathToExe, "\\app_code_temp.dll");
+    str *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
+    str *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
+    str *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
+    LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
+        pathToExeDirectory, mainDLLPath, tempDLLPath);
 
     Win32DLLCode dllCode = {0};
     AppMemory memory = {0};

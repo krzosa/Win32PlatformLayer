@@ -64,3 +64,22 @@ Win32ConsoleAttach(void)
     GLOBALConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     if(!GLOBALConsoleHandle) OutputDebugStringA("Failed to get console handle\n");
 }
+
+internal void
+Win32LastErrorMessagePrint(char *text)
+{
+    DWORD dLastError = GetLastError();
+    LPSTR strErrorMessage = NULL;
+    
+    FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | 
+        FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+        NULL,
+        dLastError,
+        0,
+        strErrorMessage,
+        0,
+        NULL);
+
+    Log("%s: %s\n", text, strErrorMessage);
+}
