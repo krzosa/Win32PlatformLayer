@@ -18,7 +18,6 @@
 #include "opengl_headers/glext.h"
 
 #include "win32_opengl.h"
-#include "string.c"
 
 static time_data GLOBALTime;
 static bool32 GLOBALAppStatus;
@@ -26,6 +25,7 @@ static user_input GLOBALUserInput;
 static OpenGLFunctions gl = {0}; 
 
 // Custom
+#include "string.c"
 #include "win32_debug_console.c"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
@@ -191,6 +191,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
+        FILETIME newDLLWriteTime = Win32GetLastWriteTime(mainDLLPath);
+        if(CompareFileTime(&newDLLWriteTime, &dllCode.lastDllWriteTime) != 0)
+        {
+            Win32UnloadDLLCode(&dllCode);
+            dllCode = Win32LoadDLLCode(mainDLLPath, tempDLLPath);
+            dllCode.hotReload(&memory);
+        }
+
         MSG Message;
         while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
         {
@@ -203,7 +211,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         glClear(GL_COLOR_BUFFER_BIT);
 
         gl.DrawArrays(GL_TRIANGLES, 0, 3);
-        
+        dllCode.update(&memory);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
 
         //
