@@ -41,6 +41,7 @@ static OpenGLFunctions gl = {0};
  * add better input handling 
  * either implement string lib in platform or not
  * memory stuff
+ * audio latency? 
 */
 
 int 
@@ -94,7 +95,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogSuccess("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
     Win32AspectRatioMaintain(windowHandle, 16, 9);
-    Win32WasapiInitialize();    
+    audio_data audioData = Win32WasapiInitialize();    
 
 
     char *vertexShaderSource = 

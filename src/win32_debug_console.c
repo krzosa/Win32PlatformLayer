@@ -55,7 +55,9 @@ PrivateLogExtra(char *prepend, char *text, ...)
     WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength + 1, 0, 0);
 }
 
-// TODO: create a console when failed to attach
+//
+// NOTE: Attaches to the console that invoked the application
+//       if that fails it allocates a new console
 internal void
 Win32ConsoleAttach(void)
 {

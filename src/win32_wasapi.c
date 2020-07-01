@@ -16,6 +16,20 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 static CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 static CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
+typedef struct audio_data
+{
+    IMMDevice *device;
+    IAudioClient *audioClient;
+    IMMDeviceEnumerator *deviceEnum;
+    IAudioRenderClient *audioRenderClient;
+
+    bool32 initialized;
+    u32 samplesPerSecond;
+    u32 numberOfChannels;
+    u32 bufferFrameCount;
+    REFERENCE_TIME bufferDuration;
+} audio_data;
+
 // NOTE: Load COM Library functions dynamically, 
 //       this way sound is not necessary to run the game
 internal void
@@ -25,13 +39,17 @@ Win32COMLoad(void)
     if (ole32Library)
     {
         LogSuccess("COM Ole32.dll load");
-        CoCreateInstanceFunctionPointer = (CoCreateInstanceFunction *)GetProcAddress(ole32Library, "CoCreateInstance");
+        CoCreateInstanceFunctionPointer = 
+            (CoCreateInstanceFunction *)GetProcAddress(ole32Library, "CoCreateInstance");
+
         if (!CoCreateInstanceFunctionPointer)
         {
             LogError("CoCreateInstance load");
             CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
         }
-        CoInitializeExFunctionPointer = (CoInitializeExFunction *)GetProcAddress(ole32Library, "CoInitializeEx");
+        CoInitializeExFunctionPointer = 
+            (CoInitializeExFunction *)GetProcAddress(ole32Library, "CoInitializeEx");
+
         if (!CoInitializeExFunctionPointer)
         {
             LogError("CoInitializeEx load");
@@ -46,53 +64,62 @@ Win32COMLoad(void)
     }
 }
 
-internal void
+internal audio_data
 Win32WasapiInitialize()
 {
+    audio_data audio = {0};
+
     HRESULT result;
     result = CoInitializeExFunctionPointer(0, COINIT_SPEED_OVER_MEMORY);
 
     if(result != S_OK)
     {
         LogError("CoInitializeExFunction");
+        return audio;
     }
 
 
-    IMMDeviceEnumerator *deviceEnum = NULL;
     result = CoCreateInstanceFunctionPointer(
         &CLSID_MMDeviceEnumerator, NULL,
         CLSCTX_ALL, &IID_IMMDeviceEnumerator,
-        (LPVOID *)&deviceEnum);
+        (LPVOID *)&audio.deviceEnum);
 
     if (result != S_OK)
     {
         LogError("CoCreateInstance");
-        return;
+        return audio;
     }
 
-    IMMDevice *device = NULL;
-    result = deviceEnum->lpVtbl->GetDefaultAudioEndpoint(deviceEnum, eRender, eConsole, &device);
+    result = audio.deviceEnum->lpVtbl->GetDefaultAudioEndpoint(
+        audio.deviceEnum, eRender, eConsole, &audio.device
+    );
 
     if (result != S_OK)
     {
         LogError("GetDefaultAudioEndpoint");
-        return;
+        return audio;
     }
 
-    IAudioClient *audioClient;
-    result = device->lpVtbl->Activate(device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audioClient);
+    result = audio.device->lpVtbl->Activate(
+        audio.device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audio.audioClient
+    );
 
     if (result != S_OK)
     {
         LogError("IAudioClient Activate");
-        return;
+        return audio;
     }
 
+    // WAVEFORMATEX *currWaveFormat = 0;
+    // audioClient->lpVtbl->GetMixFormat(audioClient, &currWaveFormat);
+
+    audio.samplesPerSecond = 48000;
+    audio.numberOfChannels = 2;
     WAVEFORMATEX waveFormat = {0};
     {
         waveFormat.wFormatTag = WAVE_FORMAT_PCM;
-        waveFormat.nChannels = 2;
-        waveFormat.nSamplesPerSec = 48000;
+        waveFormat.nChannels = audio.numberOfChannels;
+        waveFormat.nSamplesPerSec = audio.samplesPerSecond;
         waveFormat.wBitsPerSample = 16;
         waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
         waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
@@ -102,8 +129,8 @@ Win32WasapiInitialize()
     #define REFERENCE_TIMES_PER_SEC 10000000
     REFERENCE_TIME requestedBufferDuration = REFERENCE_TIMES_PER_SEC * 2;
 
-    result = audioClient->lpVtbl->Initialize(
-        audioClient, AUDCLNT_SHAREMODE_SHARED, 
+    result = audio.audioClient->lpVtbl->Initialize(
+        audio.audioClient, AUDCLNT_SHAREMODE_SHARED, 
         AUDCLNT_STREAMFLAGS_RATEADJUST | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | 
         AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, 
         requestedBufferDuration, 0, &waveFormat, 0
@@ -130,31 +157,34 @@ Win32WasapiInitialize()
             case E_OUTOFMEMORY:{ LogError("E_OUTOFMEMORY");break;}
         }
         LogError("IAudioClient Initialize");
-        return;
+        return audio;
     }
 
-    IAudioRenderClient *audioRenderClient;
-    result = audioClient->lpVtbl->GetService(
-        audioClient, &IID_IAudioRenderClient, &audioRenderClient 
+    audio.audioRenderClient;
+    result = audio.audioClient->lpVtbl->GetService(
+        audio.audioClient, &IID_IAudioRenderClient, (void**)&audio.audioRenderClient 
     );
 
     if(result != S_OK)
     {
         LogError("IAudioClient GetService");
-        return;
+        return audio;
     }
 
-    result = audioClient->lpVtbl->Start(audioClient);
+    audio.audioClient->lpVtbl->GetBufferSize(audio.audioClient, &audio.bufferFrameCount);
+
+    audio.bufferDuration = 
+        (f64)REFERENCE_TIMES_PER_SEC * audio.bufferFrameCount / audio.samplesPerSecond;
+
+    result = audio.audioClient->lpVtbl->Start(audio.audioClient);
 
     if(result != S_OK)
     {
         LogError("IAudioClient Start");
-        return;
+        return audio;
     }
-
-    u32 audioBufferSize = 0;
-    audioClient->lpVtbl->GetBufferSize(audioClient, &audioBufferSize);
 
     LogSuccess("WASAPI Initialized");
 
+    return audio;
 }
