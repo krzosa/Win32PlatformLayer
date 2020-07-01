@@ -17,13 +17,15 @@
 #include "opengl_headers/wglext.h"
 #include "opengl_headers/glext.h"
 
+#include "win32_opengl.h"
+#include "string.c"
+
 static time_data GLOBALTime;
 static bool32 GLOBALAppStatus;
 static user_input GLOBALUserInput;
+static OpenGLFunctions gl = {0}; 
 
 // Custom
-#include "string.c"
-#include "win32_opengl.h"
 #include "win32_debug_console.c"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
@@ -38,7 +40,6 @@ static user_input GLOBALUserInput;
  * add wasapi audio init
  * add better input handling 
  * either implement string lib in platform or not
- * hot reload
  * memory stuff
 */
 

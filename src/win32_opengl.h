@@ -1,6 +1,7 @@
 // NOTE: expands to, for example PFNGLBUFFERDATAPROC glBufferData;
 #define GLLoad(name, type) PFNGL##type##PROC name;
 
+// NOTE: forward declarations
 internal void *LoadOpenGLFunction(char *name);
 internal void PrintLastErrorMessage(char *text);
 internal HGLRC Win32InitOpenGL(HDC deviceContext);
@@ -15,17 +16,4 @@ typedef struct OpenGLFunctions
     #undef GLLoad // undefine GLLoad macro
 } OpenGLFunctions;
 
-static OpenGLFunctions gl = {0}; 
 
-
-internal void
-LoadOpenGLFunctions()
-{
-    // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
-    #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)LoadOpenGLFunction("gl" #name);
-
-    // NOTE: Load main OpenGL functions
-    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
-    #include "opengl_procedures.include" // include OpenGL functions to load
-    #undef GLLoad // undefine GLLoad macro 
-}

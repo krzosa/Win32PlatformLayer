@@ -1,3 +1,16 @@
+internal void
+LoadOpenGLFunctions()
+{
+    // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
+    #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)LoadOpenGLFunction("gl" #name);
+
+    // NOTE: Load main OpenGL functions
+    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)LoadOpenGLFunction("glUseProgram");
+    #include "opengl_procedures.include" // include OpenGL functions to load
+    #undef GLLoad // undefine GLLoad macro 
+}
+
+
 internal void * 
 LoadOpenGLFunction(char *name)
 {
