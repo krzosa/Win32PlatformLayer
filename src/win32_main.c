@@ -176,8 +176,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.UseProgram(shaderProgram);
 
     str *pathToExe = ExecutablePathGet();
-    char mainDLLPath[] = "app_code.dll";
-    char tempDLLPath[] = "app_code_temp.dll";
+    str *mainDLLPath = StringConcatChar(pathToExe, "\\app_code.dll");
+    str *tempDLLPath = StringConcatChar(pathToExe, "\\app_code_temp.dll");
 
     Win32DLLCode dllCode = {0};
     AppMemory memory = {0};
