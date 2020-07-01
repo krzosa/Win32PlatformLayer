@@ -5,6 +5,9 @@
 *.ilk
 *.obj
 *.rdbg
+*.dll
+*.exp
+*.lib
 
 handmade/
 run.bat

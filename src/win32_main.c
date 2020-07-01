@@ -1,4 +1,4 @@
-#include "typedefines.c"
+#include "shared.h"
 #include "win32_main.h"
 
 // CStandard Lib and Windows
@@ -30,6 +30,7 @@ static user_input GLOBALUserInput;
 #include "win32_xinput.c"
 #include "win32_timer.c"
 #include "win32_callback.c"
+#include "win32_hot_reload.c"
 #include "opengl.c"
 
 /* TODO: 
@@ -97,40 +98,43 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     LogInfo("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
 
-    CoInitializeEx(0, COINIT_SPEED_OVER_MEMORY);
+    // TODO:
 
-    HRESULT result;
+    // CoInitializeEx(0, COINIT_SPEED_OVER_MEMORY);
 
-	IMMDeviceEnumerator *deviceEnum = NULL;
-	result = CoCreateInstance(
-		&CLSID_MMDeviceEnumerator, NULL,
-		CLSCTX_ALL, &IID_IMMDeviceEnumerator,
-		(LPVOID *)&deviceEnum);
+    // HRESULT result;
 
-    if(result != S_OK)
-    {
-        LogError("CoCreateInstance");
-        return 0;
-    }
+	// IMMDeviceEnumerator *deviceEnum = NULL;
+	// result = CoCreateInstance(
+	// 	&CLSID_MMDeviceEnumerator, NULL,
+	// 	CLSCTX_ALL, &IID_IMMDeviceEnumerator,
+	// 	(LPVOID *)&deviceEnum);
 
-    IMMDevice *device = NULL;
-	result = deviceEnum->lpVtbl->GetDefaultAudioEndpoint(deviceEnum, eRender, eConsole, &device);
+    // if(result != S_OK)
+    // {
+    //     LogError("CoCreateInstance");
+    //     goto wasapiInitEnd;
+    // }
 
-    if(result != S_OK)
-    {
-        LogError("GetDefaultAudioEndpoint");
-        return 0;
-    }
+    // IMMDevice *device = NULL;
+	// result = deviceEnum->lpVtbl->GetDefaultAudioEndpoint(deviceEnum, eRender, eConsole, &device);
 
-    IAudioClient *audioClient;
-    result = device->lpVtbl->Activate(device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audioClient);
+    // if(result != S_OK)
+    // {
+    //     LogError("GetDefaultAudioEndpoint");
+    //     goto wasapiInitEnd;
+    // }
 
-    if(result != S_OK)
-    {
-        LogError("Activate audio client");
-        return 0;
-    }
+    // IAudioClient *audioClient;
+    // result = device->lpVtbl->Activate(device, &IID_IAudioClient, CLSCTX_ALL, 0, (void **)&audioClient);
 
+    // if(result != S_OK)
+    // {
+    //     LogError("IAudioClient Activate");
+    //     goto wasapiInitEnd;
+    // }
+
+    // wasapiInitEnd:;
 
     char *vertexShaderSource = 
         "#version 330 core\n"
@@ -171,6 +175,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     gl.EnableVertexAttribArray(0);
     gl.UseProgram(shaderProgram);
 
+    str *pathToExe = ExecutablePathGet();
+    char mainDLLPath[] = "app_code.dll";
+    char tempDLLPath[] = "app_code_temp.dll";
+
+    Win32DLLCode dllCode = {0};
+    AppMemory memory = {0};
+    dllCode = Win32LoadDLLCode(mainDLLPath, tempDLLPath);
+    dllCode.initialize(&memory);
     
     i64 beginFrame = Win32GetPerformanceCount();
     u64 beginFrameCycles = GetProcessorClockCycles();

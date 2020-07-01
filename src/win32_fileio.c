@@ -54,3 +54,21 @@ ReadEntireFile(char *filename)
 
     return(result);
 }
+
+internal str *
+ExecutablePathGet()
+{
+    char fileName[MAX_PATH];
+    DWORD result = GetModuleFileNameA(0, fileName, MAX_PATH);
+    if(!result)
+    {
+        LogError("GetModuleFileNameA");
+    }
+    i32 i = result - 1;
+    for(; i != 0; i--)
+    {
+        if(fileName[i] == '\\') break;
+    }
+
+    return StringCreateSubstring(fileName, i);
+}

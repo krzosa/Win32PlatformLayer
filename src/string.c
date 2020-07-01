@@ -1,8 +1,11 @@
 #pragma once
-typedef char str;
 #include <memory.h>
 
+typedef char str;
+#define ALLOCATOR(size) malloc(size)
+
 #define ArraySize(a) ( sizeof(a) / sizeof((a)[0]) )
+
 
 /* TODO: 
     Optional string pool implmentation
@@ -45,7 +48,8 @@ StringGetHeader(str *string)
 static str *
 StringAllocate(size_t size)
 {
-    StringHeader *newStringHeader = (StringHeader *)malloc(sizeof(StringHeader) + sizeof(str) * size + 1);
+    StringHeader *newStringHeader = 
+        (StringHeader *)ALLOCATOR(sizeof(StringHeader) + sizeof(str) * size + 1);
     str *newString = (str *)(newStringHeader + 1);
 
     newStringHeader->length = size;
