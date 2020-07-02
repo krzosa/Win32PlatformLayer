@@ -1,12 +1,12 @@
 #include "shared.h"
 
-void Initialize(AppMemory *memory)
+void Initialize(application_memory *memory)
 {
 }
-void Update(AppMemory *memory)
+void Update(application_memory *memory)
 {
 }
-void HotReload(AppMemory *memory)
+void HotReload(application_memory *memory)
 {
 
 }

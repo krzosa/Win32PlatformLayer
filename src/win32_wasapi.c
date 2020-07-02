@@ -1,3 +1,8 @@
+#include <objbase.h>
+#include <audioclient.h>
+#include <audiopolicy.h>
+#include <mmdeviceapi.h>
+
 static const GUID IID_IAudioClient = {0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2};
 static const GUID IID_IAudioRenderClient = {0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2};
 static const GUID CLSID_MMDeviceEnumerator = {0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E};
@@ -13,8 +18,8 @@ HRESULT CoCreateInstanceStub(REFCLSID rclsid, LPUNKNOWN *pUnkOuter, DWORD dwClsC
 HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 
 // NOTE: pointers to the functions from the dll
-static CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
-static CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
+CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
+CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
 typedef struct audio_data
 {
@@ -38,7 +43,7 @@ Win32COMLoad(void)
     HMODULE ole32Library = LoadLibraryA("ole32.dll");
     if (ole32Library)
     {
-        LogSuccess("COM Ole32.dll load");
+        LogSuccess("COM Ole32.dll Loaded");
         CoCreateInstanceFunctionPointer = 
             (CoCreateInstanceFunction *)GetProcAddress(ole32Library, "CoCreateInstance");
 
@@ -64,9 +69,12 @@ Win32COMLoad(void)
     }
 }
 
+// NOTE: Initialize Wasapi audio
 internal audio_data
-Win32WasapiInitialize()
+Win32AudioInitialize()
 {
+    Win32COMLoad();
+
     audio_data audio = {0};
 
     HRESULT result;

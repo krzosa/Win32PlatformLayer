@@ -121,7 +121,7 @@ Win32OpenGLInit(HDC deviceContext)
 }
 
 internal void
-Win32AspectRatioMaintain(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
+Win32OpenGLAspectRatioUpdate(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
 {
     RECT ClientRect;
     // NOTE: get size of the window, without the border

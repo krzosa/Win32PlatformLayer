@@ -7,10 +7,6 @@
 #include <assert.h>
 #include <xinput.h>
 #include <intrin.h>
-#include <objbase.h>
-#include <audioclient.h>
-#include <audiopolicy.h>
-#include <mmdeviceapi.h>
 
 // Opengl
 #include <gl/GL.h>
@@ -19,7 +15,7 @@
 #include "win32_opengl.h"
 
 static time_data GLOBALTime;
-static bool32 GLOBALAppStatus;
+static bool32 GLOBALAppStatus; // loop 
 static user_input GLOBALUserInput;
 static OpenGLFunctions gl = {0}; 
 
@@ -37,11 +33,12 @@ static OpenGLFunctions gl = {0};
 
 /* TODO: 
  * os status abstraction
- * add wasapi audio init
  * add better input handling 
- * either implement string lib in platform or not
  * memory stuff
+ * give app more stuff to work with, test opengl in dll
  * audio latency? 
+ * fill audio buffer
+ * assert / compile time assert
 */
 
 int 
@@ -51,20 +48,23 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     {
         // NOTE: Set timers to application start
         GLOBALTime.startAppCycles = GetProcessorClockCycles();
-        GLOBALTime.startAppCount = Win32GetPerformanceCount();
+        GLOBALTime.startAppCount = Win32PerformanceCountGet();
 
         // NOTE: Set windows scheduler to wake up every 1 millisecond
         GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        GLOBALTime.performanceCounterFrequency = Win32GetPerformanceFrequency();
+        GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
 
         GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
-    Win32COMLoad();
+    // NOTE: Load XInput(xbox controllers) dynamically 
     Win32XInputLoad();
     
     // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
+
+    // NOTE: Wasapi 
+    audio_data audioData = Win32AudioInitialize();   
     
     // NOTE: Window Setup
     WNDCLASSA windowClass = {0};
@@ -92,10 +92,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Window context setup and opengl context setup
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
-    LogSuccess("OPENGL VERSION: %s", (char *)glGetString(GL_VERSION));
+    LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
 
-    Win32AspectRatioMaintain(windowHandle, 16, 9);
-    audio_data audioData = Win32WasapiInitialize();    
+    Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
 
 
     char *vertexShaderSource = 
@@ -144,11 +143,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
     Win32DLLCode dllCode = {0};
-    AppMemory memory = {0};
+    application_memory memory = {0};
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(&memory);
     
-    i64 beginFrame = Win32GetPerformanceCount();
+    i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
 
     GLOBALAppStatus = true;
@@ -177,40 +176,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         dllCode.update(&memory);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
 
-        //
-        // NOTE: Time the frame and sleep to hit target framerate
-        //
-        {
-            GLOBALTime.updateFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
-            GLOBALTime.updateFrameCount = Win32GetPerformanceCount() - beginFrame;
-
-            f32 msPerUpdate = PerformanceCountToMilliseconds(GLOBALTime.updateFrameCount);
-            if(msPerUpdate < GLOBALTime.targetMsPerFrame)
-            {
-                if(GLOBALTime.sleepIsGranular)
-                {
-                    Sleep(GLOBALTime.targetMsPerFrame - msPerUpdate);
-                }
-                else
-                {
-                    LogError("Sleep is not granular!");
-                }
-            }
-            else
-            {
-                LogError("Missed framerate!");
-            }
-
-            GLOBALTime.totalFrameCount = Win32GetPerformanceCount() - beginFrame;
-            GLOBALTime.totalFrameCycles = GetProcessorClockCycles() - beginFrameCycles;
-            f32 totalMsPerFrame = PerformanceCountToMilliseconds(GLOBALTime.totalFrameCount);
-            f32 framesPerSec = 1 / PerformanceCountToSeconds(GLOBALTime.totalFrameCount); 
-
-            Log("frame = %ffps %lucycles %fms\n", framesPerSec, GLOBALTime.totalFrameCycles, totalMsPerFrame);
-            beginFrame = Win32GetPerformanceCount();
-            beginFrameCycles = GetProcessorClockCycles();
-        }
+        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
+        
     }
     
-    return(0);
+    return(1);
 }

@@ -18,20 +18,20 @@ internal void Log(char *text, ...);
 
 
 #define TEXT_BUFFER_SIZE 2048
+#define TEXT_BUFFER_COUNT 2
 static HANDLE GLOBALConsoleHandle;
-static char GLOBALRandomAccessTextBuffer1[TEXT_BUFFER_SIZE];
-static char GLOBALRandomAccessTextBuffer2[TEXT_BUFFER_SIZE];
+static char GLOBALRandomAccessTextBuffer[TEXT_BUFFER_COUNT][TEXT_BUFFER_SIZE];
 
 internal void 
 Log(char *text, ...)
 {
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer1, text, args);
+    vsprintf(GLOBALRandomAccessTextBuffer[0], text, args);
     va_end(args);
 
-    int textLength = CharLength(GLOBALRandomAccessTextBuffer1);
-    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength, 0, 0);
+    int textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);
+    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer[0], textLength, 0, 0);
 }
 
 internal void
@@ -40,19 +40,19 @@ PrivateLogExtra(char *prepend, char *text, ...)
     int textLength = CharLength(text);
     int prependLength = CharLength(prepend);
 
-    memcpy(GLOBALRandomAccessTextBuffer2, prepend, prependLength);
-    memcpy(GLOBALRandomAccessTextBuffer2 + prependLength, text, textLength);
-    GLOBALRandomAccessTextBuffer2[prependLength + textLength] = '\0';
+    memcpy(GLOBALRandomAccessTextBuffer[1], prepend, prependLength);
+    memcpy(GLOBALRandomAccessTextBuffer[1] + prependLength, text, textLength);
+    GLOBALRandomAccessTextBuffer[1][prependLength + textLength] = '\0';
 
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer1, GLOBALRandomAccessTextBuffer2, args);
+    vsprintf(GLOBALRandomAccessTextBuffer[0], GLOBALRandomAccessTextBuffer[1], args);
     va_end(args);
 
-    textLength = CharLength(GLOBALRandomAccessTextBuffer1);
-    GLOBALRandomAccessTextBuffer1[textLength] = '\n';
+    textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);
+    GLOBALRandomAccessTextBuffer[0][textLength] = '\n';
 
-    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer1, textLength + 1, 0, 0);
+    WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer[0], textLength + 1, 0, 0);
 }
 
 //
@@ -92,4 +92,6 @@ Win32LastErrorMessagePrint(char *text)
         NULL);
 
     Log("%s: %s\n", text, strErrorMessage);
+
+    LocalFree(strErrorMessage);
 }

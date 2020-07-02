@@ -1,4 +1,5 @@
-#if 0
+/* TODO: hook it up as second audio backend */
+
 struct win32_sound_output
 {
     i32 samplesPerSecond;
@@ -12,8 +13,8 @@ struct win32_sound_output
     i32 latencySampleCount;
 };
 
-// TODO: test going up to direct sound 8
-internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t bufferSize)
+internal void 
+Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t bufferSize)
 {
     HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
     if(DSoundLibrary)
@@ -21,8 +22,8 @@ internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t buf
         direct_sound_create* directSoundCreateObject = 
             (direct_sound_create*)GetProcAddress(DSoundLibrary, "DirectSoundCreate");
 
-        /* NOTE(Kkrz): first buffer is for setting cooperative level and general settings
-                        we write to the second buffer only */
+        /* NOTE: first buffer is for setting cooperative level and general settings
+                 we write to the second buffer only */
         LPDIRECTSOUND DirectSound;
         if(directSoundCreateObject && SUCCEEDED(directSoundCreateObject(0, &DirectSound, 0)))
         {
@@ -50,21 +51,21 @@ internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t buf
                     HRESULT Error = primaryBuffer->SetFormat(&WaveFormat);
                     if(SUCCEEDED(Error))
                     {
-                        OutputDebugStringA("Primary buffer format was set.\n");
+                        LogError("Primary buffer format was set");
                     }
                     else
                     {
-                        // TODO: failed to set format for primary buffer
+                        LogError("failed to set format for primary buffer");
                     }
                 }
                 else
                 {
-                    // TODO: failed to create sound buffer 
+                    LogError("failed to create sound buffer");
                 }
             }
             else
             {
-                // TODO: failed to set cooperative level
+                LogError("failed to set cooperative level");
             }
             DSBUFFERDESC BufferDescription = {};
             {
@@ -76,17 +77,17 @@ internal void Win32InitDSound(HWND Window, int32_t samplesPerSecond, int32_t buf
             HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &global_variableSecondaryBuffer, 0);
             if(SUCCEEDED(Error))
             {
-                OutputDebugStringA("Secondary buffer created successfully.\n");
+                LogSuccess("Secondary buffer created");
             }
         }
         else
         {
-            // TODO: failed to create sound object
+            LogError("Direct sound failed to create sound object");
         }
     }
     else
     {
-        // TODO: failed to load dll
+        LogError("Direct sound failed to load dll");
     }
 }
 
@@ -172,6 +173,3 @@ if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor
     Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
 }
 
-
-
-#endif

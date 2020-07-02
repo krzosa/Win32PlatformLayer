@@ -1,6 +1,6 @@
 #include "typedefines.h"
 
-typedef struct AppMemory
+typedef struct application_memory
 {
     i32 x;
-} AppMemory;
+} application_memory;
