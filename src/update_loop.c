@@ -1,13 +1,11 @@
 #include "shared.h"
-
-static OpenGLFunctions *gl;
 #include "opengl.c"
+
 
 
 void Initialize(application_memory *memory)
 {
-    gl = memory->gl;
-
+    OpenGLFunctionsLoad(memory->OpenGLFunctionLoad);
     char *vertexShaderSource = 
         "#version 330 core\n"
         "layout (location = 0) in vec3 aPos;"
@@ -31,8 +29,8 @@ void Initialize(application_memory *memory)
     u32 shaderProgram = ProgramCreate(shaders, shaderCount);
 
     u32 vertexBufferObject, vertexArrayObject;
-    gl->GenVertexArrays(1, &vertexArrayObject);
-    gl->GenBuffers(1, &vertexBufferObject); 
+    glGenVertexArrays(1, &vertexArrayObject);
+    glGenBuffers(1, &vertexBufferObject); 
 
     f32 vertices[] = {
         -0.5f, -0.5f, 0.0f,
@@ -40,12 +38,12 @@ void Initialize(application_memory *memory)
         0.0f,  0.5f, 0.0f
     }; 
 
-    gl->BindVertexArray(vertexArrayObject);
-    gl->BindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
-    gl->BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    gl->VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    gl->EnableVertexAttribArray(0);
-    gl->UseProgram(shaderProgram);
+    glBindVertexArray(vertexArrayObject);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    glUseProgram(shaderProgram);
 }
 void Update(application_memory *memory)
 {

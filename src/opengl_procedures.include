@@ -6,7 +6,6 @@
 // format: GLLoad(small, BIG)
 //
 
-
 GLLoad(BindBuffer, BINDBUFFER)
 GLLoad(GenBuffers, GENBUFFERS)
 GLLoad(BufferData, BUFFERDATA)

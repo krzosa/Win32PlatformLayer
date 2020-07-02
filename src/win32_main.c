@@ -13,7 +13,6 @@
 static time_data GLOBALTime;
 static bool32 GLOBALAppStatus;
 static user_input GLOBALUserInput;
-static OpenGLFunctions gl = {0}; 
 
 // Custom
 #include "string.c"
@@ -116,7 +115,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("Memory allocated");
 
-        applicationMemory.gl = &gl;
+        applicationMemory.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
     }
 
     // NOTE: Load the dll and call initialize function

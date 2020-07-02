@@ -20,5 +20,5 @@ typedef struct application_memory
 {
     pernament_storage pernamentStorage;
     temporary_storage temporaryStorage;
-    OpenGLFunctions *gl;
+    OpenGLFunctionLoadType *OpenGLFunctionLoad; 
 } application_memory;

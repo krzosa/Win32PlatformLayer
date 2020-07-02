@@ -1,23 +1,10 @@
 // NOTE: forward declarations
-internal void *OpenGLFunctionLoad(char *name);
+internal void *Win32OpenGLFunctionLoad(char *name);
 internal void PrintLastErrorMessage(char *text);
 internal HGLRC Win32OpenGLInit(HDC deviceContext);
 
-internal void
-OpenGLFunctionsLoad()
-{
-    // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
-    #define GLLoad(name, type) gl.##name = (PFNGL##type##PROC)OpenGLFunctionLoad("gl" #name);
-
-    // NOTE: Load main OpenGL functions using a macro
-    // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)OpenGLFunctionLoad("glUseProgram");
-    #include "opengl_procedures.include" // include OpenGL functions to load
-    #undef GLLoad // undefine GLLoad macro 
-}
-
-
 internal void * 
-OpenGLFunctionLoad(char *name)
+Win32OpenGLFunctionLoad(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
   if(p == 0 ||
@@ -79,12 +66,10 @@ Win32OpenGLInit(HDC deviceContext)
     PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
 
     // NOTE: Load windows opengl functions
-    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)OpenGLFunctionLoad("wglChoosePixelFormatARB");
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)OpenGLFunctionLoad("wglCreateContextAttribsARB");
-    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)OpenGLFunctionLoad("wglMakeContextCurrentARB");
-    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)OpenGLFunctionLoad("wglSwapIntervalEXT");
-
-    OpenGLFunctionsLoad();
+    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLFunctionLoad("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)Win32OpenGLFunctionLoad("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)Win32OpenGLFunctionLoad("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)Win32OpenGLFunctionLoad("wglSwapIntervalEXT");
 
     int attribList[] =
     {

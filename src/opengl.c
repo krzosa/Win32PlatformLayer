@@ -4,16 +4,16 @@
 internal u32 
 ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
 {
-    u32 shader = gl->CreateShader(shaderType);
-    gl->ShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
-    gl->CompileShader(shader);
+    u32 shader = glCreateShader(shaderType);
+    glShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
+    glCompileShader(shader);
 
     i32 status;
-    gl->GetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
     if (!status)
     {
         char log[ERROR_BUFFER_SIZE];
-        gl->GetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
+        glGetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
 
         char *strShaderType = NULL;
         switch(shaderType)
@@ -31,25 +31,25 @@ ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
 internal u32
 ProgramCreate(u32 shaders[], u32 shaderCount)
 {
-    u32 shaderProgram = gl->CreateProgram();
+    u32 shaderProgram = glCreateProgram();
 
     for(u32 i = 0; i != shaderCount; i++)
-        gl->AttachShader(shaderProgram, shaders[i]);
+        glAttachShader(shaderProgram, shaders[i]);
 
-    gl->LinkProgram(shaderProgram);
+    glLinkProgram(shaderProgram);
 
     i32 status;
-    gl->GetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
     if (!status)
     {
         char log[ERROR_BUFFER_SIZE];
-        gl->GetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
+        glGetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
 
         // LogError("Create program %s", log);
     }
 
     for(u32 i = 0; i != shaderCount; i++)
-        gl->DeleteShader(shaders[i]); 
+        glDeleteShader(shaders[i]); 
 
     return shaderProgram;
 }
