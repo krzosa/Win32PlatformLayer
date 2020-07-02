@@ -7,7 +7,6 @@
 #endif
 
 #include "opengl_headers/glext.h"
-typedef void *OpenGLFunctionLoadType(char *name);
 
 // NOTE: OPENGL Pointers to functions
 //       expands to, for example PFNGLBUFFERDATAPROC glBufferData;
@@ -17,7 +16,7 @@ typedef void *OpenGLFunctionLoadType(char *name);
 #undef GLLoad // undefine GLLoad macro
 
 internal void
-OpenGLFunctionsLoad(OpenGLFunctionLoadType *OpenGLFunctionLoad)
+OpenGLFunctionsLoad(opengl_function_load *OpenGLFunctionLoad)
 {
     // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLFunctionLoad("glUseProgram");
     #define GLLoad(name, type) gl##name = (PFNGL##type##PROC)OpenGLFunctionLoad("gl" #name);

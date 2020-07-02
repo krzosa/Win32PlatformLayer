@@ -12,10 +12,9 @@
 // WinMain 157 SUCCESS: test3
 
 internal void Log(char *text, ...);
-#define LogInfo(text, ...) PrivateLogExtra("INFO: ", text, __VA_ARGS__)
-#define LogSuccess(text, ...) PrivateLogExtra("SUCCESS: ", text, __VA_ARGS__)
-#define LogError(text, ...) PrivateLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
-
+#define LogInfo(text, ...) LogExtra("INFO: ", text, __VA_ARGS__)
+#define LogSuccess(text, ...) LogExtra("SUCCESS: ", text, __VA_ARGS__)
+#define LogError(text, ...) LogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #define TEXT_BUFFER_SIZE 2048
 #define TEXT_BUFFER_COUNT 2
@@ -35,7 +34,7 @@ Log(char *text, ...)
 }
 
 internal void
-PrivateLogExtra(char *prepend, char *text, ...)
+LogExtra(char *prepend, char *text, ...)
 {
     int textLength = CharLength(text);
     int prependLength = CharLength(prepend);

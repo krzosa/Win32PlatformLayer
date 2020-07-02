@@ -1,9 +1,9 @@
 #include "shared.h"
 #include "opengl.c"
 
-void Initialize(operating_system_interface *memory)
+void Initialize(operating_system_interface *os)
 {
-    OpenGLFunctionsLoad(memory->OpenGLFunctionLoad);
+    OpenGLFunctionsLoad(os->OpenGLFunctionLoad);
     
     char *vertexShaderSource = 
         "#version 330 core\n"
@@ -44,14 +44,13 @@ void Initialize(operating_system_interface *memory)
     glEnableVertexAttribArray(0);
     glUseProgram(shaderProgram);
 }
-void Update(operating_system_interface *memory)
+void Update(operating_system_interface *os)
 {
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
-
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
-void HotReload(operating_system_interface *memory)
+void HotReload(operating_system_interface *os)
 {
 
 }

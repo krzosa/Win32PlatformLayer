@@ -94,29 +94,32 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     Win32DLLCode dllCode = {0};
 
-    // NOTE: Allocate memory
-    operating_system_interface applicationMemory = {0};
+    // NOTE: init operating system interface, allocate memory etc.
+    operating_system_interface operatingSystemInterface = {0};
     {
-        applicationMemory.pernamentStorage.memory = VirtualAlloc(
+        operatingSystemInterface.pernamentStorage.memory = VirtualAlloc(
             NULL, Megabytes(64), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
-        applicationMemory.pernamentStorage.maxSize = Megabytes(64);
-        applicationMemory.pernamentStorage.allocatedSize = 0;
+        operatingSystemInterface.pernamentStorage.maxSize = Megabytes(64);
+        operatingSystemInterface.pernamentStorage.allocatedSize = 0;
 
-        applicationMemory.temporaryStorage.memory = VirtualAlloc(
+        operatingSystemInterface.temporaryStorage.memory = VirtualAlloc(
             NULL, Megabytes(32), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
-        applicationMemory.temporaryStorage.maxSize = Megabytes(32);
-        applicationMemory.temporaryStorage.allocatedSize = 0;
+        operatingSystemInterface.temporaryStorage.maxSize = Megabytes(32);
+        operatingSystemInterface.temporaryStorage.allocatedSize = 0;
         
         LogSuccess("Memory allocated");
 
-        applicationMemory.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
+        operatingSystemInterface.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
+        
+        operatingSystemInterface.log = &Log;
+        operatingSystemInterface.logExtra = &LogExtra;
     }
 
     // NOTE: Load the dll and call initialize function
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
-    dllCode.initialize(&applicationMemory);
+    dllCode.initialize(&operatingSystemInterface);
     
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
@@ -130,7 +133,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         {
             Win32DLLCodeUnload(&dllCode);
             dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
-            dllCode.hotReload(&applicationMemory);
+
+            // NOTE: Call HotReload function from the dll
+            dllCode.hotReload(&operatingSystemInterface);
         }
 
         MSG Message;
@@ -141,7 +146,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
         Win32UpdateXInput();
 
-        dllCode.update(&applicationMemory);
+        // NOTE: Call Update function from the dll
+        dllCode.update(&operatingSystemInterface);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&timeData, &beginFrame, &beginFrameCycles);
     }
