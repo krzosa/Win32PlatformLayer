@@ -1,28 +1,10 @@
-//
-// NOTE: Only for debugging, danger of overflowing the buffer
-// example of usage: LogInfo("test test %d", 123);
-//
-
-// Example Printout: 
-// Win32MainWindowCallback 40 INFO: WM_ACTIVATEAPP
-// Win32XInputLoad 47 SUCCESS: XInput loaded
-// WinMain 153 INFO: OPENGL VERSION: 3.3.0 NVIDIA 445.75
-// WinMain 155 INFO: test1 12 aasafaf
-// WinMain 156 ERROR: test2
-// WinMain 157 SUCCESS: test3
-
-internal void Log(char *text, ...);
-#define LogInfo(text, ...) LogExtra("INFO: ", text, __VA_ARGS__)
-#define LogSuccess(text, ...) LogExtra("SUCCESS: ", text, __VA_ARGS__)
-#define LogError(text, ...) LogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)
-
 #define TEXT_BUFFER_SIZE 2048
 #define TEXT_BUFFER_COUNT 2
 static HANDLE GLOBALConsoleHandle;
 static char GLOBALRandomAccessTextBuffer[TEXT_BUFFER_COUNT][TEXT_BUFFER_SIZE];
 
 internal void 
-Log(char *text, ...)
+ConsoleLog(char *text, ...)
 {
     va_list args;
     va_start(args, text);
@@ -34,7 +16,7 @@ Log(char *text, ...)
 }
 
 internal void
-LogExtra(char *prepend, char *text, ...)
+ConsoleLogExtra(char *prepend, char *text, ...)
 {
     int textLength = CharLength(text);
     int prependLength = CharLength(prepend);

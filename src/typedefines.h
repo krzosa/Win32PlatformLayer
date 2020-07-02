@@ -42,3 +42,7 @@ typedef struct v2
 #else
     #define debugger() {assert(0);}
 #endif
+
+typedef void console_log(char *text, ...);
+typedef void console_log_extra(char *prepend, char *text, ...);
+typedef void *opengl_function_load(char *name);

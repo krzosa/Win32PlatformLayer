@@ -22,7 +22,7 @@ ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
             case GL_GEOMETRY_SHADER: strShaderType = "geometry"; break;
             case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
         }
-        // LogError("%s Shader compilation %s", shaderType, log);
+        LogError("%s Shader compilation %s", shaderType, log);
     }
 
     return shader;
@@ -45,7 +45,7 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
         char log[ERROR_BUFFER_SIZE];
         glGetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
 
-        // LogError("Create program %s", log);
+        LogError("Create program %s", log);
     }
 
     for(u32 i = 0; i != shaderCount; i++)

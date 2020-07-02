@@ -15,18 +15,17 @@ typedef struct temporary_storage
     u64 highestAllocatedSize;
 } temporary_storage;
 
-typedef void console_log(char *text, ...);
-typedef void console_log_extra(char *prepend, char *text, ...);
-typedef void *opengl_function_load(char *name);
-
 typedef struct operating_system_interface
 {
     pernament_storage pernamentStorage;
     temporary_storage temporaryStorage;
-    opengl_function_load *OpenGLFunctionLoad;
 
     console_log *log;
     console_log_extra *logExtra;
+    opengl_function_load *OpenGLFunctionLoad;
 } operating_system_interface;
 
-#include "opengl.h"
+#define Log(text, ...)        ConsoleLog(text, __VA_ARGS__)
+#define LogInfo(text, ...)    ConsoleLogExtra("INFO: ", text, __VA_ARGS__)
+#define LogSuccess(text, ...) ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
+#define LogError(text, ...)   ConsoleLogExtra("%s %d ERROR: ", text, __FUNCTION__, __LINE__, __VA_ARGS__)

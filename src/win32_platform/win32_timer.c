@@ -18,23 +18,23 @@ Win32PerformanceFrequencyGet()
 }
 
 inline internal f32
-PerformanceCountToMilliseconds(i64 count, i64 frequency)
+PerformanceCountToMilliseconds(i64 count)
 {
-    f32 result = (f32)(count * 1000.0f) / (f32)frequency;
+    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALTime.performanceCounterFrequency;
     return result;
 }
 
 inline internal f32
-PerformanceCountToSeconds(i64 count, i64 frequency)
+PerformanceCountToSeconds(i64 count)
 {
-    f32 result = (f32)count / (f32)frequency;
+    f32 result = (f32)count / (f32)GLOBALTime.performanceCounterFrequency;
     return result;
 }
 
 inline internal f32
-PerformanceCountToFramesPerSecond(i64 count, i64 frequency)
+PerformanceCountToFramesPerSecond(i64 count)
 {
-    f32 result = 1 / ((f32)count / (f32)frequency);
+    f32 result = 1 / ((f32)count / (f32)GLOBALTime.performanceCounterFrequency);
     return result;
 }
 
@@ -47,10 +47,7 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
 
     time->updateFrameCycles = GetProcessorClockCycles() - *prevFrameCycles;
     time->updateFrameCount = Win32PerformanceCountGet() - *prevFrame;
-    f32 msPerUpdate = PerformanceCountToMilliseconds(
-        time->updateFrameCount, 
-        time->performanceCounterFrequency
-    );
+    f32 msPerUpdate = PerformanceCountToMilliseconds(time->updateFrameCount);
     if(msPerUpdate < time->targetMsPerFrame)
     {
         if(time->sleepIsGranular)
@@ -69,14 +66,8 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
 
     time->totalFrameCount = Win32PerformanceCountGet() - *prevFrame;
     time->totalFrameCycles = GetProcessorClockCycles() - *prevFrameCycles;
-    f32 totalMsPerFrame = PerformanceCountToMilliseconds(
-        time->totalFrameCount, 
-        time->performanceCounterFrequency
-    );
-    f32 framesPerSec = 1 / PerformanceCountToSeconds(
-        time->totalFrameCount, 
-        time->performanceCounterFrequency
-    ); 
+    f32 totalMsPerFrame = PerformanceCountToMilliseconds(time->totalFrameCount);
+    f32 framesPerSec = 1 / PerformanceCountToSeconds(time->totalFrameCount); 
 
     Log("frame = %ffps %lucycles %fms\n", framesPerSec, time->totalFrameCycles, totalMsPerFrame);
     *prevFrame = Win32PerformanceCountGet();

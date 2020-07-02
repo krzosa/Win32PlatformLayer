@@ -1,4 +1,4 @@
-#include "shared.h" // Opengl
+#include "../operating_system_interface.h"
 #include "win32_main.h"
 
 // CStandard Lib and Windows
@@ -7,16 +7,22 @@
 #include <xinput.h>
 #include <intrin.h>
 
+// OpenGL
+#include <gl/GL.h>
+#include "../opengl_headers/wglext.h"
+#include "../opengl_headers/glext.h"
+
 global_variable bool32 GLOBALAppStatus;
 global_variable user_input GLOBALUserInput;
+global_variable time_data GLOBALTime;
 
 // Custom
-#include "string.c"
+#include "../string.c"
 #include "win32_debug_console.c"
+#include "win32_timer.c"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
 #include "win32_xinput.c"
-#include "win32_timer.c"
 #include "win32_callback.c"
 #include "win32_hot_reload.c"
 #include "win32_wasapi.c"
@@ -36,17 +42,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32ConsoleAttach();
 
     // NOTE: Init time data
-    time_data timeData;
     {
         // NOTE: Set timers to application start
-        timeData.startAppCycles = GetProcessorClockCycles();
-        timeData.startAppCount = Win32PerformanceCountGet();
+        GLOBALTime.startAppCycles = GetProcessorClockCycles();
+        GLOBALTime.startAppCount = Win32PerformanceCountGet();
 
         // NOTE: Set windows scheduler to wake up every 1 millisecond
-        timeData.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        timeData.performanceCounterFrequency = Win32PerformanceFrequencyGet();
+        GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+        GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
 
-        timeData.targetMsPerFrame = 16.6f;
+        GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
@@ -95,31 +100,33 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32DLLCode dllCode = {0};
 
     // NOTE: init operating system interface, allocate memory etc.
-    operating_system_interface operatingSystemInterface = {0};
+    operating_system_interface os = {0};
     {
-        operatingSystemInterface.pernamentStorage.memory = VirtualAlloc(
+        os.pernamentStorage.memory = VirtualAlloc(
             NULL, Megabytes(64), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
-        operatingSystemInterface.pernamentStorage.maxSize = Megabytes(64);
-        operatingSystemInterface.pernamentStorage.allocatedSize = 0;
+        os.pernamentStorage.maxSize = Megabytes(64);
+        os.pernamentStorage.allocatedSize = 0;
 
-        operatingSystemInterface.temporaryStorage.memory = VirtualAlloc(
+        os.temporaryStorage.memory = VirtualAlloc(
             NULL, Megabytes(32), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
-        operatingSystemInterface.temporaryStorage.maxSize = Megabytes(32);
-        operatingSystemInterface.temporaryStorage.allocatedSize = 0;
+        os.temporaryStorage.maxSize = Megabytes(32);
+        os.temporaryStorage.allocatedSize = 0;
         
-        LogSuccess("Memory allocated");
+        LogSuccess("OS Memory allocated");
 
-        operatingSystemInterface.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
-        
-        operatingSystemInterface.log = &Log;
-        operatingSystemInterface.logExtra = &LogExtra;
+        os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
+
+        os.log = &ConsoleLog;
+        os.logExtra = &ConsoleLogExtra;
+
+        LogSuccess("OS Functions Loaded");
     }
 
     // NOTE: Load the dll and call initialize function
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
-    dllCode.initialize(&operatingSystemInterface);
+    dllCode.initialize(&os);
     
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
@@ -135,7 +142,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
 
             // NOTE: Call HotReload function from the dll
-            dllCode.hotReload(&operatingSystemInterface);
+            dllCode.hotReload(&os);
         }
 
         MSG Message;
@@ -147,9 +154,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         Win32UpdateXInput();
 
         // NOTE: Call Update function from the dll
-        dllCode.update(&operatingSystemInterface);
+        dllCode.update(&os);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        TimeEndFrameAndSleep(&timeData, &beginFrame, &beginFrameCycles);
+        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
     }
     
     return(1);
