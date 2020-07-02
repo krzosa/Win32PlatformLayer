@@ -6,6 +6,11 @@
 #define true 1
 #define false 0
 
+#define Kilobytes(value) ((value)*1024LL)
+#define Megabytes(value) (Kilobytes(value)*1024LL)
+#define Gigabytes(value) (Megabytes(value)*1024LL)
+#define Terabytes(value) (Gigabytes(value)*1024LL)
+
 typedef int8_t   i8;
 typedef int16_t  i16;
 typedef int32_t  i32;

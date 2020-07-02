@@ -1,11 +1,8 @@
+#include <windows.h>
+#include <gl/GL.h>
+#include "opengl_headers/wglext.h"
 
-// NOTE: forward declarations
-internal void *OpenGLFunctionLoad(char *name);
-internal void PrintLastErrorMessage(char *text);
-internal HGLRC Win32OpenGLInit(HDC deviceContext);
-
-// NOTE: OpenGL function prototypes not included in opengl header files
-typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);
+#include "opengl_headers/glext.h"
 
 // NOTE: OPENGL Pointers to functions
 typedef struct OpenGLFunctions
@@ -16,5 +13,3 @@ typedef struct OpenGLFunctions
     #include "opengl_procedures.include"
     #undef GLLoad // undefine GLLoad macro
 } OpenGLFunctions;
-
-

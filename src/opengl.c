@@ -1,19 +1,19 @@
 // TODO: move maybe to dynamically allocated string, but probably I need a custom allocator first
-#define ERROR_BUFFER_SIZE 2048
+#define ERROR_BUFFER_SIZE 1028
 
 internal u32 
 ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
 {
-    u32 shader = gl.CreateShader(shaderType);
-    gl.ShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
-    gl.CompileShader(shader);
+    u32 shader = gl->CreateShader(shaderType);
+    gl->ShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
+    gl->CompileShader(shader);
 
     i32 status;
-    gl.GetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
+    gl->GetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
     if (!status)
     {
         char log[ERROR_BUFFER_SIZE];
-        gl.GetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
+        gl->GetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
 
         char *strShaderType = NULL;
         switch(shaderType)
@@ -22,7 +22,7 @@ ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
             case GL_GEOMETRY_SHADER: strShaderType = "geometry"; break;
             case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
         }
-        LogError("%s Shader compilation %s", shaderType, log);
+        // LogError("%s Shader compilation %s", shaderType, log);
     }
 
     return shader;
@@ -31,25 +31,25 @@ ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
 internal u32
 ProgramCreate(u32 shaders[], u32 shaderCount)
 {
-    u32 shaderProgram = gl.CreateProgram();
+    u32 shaderProgram = gl->CreateProgram();
 
     for(u32 i = 0; i != shaderCount; i++)
-        gl.AttachShader(shaderProgram, shaders[i]);
+        gl->AttachShader(shaderProgram, shaders[i]);
 
-    gl.LinkProgram(shaderProgram);
+    gl->LinkProgram(shaderProgram);
 
     i32 status;
-    gl.GetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
+    gl->GetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
     if (!status)
     {
         char log[ERROR_BUFFER_SIZE];
-        gl.GetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
+        gl->GetProgramInfoLog(shaderProgram, ERROR_BUFFER_SIZE - 1, NULL, log);
 
-        LogError("Create program %s", log);
+        // LogError("Create program %s", log);
     }
 
     for(u32 i = 0; i != shaderCount; i++)
-        gl.DeleteShader(shaders[i]); 
+        gl->DeleteShader(shaders[i]); 
 
     return shaderProgram;
 }

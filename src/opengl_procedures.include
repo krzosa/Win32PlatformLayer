@@ -1,3 +1,12 @@
+//
+// NOTE: fancy macro work, this include is included in 2 different places
+//       one declares the functions inside a struct, the second one loads
+//       the functions dynamically
+// tldr: just place a name of gl function here and it should load
+// format: GLLoad(small, BIG)
+//
+
+
 GLLoad(BindBuffer, BINDBUFFER)
 GLLoad(GenBuffers, GENBUFFERS)
 GLLoad(BufferData, BUFFERDATA)
@@ -17,9 +26,9 @@ GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
 GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
 GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
 
-GLLoad(DrawArrays, DRAWARRAYS)
 GLLoad(GetShaderiv, GETSHADERIV)
 GLLoad(GetProgramiv, GETPROGRAMIV)
 GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
 GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
 GLLoad(GenVertexArrays, GENVERTEXARRAYS)
+

@@ -1,3 +1,8 @@
+// NOTE: forward declarations
+internal void *OpenGLFunctionLoad(char *name);
+internal void PrintLastErrorMessage(char *text);
+internal HGLRC Win32OpenGLInit(HDC deviceContext);
+
 internal void
 OpenGLFunctionsLoad()
 {
