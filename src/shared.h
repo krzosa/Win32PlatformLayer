@@ -16,9 +16,9 @@ typedef struct temporary_storage
     u64 highestAllocatedSize;
 } temporary_storage;
 
-typedef struct application_memory
+typedef struct operating_system_interface
 {
     pernament_storage pernamentStorage;
     temporary_storage temporaryStorage;
     OpenGLFunctionLoadType *OpenGLFunctionLoad; 
-} application_memory;
+} operating_system_interface;

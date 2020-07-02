@@ -1,18 +1,14 @@
-#include "shared.h"
+#include "shared.h" // Opengl
 #include "win32_main.h"
 
 // CStandard Lib and Windows
 #include <windows.h>
 #include <stdio.h>
-#include <assert.h>
 #include <xinput.h>
 #include <intrin.h>
 
-// Opengl
-
-static time_data GLOBALTime;
-static bool32 GLOBALAppStatus;
-static user_input GLOBALUserInput;
+global_variable bool32 GLOBALAppStatus;
+global_variable user_input GLOBALUserInput;
 
 // Custom
 #include "string.c"
@@ -29,10 +25,8 @@ static user_input GLOBALUserInput;
  * os status abstraction
  * add better input handling 
  * memory stuff
- * give app more stuff to work with, test opengl in dll
  * audio latency? 
  * fill audio buffer
- * assert / compile time assert
 */
 
 int 
@@ -42,16 +36,17 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32ConsoleAttach();
 
     // NOTE: Init time data
+    time_data timeData;
     {
         // NOTE: Set timers to application start
-        GLOBALTime.startAppCycles = GetProcessorClockCycles();
-        GLOBALTime.startAppCount = Win32PerformanceCountGet();
+        timeData.startAppCycles = GetProcessorClockCycles();
+        timeData.startAppCount = Win32PerformanceCountGet();
 
         // NOTE: Set windows scheduler to wake up every 1 millisecond
-        GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
+        timeData.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+        timeData.performanceCounterFrequency = Win32PerformanceFrequencyGet();
 
-        GLOBALTime.targetMsPerFrame = 16.6f;
+        timeData.targetMsPerFrame = 16.6f;
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
@@ -90,6 +85,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
 
+    // NOTE: Construct paths to exe and to dll
     str *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
     str *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
     str *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
@@ -99,7 +95,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32DLLCode dllCode = {0};
 
     // NOTE: Allocate memory
-    application_memory applicationMemory = {0};
+    operating_system_interface applicationMemory = {0};
     {
         applicationMemory.pernamentStorage.memory = VirtualAlloc(
             NULL, Megabytes(64), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
@@ -146,11 +142,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         Win32UpdateXInput();
 
         dllCode.update(&applicationMemory);
-
-
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
-        
+        TimeEndFrameAndSleep(&timeData, &beginFrame, &beginFrameCycles);
     }
     
     return(1);

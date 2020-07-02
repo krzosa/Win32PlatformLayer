@@ -1,8 +1,12 @@
 #include <stdint.h>
+#include <assert.h>
 
-#define local_global static
+#define global_variable static
+// global variable with local scope
+#define local_scoped_global static
 // Function internal to the obj, file 
 #define internal static
+
 #define true 1
 #define false 0
 
@@ -32,10 +36,9 @@ typedef struct v2
     f32 y;
 } v2;
 
-typedef struct v4
-{
-    u8 r;
-    u8 g;
-    u8 b;
-    u8 a;
-} v4;
+// NOTE: set breakpoint
+#if _MSC_VER
+    #define debugger() {__debugbreak();}
+#else
+    #define debugger() {assert(0);}
+#endif

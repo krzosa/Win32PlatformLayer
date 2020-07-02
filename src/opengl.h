@@ -1,13 +1,16 @@
+#if _WIN32
 #include <windows.h>
 #include <gl/GL.h>
 #include "opengl_headers/wglext.h"
+#else
+#error "ERROR: only windows supported"
+#endif
 
 #include "opengl_headers/glext.h"
-
 typedef void *OpenGLFunctionLoadType(char *name);
 
 // NOTE: OPENGL Pointers to functions
-// NOTE: expands to, for example PFNGLBUFFERDATAPROC glBufferData;
+//       expands to, for example PFNGLBUFFERDATAPROC glBufferData;
 #define GLLoad(name, type) static PFNGL##type##PROC gl##name;
 // NOTE: Load OpenGL function prototypes from file
 #include "opengl_procedures.include"

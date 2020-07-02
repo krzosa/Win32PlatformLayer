@@ -4,19 +4,16 @@
 typedef char str;
 #define ALLOCATOR(size) malloc(size)
 
-#define ArraySize(a) ( sizeof(a) / sizeof((a)[0]) )
-
-
 /* TODO: 
     Optional string pool implmentation
     Capacity bigger then length
  */
 
-typedef struct StringHeader
+typedef struct string_header
 {
     size_t length;
     size_t capacity;
-} StringHeader;
+} string_header;
 
 inline static size_t
 CharLength(char *text)
@@ -30,30 +27,30 @@ CharLength(char *text)
 inline static size_t 
 StringLength(str *string)
 {
-    return ((StringHeader *)(string) - 1)->length;
+    return ((string_header *)(string) - 1)->length;
 }
 
 inline static size_t 
 StringCapacity(str *string)
 {
-    return ((StringHeader *)(string) - 1)->capacity;
+    return ((string_header *)(string) - 1)->capacity;
 }
 
-inline static StringHeader *
+inline static string_header *
 StringGetHeader(str *string)
 {
-    return (StringHeader *)(string) - 1;
+    return (string_header *)(string) - 1;
 }
 
 static str *
 StringAllocate(size_t size)
 {
-    StringHeader *newStringHeader = 
-        (StringHeader *)ALLOCATOR(sizeof(StringHeader) + sizeof(str) * size + 1);
-    str *newString = (str *)(newStringHeader + 1);
+    string_header *newstring_header = 
+        (string_header *)ALLOCATOR(sizeof(string_header) + sizeof(str) * size + 1);
+    str *newString = (str *)(newstring_header + 1);
 
-    newStringHeader->length = size;
-    newStringHeader->capacity = size + 1;
+    newstring_header->length = size;
+    newstring_header->capacity = size + 1;
     newString[size] = '\0';
 
     return newString;
@@ -75,7 +72,7 @@ StringCreate(char *text)
 static void
 StringFree(str *string)
 {
-    StringHeader *stringHeader = ((StringHeader *)string) - 1;
+    string_header *stringHeader = ((string_header *)string) - 1;
     free(stringHeader);
 }
 

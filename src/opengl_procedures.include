@@ -1,6 +1,6 @@
 //
 // NOTE: fancy macro work, this include is included in 2 different places
-//       one declares the functions inside a struct, the second one loads
+//       one declares the function, the second one loads
 //       the functions dynamically
 // tldr: just place a name of gl function here and it should load
 // format: GLLoad(small, BIG)
