@@ -2,7 +2,8 @@
 #include <memory.h>
 
 typedef char str;
-#define ALLOCATOR(size) malloc(size)
+#define STR_ALLOC(size) malloc(size)
+
 
 /* TODO: 
     Optional string pool implmentation
@@ -46,7 +47,7 @@ static str *
 StringAllocate(size_t size)
 {
     string_header *newstring_header = 
-        (string_header *)ALLOCATOR(sizeof(string_header) + sizeof(str) * size + 1);
+        (string_header *)STR_ALLOC(sizeof(string_header) + sizeof(str) * size + 1);
     str *newString = (str *)(newstring_header + 1);
 
     newstring_header->length = size;

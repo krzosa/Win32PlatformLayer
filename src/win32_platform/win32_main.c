@@ -135,7 +135,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
-    static f32 audioIndexer = 0.01f; 
 
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
@@ -152,24 +151,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         // NOTE: Process input
-        Win32InputUpdate(&userInput.keyboard);
-        Win32XInputUpdate();
-
-        // f32 *audioBuffer = (f32 *)os.pernamentStorage.memory;
-        // for(i32 i = 0; i < 800; i++)
-        // {
-        //     // debugger();
-        //     audioBuffer[i] = 3000 * i;
-        //     // Log("%f\n", audioBuffer[i]);
-        //     audioIndexer += 0.01f;
-        // }
-        // Win32FillSoundBuffer(800, audioBuffer, &audioData);
+        Win32InputUpdate(&userInput);
+        Win32XInputUpdate(&userInput);
 
         if(IsKeyDown(&userInput.keyboard, KEY_W)) Log("W\n");
-        if(IsKeyPressedOnce(&userInput.keyboard, KEY_S)) Log("S\n");
+        if(IsKeyPressedOnce(&userInput.keyboard, KEY_ESC)) GLOBALAppStatus = 0;
         if(IsKeyUnpressedOnce(&userInput.keyboard, KEY_A)) Log("A\n");
         // if(IsKeyUp(&userInput.keyboard, KEY_D)) Log("D\n");
-        
 
         
 

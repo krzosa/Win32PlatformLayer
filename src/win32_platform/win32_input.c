@@ -13,29 +13,54 @@ static XInputGetStateProc *XInputGetStateFunctionPointer = XInputGetStateStub;
 typedef enum keyboard_keys
 {
     KEY_W,
-    KEY_A,
     KEY_S,
+    KEY_A,
     KEY_D,
+    KEY_UP,
+    KEY_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
+
+    KEY_F1,
+    KEY_F2,
+    KEY_F3,
+    KEY_F4,
     KEY_F12,
+    KEY_ESC,
 
     KEY_COUNT,
 } keyboard_keys;
 
 typedef enum controller_buttons
 {
-    BUTTON_A,
-    BUTTON_B,
+    BUTTON_UP,
+    BUTTON_DOWN,
+    BUTTON_LEFT,
+    BUTTON_RIGHT,
+
+    BUTTON_DPAD_UP,
+    BUTTON_DPAD_DOWN,
+    BUTTON_DPAD_LEFT,
+    BUTTON_DPAD_RIGHT,
+
+    BUTTON_LEFT_SHOULDER,
+    BUTTON_RIGHT_SHOULDER,
+
     BUTTON_START,
-    BUTTON_RESET,
+    BUTTON_SELECT,
 
     BUTTON_COUNT,
 } controller_buttons;
 
 typedef struct user_input_controller
 {
-    f32 stickX;
-    f32 stickY;
+    f32 leftStickX;
+    f32 leftStickY;
+
+    f32 rightStickX;
+    f32 rightStickY;
     
+    bool8 connected;
     bool8 currentButtonState[BUTTON_COUNT];
     bool8 previousButtonState[BUTTON_COUNT];
 } user_input_controller;
@@ -48,8 +73,7 @@ typedef struct user_input_keyboard
 
 typedef struct user_input
 {
-    #define MAX_CONTROLLER_COUNT 4
-    user_input_controller controller[MAX_CONTROLLER_COUNT];
+    user_input_controller controller[XUSER_MAX_COUNT];
 
     user_input_keyboard keyboard;
 } user_input;
@@ -98,41 +122,6 @@ Win32XInputLoad(void)
     }
 }
 
-internal void
-Win32XInputUpdate(void)
-{
-    DWORD xinputState;    
-
-    // NOTE: i = controller index
-    for (DWORD i=0; i < XUSER_MAX_COUNT; i++ )
-    {
-        XINPUT_STATE state;
-        if(XInputGetStateFunctionPointer( i, &state ) == ERROR_SUCCESS)
-        {
-            XINPUT_GAMEPAD *gamepad = &state.Gamepad;
-            bool8 up = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-            bool8 down = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-            bool8 left = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-            bool8 right = (gamepad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-            bool8 start = (gamepad->wButtons & XINPUT_GAMEPAD_START);
-            bool8 back = (gamepad->wButtons & XINPUT_GAMEPAD_BACK);
-            bool8 leftShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
-            bool8 rightShoulder = (gamepad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-            bool8 AButton = (gamepad->wButtons & XINPUT_GAMEPAD_A);
-            bool8 BButton = (gamepad->wButtons & XINPUT_GAMEPAD_B);
-            bool8 XButton = (gamepad->wButtons & XINPUT_GAMEPAD_X);
-            bool8 YButton = (gamepad->wButtons & XINPUT_GAMEPAD_Y);
-
-            i16 stickX = gamepad->sThumbLX;
-            i16 stickY = gamepad->sThumbLY;
-            // LogInfo("Controller %d conntected\n", i);
-        }
-        else
-        {
-            // LogInfo("Controller %d not connected ", i);
-        }
-    }
-}
 
 internal bool32
 IsKeyPressedOnce(user_input_keyboard *keyboard, keyboard_keys KEY)
@@ -178,10 +167,20 @@ IsKeyUp(user_input_keyboard *keyboard, keyboard_keys KEY)
     return false;
 }
 
+#define KEYUpdate(KEY){ \
+    keyboard->previousKeyState[KEY] = wasKeyDown; \
+    keyboard->currentKeyState[KEY] = isKeyDown;}
+
+#define BUTTONUpdate(BUTTON, XINPUT_BUTTON) \
+    controller->previousButtonState[BUTTON] = controller->currentButtonState[BUTTON]; \
+    controller->currentButtonState[BUTTON] = (gamepad->wButtons & XINPUT_BUTTON) != 0;
+
 
 internal void
-Win32InputUpdate(user_input_keyboard *keyboard)
+Win32InputUpdate(user_input *userInput)
 {
+    user_input_keyboard *keyboard = &userInput->keyboard;
+
     MSG message;
     while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
     {
@@ -193,34 +192,22 @@ Win32InputUpdate(user_input_keyboard *keyboard)
             {
                 bool8 isKeyDown = (message.message == WM_KEYDOWN);
                 bool8 wasKeyDown = !!(message.lParam & (1 << 30));
-                if(VKCode == 'W')
-                {
-                    keyboard->previousKeyState[KEY_W] = wasKeyDown;
-                    keyboard->currentKeyState[KEY_W] = isKeyDown;
-                }
-                if(VKCode == 'S')
-                {
-                    keyboard->previousKeyState[KEY_S] = wasKeyDown;
-                    keyboard->currentKeyState[KEY_S] = isKeyDown;
-                }
-                if(VKCode == 'A')
-                {
-                    keyboard->previousKeyState[KEY_A] = wasKeyDown;
-                    keyboard->currentKeyState[KEY_S] = isKeyDown;
-                }
-                if(VKCode == 'D')
-                {
-                    keyboard->previousKeyState[KEY_D] = wasKeyDown;
-                    keyboard->currentKeyState[KEY_D] = isKeyDown;
-                }
-                if(VKCode == VK_ESCAPE)
-                {
-                    GLOBALAppStatus = isKeyDown;
-                }
-                else
-                {
-                    // NOTE: other keys
-                }
+
+                if(VKCode == 'W') KEYUpdate(KEY_W)
+                if(VKCode == 'S') KEYUpdate(KEY_S)
+                if(VKCode == 'A') KEYUpdate(KEY_A)
+                if(VKCode == 'D') KEYUpdate(KEY_D)
+                if(VKCode == VK_UP) KEYUpdate(KEY_UP)
+                if(VKCode == VK_DOWN) KEYUpdate(KEY_DOWN)
+                if(VKCode == VK_LEFT) KEYUpdate(KEY_LEFT)
+                if(VKCode == VK_RIGHT) KEYUpdate(KEY_RIGHT)
+                if(VKCode == VK_F1) KEYUpdate(KEY_F1)
+                if(VKCode == VK_F2) KEYUpdate(KEY_F2)
+                if(VKCode == VK_F3) KEYUpdate(KEY_F3)
+                if(VKCode == VK_F4) KEYUpdate(KEY_F4)
+                if(VKCode == VK_F12) KEYUpdate(KEY_F12)
+                if(VKCode == VK_ESCAPE) KEYUpdate(KEY_ESC)
+                else{} // NOTE: other keys
                 break;
             }
             default:
@@ -233,3 +220,49 @@ Win32InputUpdate(user_input_keyboard *keyboard)
     }
 }
 
+internal void
+Win32XInputUpdate(user_input *userInput)
+{
+    DWORD xinputState;    
+
+    // NOTE: i = controller index
+    for (DWORD i=0; i < XUSER_MAX_COUNT; i++ )
+    {
+        XINPUT_STATE state;
+        user_input_controller *controller = &userInput->controller[i];
+        if(XInputGetStateFunctionPointer( i, &state ) == ERROR_SUCCESS)
+        {
+            XINPUT_GAMEPAD *gamepad = &state.Gamepad;
+
+            BUTTONUpdate(BUTTON_DOWN, XINPUT_GAMEPAD_A)
+            BUTTONUpdate(BUTTON_RIGHT, XINPUT_GAMEPAD_B)
+            BUTTONUpdate(BUTTON_LEFT, XINPUT_GAMEPAD_X)
+            BUTTONUpdate(BUTTON_UP, XINPUT_GAMEPAD_Y)
+
+            BUTTONUpdate(BUTTON_DPAD_UP, XINPUT_GAMEPAD_DPAD_UP)
+            BUTTONUpdate(BUTTON_DPAD_DOWN, XINPUT_GAMEPAD_DPAD_DOWN)
+            BUTTONUpdate(BUTTON_DPAD_RIGHT, XINPUT_GAMEPAD_DPAD_RIGHT)
+            BUTTONUpdate(BUTTON_DPAD_LEFT, XINPUT_GAMEPAD_DPAD_LEFT)
+
+            BUTTONUpdate(BUTTON_START, XINPUT_GAMEPAD_START)
+            BUTTONUpdate(BUTTON_SELECT, XINPUT_GAMEPAD_BACK)
+
+            BUTTONUpdate(BUTTON_LEFT_SHOULDER, XINPUT_GAMEPAD_LEFT_SHOULDER)
+            BUTTONUpdate(BUTTON_RIGHT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER)
+
+            controller->leftStickX = gamepad->sThumbLX / 32767.f;
+            controller->leftStickY = gamepad->sThumbLY / 32767.f;
+
+            controller->rightStickX = gamepad->sThumbRX / 32767.f;
+            controller->rightStickY = gamepad->sThumbRY / 32767.f;
+
+            controller->connected = 1;
+            // LogInfo("Controller %d conntected", i);
+        }
+        else
+        {
+            controller->connected = 0;
+            // LogInfo("Controller %d not connected ", i);
+        }
+    }
+}
