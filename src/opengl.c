@@ -22,7 +22,7 @@ ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
             case GL_GEOMETRY_SHADER: strShaderType = "geometry"; break;
             case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
         }
-        LogError("%s Shader compilation %s", shaderType, log);
+        LogError("%s Shader compilation %s", strShaderType, log);
     }
 
     return shader;
@@ -52,4 +52,48 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
         glDeleteShader(shaders[i]); 
 
     return shaderProgram;
+}
+
+internal void
+OpenGLTriangleSetup()
+{
+    // dbg()
+    char *vertexShaderSource = 
+        "#version 330 core\n"
+        "layout (location = 0) in vec3 aPos;"
+        "void main()"
+        "{"
+        "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+        "}\0";
+
+    char *fragmentShaderSource =
+        "#version 330 core\n"
+        "out vec4 FragColor;"
+        "void main(){"
+            "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
+
+    u32 shaders[2];
+    u32 shaderCount = 0;
+
+    shaders[shaderCount++] = ShaderCreate(GL_VERTEX_SHADER, &vertexShaderSource);
+    shaders[shaderCount++] = ShaderCreate(GL_FRAGMENT_SHADER, &fragmentShaderSource);
+
+    u32 shaderProgram = ProgramCreate(shaders, shaderCount);
+
+    u32 vertexBufferObject, vertexArrayObject;
+    glGenVertexArrays(1, &vertexArrayObject);
+    glGenBuffers(1, &vertexBufferObject); 
+
+    f32 vertices[] = {
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        0.0f,  0.5f, 0.0f
+    }; 
+
+    glBindVertexArray(vertexArrayObject);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    glUseProgram(shaderProgram);
 }
