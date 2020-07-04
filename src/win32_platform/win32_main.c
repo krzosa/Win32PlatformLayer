@@ -162,7 +162,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         if(IsButtonPressedOnce(&userInput.controller[0], BUTTON_DOWN)) Log("FF\n");
         if(IsButtonUnpressedOnce(&userInput.controller[0], BUTTON_LEFT)) Log("A\n");
 
-        
+        Log("%f %f\n", userInput.controller[0].leftStickX, userInput.controller[0].leftStickY);
 
         // NOTE: Call Update function from the dll
         dllCode.update(&os);

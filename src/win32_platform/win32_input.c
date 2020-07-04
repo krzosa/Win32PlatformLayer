@@ -294,11 +294,30 @@ Win32XInputUpdate(user_input *userInput)
             BUTTONUpdate(BUTTON_LEFT_SHOULDER, XINPUT_GAMEPAD_LEFT_SHOULDER)
             BUTTONUpdate(BUTTON_RIGHT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER)
 
-            controller->leftStickX = gamepad->sThumbLX / 32767.f;
-            controller->leftStickY = gamepad->sThumbLY / 32767.f;
+            #define StickRange 32767.f
+            #define LeftStickDeadzone 7849
 
-            controller->rightStickX = gamepad->sThumbRX / 32767.f;
-            controller->rightStickY = gamepad->sThumbRY / 32767.f;
+            controller->leftStickX = 0; 
+            controller->leftStickY = 0;
+
+            if(gamepad->sThumbLX > LeftStickDeadzone || 
+                gamepad->sThumbLX < -LeftStickDeadzone)
+                controller->leftStickX = gamepad->sThumbLX / StickRange;
+            if(gamepad->sThumbLY > LeftStickDeadzone ||
+                gamepad->sThumbLY < -LeftStickDeadzone)
+                controller->leftStickY = gamepad->sThumbLY / StickRange;
+
+            #define RightStickDeadzone 8689
+
+            controller->rightStickX = 0; 
+            controller->rightStickY = 0;
+
+            if(gamepad->sThumbRX > RightStickDeadzone || 
+                gamepad->sThumbRX < -RightStickDeadzone)
+                controller->rightStickX = gamepad->sThumbRX / StickRange;
+            if(gamepad->sThumbRY > RightStickDeadzone ||
+                gamepad->sThumbRY < -RightStickDeadzone)
+                controller->rightStickY = gamepad->sThumbRY / StickRange;
 
             controller->connected = 1;
         }
