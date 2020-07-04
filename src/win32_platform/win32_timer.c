@@ -77,7 +77,7 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     time->totalMsPerFrame = PerformanceCountToMilliseconds(time->totalFrameCount);
     time->framesPerSec = 1 / PerformanceCountToSeconds(time->totalFrameCount); 
 
-    Log("frame = %ffps %lucycles %fms\n", time->framesPerSec, time->totalFrameCycles, time->totalMsPerFrame);
+    // Log("frame = %ffps %lucycles %fms\n", time->framesPerSec, time->totalFrameCycles, time->totalMsPerFrame);
     *prevFrame = Win32PerformanceCountGet();
     *prevFrameCycles = GetProcessorClockCycles();
 }

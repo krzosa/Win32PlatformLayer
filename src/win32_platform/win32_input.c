@@ -10,6 +10,51 @@ DWORD WINAPI XInputSetStateStub(DWORD dw_user_index, XINPUT_VIBRATION *p_vibrati
 static XInputSetStateProc *XInputSetStateFunctionPointer = XInputSetStateStub;
 static XInputGetStateProc *XInputGetStateFunctionPointer = XInputGetStateStub;
 
+typedef enum keyboard_keys
+{
+    KEY_W,
+    KEY_A,
+    KEY_S,
+    KEY_D,
+    KEY_F12,
+
+    KEY_COUNT,
+} keyboard_keys;
+
+typedef enum controller_buttons
+{
+    BUTTON_A,
+    BUTTON_B,
+    BUTTON_START,
+    BUTTON_RESET,
+
+    BUTTON_COUNT,
+} controller_buttons;
+
+typedef struct user_input_controller
+{
+    f32 stickX;
+    f32 stickY;
+    
+    bool8 currentButtonState[BUTTON_COUNT];
+    bool8 previousButtonState[BUTTON_COUNT];
+} user_input_controller;
+
+typedef struct user_input_keyboard
+{
+    bool8 currentKeyState[KEY_COUNT];
+    bool8 previousKeyState[KEY_COUNT];
+} user_input_keyboard;
+
+typedef struct user_input
+{
+    #define MAX_CONTROLLER_COUNT 4
+    user_input_controller controller[MAX_CONTROLLER_COUNT];
+
+    user_input_keyboard keyboard;
+} user_input;
+
+
 internal void 
 Win32XInputLoad(void)    
 {
@@ -54,7 +99,7 @@ Win32XInputLoad(void)
 }
 
 internal void
-Win32UpdateXInput(user_input_controller *userInput)
+Win32XInputUpdate(void)
 {
     DWORD xinputState;    
 
@@ -89,8 +134,53 @@ Win32UpdateXInput(user_input_controller *userInput)
     }
 }
 
+internal bool32
+IsKeyPressedOnce(user_input_keyboard *keyboard, keyboard_keys KEY)
+{
+    if(keyboard->previousKeyState[KEY] == 0 &&
+        keyboard->currentKeyState[KEY] == 1)
+    {
+        keyboard->previousKeyState[KEY] = 1;
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsKeyUnpressedOnce(user_input_keyboard *keyboard, keyboard_keys KEY)
+{
+    if(keyboard->previousKeyState[KEY] == 1 &&
+        keyboard->currentKeyState[KEY] == 0)
+    {
+        keyboard->previousKeyState[KEY] = 0;
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsKeyDown(user_input_keyboard *keyboard, keyboard_keys KEY)
+{
+    if(keyboard->currentKeyState[KEY] == 1)
+    {
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsKeyUp(user_input_keyboard *keyboard, keyboard_keys KEY)
+{
+    if(keyboard->currentKeyState[KEY] == 0)
+    {
+        return true;
+    }
+    return false;
+}
+
+
 internal void
-Win32ProcessMessages(user_input_controller *userInput)
+Win32InputUpdate(user_input_keyboard *keyboard)
 {
     MSG message;
     while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
@@ -102,27 +192,28 @@ Win32ProcessMessages(user_input_controller *userInput)
             case WM_KEYDOWN:
             {
                 bool8 isKeyDown = (message.message == WM_KEYDOWN);
+                bool8 wasKeyDown = !!(message.lParam & (1 << 30));
                 if(VKCode == 'W')
                 {
-                    dbg()
-                    userInput->up = isKeyDown;
-                    Log("W\n");
+                    keyboard->previousKeyState[KEY_W] = wasKeyDown;
+                    keyboard->currentKeyState[KEY_W] = isKeyDown;
                 }
-                else if(VKCode == 'S')
+                if(VKCode == 'S')
                 {
-                    dbg()
-                    Log("S\n");
-                    userInput->down = isKeyDown;
+                    keyboard->previousKeyState[KEY_S] = wasKeyDown;
+                    keyboard->currentKeyState[KEY_S] = isKeyDown;
                 }
                 if(VKCode == 'A')
                 {
-                    userInput->left = isKeyDown;
+                    keyboard->previousKeyState[KEY_A] = wasKeyDown;
+                    keyboard->currentKeyState[KEY_S] = isKeyDown;
                 }
-                else if(VKCode == 'D')
+                if(VKCode == 'D')
                 {
-                    userInput->right = isKeyDown;
+                    keyboard->previousKeyState[KEY_D] = wasKeyDown;
+                    keyboard->currentKeyState[KEY_D] = isKeyDown;
                 }
-                else if(VKCode == VK_ESCAPE)
+                if(VKCode == VK_ESCAPE)
                 {
                     GLOBALAppStatus = isKeyDown;
                 }

@@ -60,8 +60,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Load XInput(xbox controllers) dynamically 
     Win32XInputLoad();
 
-    user_input_controller userInputController;
-
     // NOTE: Wasapi init and load COM library dynamically 
     audio_data audioData = Win32AudioInitialize();   
     
@@ -102,7 +100,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
-    Win32DLLCode dllCode = {0};
+    user_input userInput = {0};
+    win32_dll_code dllCode = {0};
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
@@ -153,8 +152,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         // NOTE: Process input
-        Win32ProcessMessages(&userInputController);
-        Win32UpdateXInput(&userInputController);
+        Win32InputUpdate(&userInput.keyboard);
+        Win32XInputUpdate();
 
         // f32 *audioBuffer = (f32 *)os.pernamentStorage.memory;
         // for(i32 i = 0; i < 800; i++)
@@ -165,6 +164,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         //     audioIndexer += 0.01f;
         // }
         // Win32FillSoundBuffer(800, audioBuffer, &audioData);
+
+        if(IsKeyDown(&userInput.keyboard, KEY_W)) Log("W\n");
+        if(IsKeyPressedOnce(&userInput.keyboard, KEY_S)) Log("S\n");
+        if(IsKeyUnpressedOnce(&userInput.keyboard, KEY_A)) Log("A\n");
+        // if(IsKeyUp(&userInput.keyboard, KEY_D)) Log("D\n");
+        
+
+        
 
         // NOTE: Call Update function from the dll
         dllCode.update(&os);
