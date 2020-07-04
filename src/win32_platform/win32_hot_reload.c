@@ -1,13 +1,13 @@
 // NOTE: prototypes for function pointers
 typedef void Initialize(operating_system_interface *memory); // called at the beginning of the app
 typedef void HotReload(operating_system_interface *memory); // called on hot reload
-typedef void Update(operating_system_interface *memory); // called on every frame
+typedef bool32 Update(operating_system_interface *memory); // called on every frame
 
 // NOTE: empty functions meant to be replacements when
 // functions from the dll fail to load
 void InitializeStub(operating_system_interface *memory){}
 void HotReloadStub(operating_system_interface *memory){}
-void UpdateStub(operating_system_interface *memory){}
+bool32 UpdateStub(operating_system_interface *memory){return 1;}
 
 typedef struct win32_dll_code
 {

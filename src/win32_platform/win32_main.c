@@ -23,7 +23,6 @@ global_variable time_data GLOBALTime;
 #include "win32_opengl.c"
 #include "win32_fileio.c"
 #include "win32_input.c"
-#include "win32_callback.c"
 #include "win32_hot_reload.c"
 #include "win32_wasapi.c"
 
@@ -34,6 +33,9 @@ global_variable time_data GLOBALTime;
  * audio latency? 
  * fill audio buffer
 */
+
+LRESULT CALLBACK 
+Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
@@ -100,7 +102,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
-    user_input userInput = {0};
     win32_dll_code dllCode = {0};
 
     // NOTE: init operating system interface, allocate memory etc.
@@ -151,24 +152,52 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         // NOTE: Process input
-        Win32InputUpdate(&userInput);
-        Win32XInputUpdate(&userInput);
+        Win32InputUpdate(&os.userInput);
+        Win32XInputUpdate(&os.userInput);
 
-        if(IsKeyDown(&userInput.keyboard, KEY_W)) Log("W\n");
-        if(IsKeyPressedOnce(&userInput.keyboard, KEY_ESC)) GLOBALAppStatus = 0;
-        if(IsKeyUnpressedOnce(&userInput.keyboard, KEY_A)) Log("A\n");
-        // if(IsKeyUp(&userInput.keyboard, KEY_D)) Log("D\n");
-        if(IsButtonDown(&userInput.controller[0], BUTTON_UP)) Log("A\n");
-        if(IsButtonPressedOnce(&userInput.controller[0], BUTTON_DOWN)) Log("FF\n");
-        if(IsButtonUnpressedOnce(&userInput.controller[0], BUTTON_LEFT)) Log("A\n");
-
-        Log("%f %f\n", userInput.controller[0].leftStickX, userInput.controller[0].leftStickY);
-
-        // NOTE: Call Update function from the dll
-        dllCode.update(&os);
+        // NOTE: Call Update function from the dll, bit "and" operator here
+        //       because we dont want update to override appstatus
+        GLOBALAppStatus &= dllCode.update(&os);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
     }
     
     return(1);
+}
+
+LRESULT CALLBACK 
+Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    LRESULT result = 0;
+
+    uint32_t VKCode = wParam;
+    switch (message) 
+    {
+        case WM_QUIT:
+        case WM_CLOSE:
+        case WM_DESTROY:
+        {
+            GLOBALAppStatus = false;
+            break;
+        } 
+        case WM_WINDOWPOSCHANGING:
+        case WM_SIZE:
+        {
+            // NOTE: resize opengl viewport on window resize
+            Win32OpenGLAspectRatioUpdate(window, 16, 9);
+            break;
+        }
+        case WM_KEYUP:
+        case WM_KEYDOWN:
+        {
+            assert(0);
+        }
+        default:
+        {
+            result = DefWindowProc(window, message, wParam, lParam);
+        } break;
+
+    }
+
+    return result;
 }

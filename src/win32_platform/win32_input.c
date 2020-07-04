@@ -10,75 +10,6 @@ DWORD WINAPI XInputSetStateStub(DWORD dw_user_index, XINPUT_VIBRATION *p_vibrati
 static XInputSetStateProc *XInputSetStateFunctionPointer = XInputSetStateStub;
 static XInputGetStateProc *XInputGetStateFunctionPointer = XInputGetStateStub;
 
-typedef enum keyboard_keys
-{
-    KEY_W,
-    KEY_S,
-    KEY_A,
-    KEY_D,
-    KEY_UP,
-    KEY_DOWN,
-    KEY_LEFT,
-    KEY_RIGHT,
-
-    KEY_F1,
-    KEY_F2,
-    KEY_F3,
-    KEY_F4,
-    KEY_F12,
-    KEY_ESC,
-
-    KEY_COUNT,
-} keyboard_keys;
-
-typedef enum controller_buttons
-{
-    BUTTON_UP,
-    BUTTON_DOWN,
-    BUTTON_LEFT,
-    BUTTON_RIGHT,
-
-    BUTTON_DPAD_UP,
-    BUTTON_DPAD_DOWN,
-    BUTTON_DPAD_LEFT,
-    BUTTON_DPAD_RIGHT,
-
-    BUTTON_LEFT_SHOULDER,
-    BUTTON_RIGHT_SHOULDER,
-
-    BUTTON_START,
-    BUTTON_SELECT,
-
-    BUTTON_COUNT,
-} controller_buttons;
-
-typedef struct user_input_controller
-{
-    f32 leftStickX;
-    f32 leftStickY;
-
-    f32 rightStickX;
-    f32 rightStickY;
-    
-    bool8 connected;
-    bool8 currentButtonState[BUTTON_COUNT];
-    bool8 previousButtonState[BUTTON_COUNT];
-} user_input_controller;
-
-typedef struct user_input_keyboard
-{
-    bool8 currentKeyState[KEY_COUNT];
-    bool8 previousKeyState[KEY_COUNT];
-} user_input_keyboard;
-
-typedef struct user_input
-{
-    user_input_controller controller[XUSER_MAX_COUNT];
-
-    user_input_keyboard keyboard;
-} user_input;
-
-
 internal void 
 Win32XInputLoad(void)    
 {
@@ -122,95 +53,6 @@ Win32XInputLoad(void)
     }
 }
 
-
-internal bool32
-IsKeyPressedOnce(user_input_keyboard *keyboard, keyboard_keys KEY)
-{
-    if(keyboard->previousKeyState[KEY] == 0 &&
-        keyboard->currentKeyState[KEY] == 1)
-    {
-        keyboard->previousKeyState[KEY] = 1;
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsKeyUnpressedOnce(user_input_keyboard *keyboard, keyboard_keys KEY)
-{
-    if(keyboard->previousKeyState[KEY] == 1 &&
-        keyboard->currentKeyState[KEY] == 0)
-    {
-        keyboard->previousKeyState[KEY] = 0;
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsKeyDown(user_input_keyboard *keyboard, keyboard_keys KEY)
-{
-    if(keyboard->currentKeyState[KEY] == 1)
-    {
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsKeyUp(user_input_keyboard *keyboard, keyboard_keys KEY)
-{
-    if(keyboard->currentKeyState[KEY] == 0)
-    {
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsButtonPressedOnce(user_input_controller *controller, controller_buttons BUTTON)
-{
-    if(controller->previousButtonState[BUTTON] == 0 &&
-        controller->currentButtonState[BUTTON] == 1)
-    {
-        controller->previousButtonState[BUTTON] = 1;
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsButtonUnpressedOnce(user_input_controller *controller, controller_buttons BUTTON)
-{
-    if(controller->previousButtonState[BUTTON] == 1 &&
-        controller->currentButtonState[BUTTON] == 0)
-    {
-        controller->previousButtonState[BUTTON] = 0;
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsButtonDown(user_input_controller *controller, controller_buttons BUTTON)
-{
-    if(controller->currentButtonState[BUTTON] == 1)
-    {
-        return true;
-    }
-    return false;
-}
-
-internal bool32
-IsButtonUp(user_input_controller *controller, controller_buttons BUTTON)
-{
-    if(controller->currentButtonState[BUTTON] == 0)
-    {
-        return true;
-    }
-    return false;
-}
-
 #define KEYUpdate(KEY){ \
     keyboard->previousKeyState[KEY] = wasKeyDown; \
     keyboard->currentKeyState[KEY] = isKeyDown;}
@@ -218,7 +60,6 @@ IsButtonUp(user_input_controller *controller, controller_buttons BUTTON)
 #define BUTTONUpdate(BUTTON, XINPUT_BUTTON) \
     controller->previousButtonState[BUTTON] = controller->currentButtonState[BUTTON]; \
     controller->currentButtonState[BUTTON] = (gamepad->wButtons & XINPUT_BUTTON) != 0;
-
 
 internal void
 Win32InputUpdate(user_input *userInput)
@@ -300,24 +141,41 @@ Win32XInputUpdate(user_input *userInput)
             controller->leftStickX = 0; 
             controller->leftStickY = 0;
 
+            // NOTE: Take deadzone into account for the left stick
             if(gamepad->sThumbLX > LeftStickDeadzone || 
                 gamepad->sThumbLX < -LeftStickDeadzone)
+            {
+                // NOTE: Normalize the stick values
                 controller->leftStickX = gamepad->sThumbLX / StickRange;
+            }
+
             if(gamepad->sThumbLY > LeftStickDeadzone ||
                 gamepad->sThumbLY < -LeftStickDeadzone)
+            {
+                // NOTE: Normalize the stick values
                 controller->leftStickY = gamepad->sThumbLY / StickRange;
+            }
 
             #define RightStickDeadzone 8689
 
             controller->rightStickX = 0; 
             controller->rightStickY = 0;
 
+            // NOTE: Take deadzone into account for the right stick
             if(gamepad->sThumbRX > RightStickDeadzone || 
                 gamepad->sThumbRX < -RightStickDeadzone)
+            {
+                // NOTE: Normalize the stick values
                 controller->rightStickX = gamepad->sThumbRX / StickRange;
+            }    
+
             if(gamepad->sThumbRY > RightStickDeadzone ||
                 gamepad->sThumbRY < -RightStickDeadzone)
+            {
+                // NOTE: Normalize the stick values
                 controller->rightStickY = gamepad->sThumbRY / StickRange;
+            }
+
 
             controller->connected = 1;
         }

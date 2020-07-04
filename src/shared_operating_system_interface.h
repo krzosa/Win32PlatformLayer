@@ -17,15 +17,84 @@ typedef struct file_data
     u32 size;
 } file_data;
 
+typedef enum keyboard_keys
+{
+    KEY_W,
+    KEY_S,
+    KEY_A,
+    KEY_D,
+    KEY_UP,
+    KEY_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
+
+    KEY_F1,
+    KEY_F2,
+    KEY_F3,
+    KEY_F4,
+    KEY_F12,
+    KEY_ESC,
+
+    KEY_COUNT,
+} keyboard_keys;
+
+typedef enum controller_buttons
+{
+    BUTTON_UP,
+    BUTTON_DOWN,
+    BUTTON_LEFT,
+    BUTTON_RIGHT,
+
+    BUTTON_DPAD_UP,
+    BUTTON_DPAD_DOWN,
+    BUTTON_DPAD_LEFT,
+    BUTTON_DPAD_RIGHT,
+
+    BUTTON_LEFT_SHOULDER,
+    BUTTON_RIGHT_SHOULDER,
+
+    BUTTON_START,
+    BUTTON_SELECT,
+
+    BUTTON_COUNT,
+} controller_buttons;
+
+typedef struct user_input_controller
+{
+    f32 leftStickX;
+    f32 leftStickY;
+
+    f32 rightStickX;
+    f32 rightStickY;
+    
+    bool8 connected;
+    bool8 currentButtonState[BUTTON_COUNT];
+    bool8 previousButtonState[BUTTON_COUNT];
+} user_input_controller;
+
+typedef struct user_input_keyboard
+{
+    bool8 currentKeyState[KEY_COUNT];
+    bool8 previousKeyState[KEY_COUNT];
+} user_input_keyboard;
+
+typedef struct user_input
+{
+    user_input_controller controller[4];
+    user_input_keyboard keyboard;
+} user_input;
+
 typedef struct operating_system_interface
 {
     memory_storage pernamentStorage;
     memory_storage temporaryStorage;
 
+    user_input userInput;
+
     console_log *log;
     console_log_extra *logExtra;
     time_current_get *timeCurrentGet;
-
     opengl_function_load *OpenGLFunctionLoad;
 } operating_system_interface;
+
 

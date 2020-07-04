@@ -12,6 +12,18 @@ Win32OpenGLFunctionLoad(char *name)
   return p;
 }
 
+window_dimension 
+Win32GetWindowDimension(HWND Window)
+{
+    RECT ClientRect;
+    window_dimension windowDimension;
+    // get size of the window, without the border
+    GetClientRect(Window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+    return windowDimension;
+}
+
 internal HGLRC
 Win32OpenGLInit(HDC deviceContext)
 {
