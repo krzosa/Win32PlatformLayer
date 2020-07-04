@@ -158,6 +158,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         if(IsKeyPressedOnce(&userInput.keyboard, KEY_ESC)) GLOBALAppStatus = 0;
         if(IsKeyUnpressedOnce(&userInput.keyboard, KEY_A)) Log("A\n");
         // if(IsKeyUp(&userInput.keyboard, KEY_D)) Log("D\n");
+        if(IsButtonDown(&userInput.controller[0], BUTTON_UP)) Log("A\n");
+        if(IsButtonPressedOnce(&userInput.controller[0], BUTTON_DOWN)) Log("FF\n");
+        if(IsButtonUnpressedOnce(&userInput.controller[0], BUTTON_LEFT)) Log("A\n");
 
         
 

@@ -167,6 +167,50 @@ IsKeyUp(user_input_keyboard *keyboard, keyboard_keys KEY)
     return false;
 }
 
+internal bool32
+IsButtonPressedOnce(user_input_controller *controller, controller_buttons BUTTON)
+{
+    if(controller->previousButtonState[BUTTON] == 0 &&
+        controller->currentButtonState[BUTTON] == 1)
+    {
+        controller->previousButtonState[BUTTON] = 1;
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsButtonUnpressedOnce(user_input_controller *controller, controller_buttons BUTTON)
+{
+    if(controller->previousButtonState[BUTTON] == 1 &&
+        controller->currentButtonState[BUTTON] == 0)
+    {
+        controller->previousButtonState[BUTTON] = 0;
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsButtonDown(user_input_controller *controller, controller_buttons BUTTON)
+{
+    if(controller->currentButtonState[BUTTON] == 1)
+    {
+        return true;
+    }
+    return false;
+}
+
+internal bool32
+IsButtonUp(user_input_controller *controller, controller_buttons BUTTON)
+{
+    if(controller->currentButtonState[BUTTON] == 0)
+    {
+        return true;
+    }
+    return false;
+}
+
 #define KEYUpdate(KEY){ \
     keyboard->previousKeyState[KEY] = wasKeyDown; \
     keyboard->currentKeyState[KEY] = isKeyDown;}
@@ -257,12 +301,10 @@ Win32XInputUpdate(user_input *userInput)
             controller->rightStickY = gamepad->sThumbRY / 32767.f;
 
             controller->connected = 1;
-            // LogInfo("Controller %d conntected", i);
         }
         else
         {
             controller->connected = 0;
-            // LogInfo("Controller %d not connected ", i);
         }
     }
 }
