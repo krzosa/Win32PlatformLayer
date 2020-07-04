@@ -4,43 +4,25 @@ typedef struct window_dimension
     i32 height;
 } window_dimension;
 
-typedef struct user_input
+typedef struct user_input_controller
 {
-    bool8 up;
-    bool8 down;
-    bool8 left;
-    bool8 right;
-    bool8 reset;
-} user_input;
+    f32 stickX;
+    f32 stickY;
 
-typedef struct file_data
-{
-    void *contents;
-    u32 size;
-} file_data;
+    u8 action1;
+    u8 action2;
+    u8 action3;
+    u8 action4;
 
-typedef struct time_data
-{
-    // NOTE: count == QueryPerformanceCount
-    // performanceCounterFrequency says 
-    // how many counts there are per second
-    i64 performanceCounterFrequency;
+    u8 up;
+    u8 down;
+    u8 left;
+    u8 right;
 
-    // Can we assume that Sleep will get called every millisecond
-    bool32 sleepIsGranular;
-    f32 targetMsPerFrame;
 
-    // TimeStamp taken at the program start
-    // Cycles as in processor clock cycles
-    u64 startAppCycles;
-    u64 startAppCount;
-
-    // Length of the update, without the sleep 
-    u64 updateFrameCycles;
-    i64 updateFrameCount;
-
-    // Length of the update, with sleep
-    u64 totalFrameCycles;
-    i64 totalFrameCount;
+    u8 leftShoulder;
+    u8 rightShoulder;
     
-} time_data;
+    u8 start;
+    u8 select;
+} user_input_controller;

@@ -54,7 +54,7 @@ Win32XInputLoad(void)
 }
 
 internal void
-Win32UpdateXInput(void)
+Win32UpdateXInput(user_input_controller *userInput)
 {
     DWORD xinputState;    
 
@@ -85,6 +85,59 @@ Win32UpdateXInput(void)
         else
         {
             // LogInfo("Controller %d not connected ", i);
+        }
+    }
+}
+
+internal void
+Win32ProcessMessages(user_input_controller *userInput)
+{
+    MSG message;
+    while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
+    {
+        u32 VKCode = message.wParam;
+        switch (message.message)
+        {
+            case WM_KEYUP:
+            case WM_KEYDOWN:
+            {
+                bool8 isKeyDown = (message.message == WM_KEYDOWN);
+                if(VKCode == 'W')
+                {
+                    dbg()
+                    userInput->up = isKeyDown;
+                    Log("W\n");
+                }
+                else if(VKCode == 'S')
+                {
+                    dbg()
+                    Log("S\n");
+                    userInput->down = isKeyDown;
+                }
+                if(VKCode == 'A')
+                {
+                    userInput->left = isKeyDown;
+                }
+                else if(VKCode == 'D')
+                {
+                    userInput->right = isKeyDown;
+                }
+                else if(VKCode == VK_ESCAPE)
+                {
+                    GLOBALAppStatus = isKeyDown;
+                }
+                else
+                {
+                    // NOTE: other keys
+                }
+                break;
+            }
+            default:
+            {
+                TranslateMessage(&message);
+                DispatchMessageA(&message);
+                break;
+            }
         }
     }
 }

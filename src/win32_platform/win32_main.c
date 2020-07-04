@@ -1,4 +1,5 @@
-#include "../operating_system_interface.h"
+#include "../shared_custom.h"
+#include "../shared_operating_system_interface.h"
 #include "win32_main.h"
 
 // CStandard Lib and Windows
@@ -13,16 +14,15 @@
 #include "../opengl_headers/glext.h"
 
 global_variable bool32 GLOBALAppStatus;
-global_variable user_input GLOBALUserInput;
 global_variable time_data GLOBALTime;
 
 // Custom
-#include "../string.c"
+#include "../shared_string.c"
 #include "win32_debug_console.c"
 #include "win32_timer.c"
 #include "win32_opengl.c"
 #include "win32_fileio.c"
-#include "win32_xinput.c"
+#include "win32_input.c"
 #include "win32_callback.c"
 #include "win32_hot_reload.c"
 #include "win32_wasapi.c"
@@ -43,19 +43,24 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     // NOTE: Init time data
     {
-        // NOTE: Set timers to application start
-        GLOBALTime.startAppCycles = GetProcessorClockCycles();
-        GLOBALTime.startAppCount = Win32PerformanceCountGet();
-
         // NOTE: Set windows scheduler to wake up every 1 millisecond
         GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
         GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
+
+        
+        // NOTE: Set timers to application start
+        GLOBALTime.startAppCycles = GetProcessorClockCycles();
+        GLOBALTime.startAppCount = Win32PerformanceCountGet();
+        GLOBALTime.startAppMilliseconds = PerformanceCountToMilliseconds(
+                                            GLOBALTime.startAppCount);
 
         GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
     Win32XInputLoad();
+
+    user_input_controller userInputController;
 
     // NOTE: Wasapi init and load COM library dynamically 
     audio_data audioData = Win32AudioInitialize();   
@@ -120,6 +125,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         os.log = &ConsoleLog;
         os.logExtra = &ConsoleLogExtra;
+        os.timeCurrentGet = &Win32TimeGetCurrent;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -130,6 +136,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
+    static f32 audioIndexer = 0.01f; 
 
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
@@ -145,13 +152,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             dllCode.hotReload(&os);
         }
 
-        MSG Message;
-        while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&Message);
-            DispatchMessageA(&Message);
-        }
-        Win32UpdateXInput();
+        // NOTE: Process input
+        Win32ProcessMessages(&userInputController);
+        Win32UpdateXInput(&userInputController);
+
+        // f32 *audioBuffer = (f32 *)os.pernamentStorage.memory;
+        // for(i32 i = 0; i < 800; i++)
+        // {
+        //     // debugger();
+        //     audioBuffer[i] = 3000 * i;
+        //     // Log("%f\n", audioBuffer[i]);
+        //     audioIndexer += 0.01f;
+        // }
+        // Win32FillSoundBuffer(800, audioBuffer, &audioData);
 
         // NOTE: Call Update function from the dll
         dllCode.update(&os);

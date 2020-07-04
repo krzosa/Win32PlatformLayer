@@ -25,5 +25,7 @@ OpenGLFunctionsLoad(opengl_function_load *OpenGLFunctionLoad)
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLFunctionLoad("glUseProgram");
     #include "opengl_procedures.include" // include OpenGL functions to load
     #undef GLLoad // undefine GLLoad macro 
+
+    LogSuccess("OpenGL functions loaded");
 }
 

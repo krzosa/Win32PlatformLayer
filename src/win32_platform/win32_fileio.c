@@ -1,5 +1,5 @@
 internal void
-FreeFileMemory(void *Memory)
+Win32FreeFileMemory(void *Memory)
 {
     if(Memory)
     {
@@ -8,7 +8,7 @@ FreeFileMemory(void *Memory)
 }
 
 internal file_data 
-ReadEntireFile(char *filename)
+Win32ReadEntireFile(char *filename)
 {
     file_data result = {0};
     
@@ -31,7 +31,7 @@ ReadEntireFile(char *filename)
                 else
                 {                    
                     Log("ReadEntireFile: ReadFile failed\n");
-                    FreeFileMemory(result.contents);
+                    Win32FreeFileMemory(result.contents);
                     result.contents = 0;
                 }
             }
