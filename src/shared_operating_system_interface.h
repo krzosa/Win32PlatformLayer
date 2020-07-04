@@ -78,10 +78,21 @@ typedef struct user_input_keyboard
     bool8 previousKeyState[KEY_COUNT];
 } user_input_keyboard;
 
+typedef struct user_input_mouse
+{
+    i32 mousePosX;
+    i32 mousePosY;
+
+    bool8 left;
+    bool8 right;
+    bool8 middle;
+} user_input_mouse;
+
 typedef struct user_input
 {
     user_input_controller controller[4];
     user_input_keyboard keyboard;
+    user_input_mouse mouse;
 } user_input;
 
 typedef struct operating_system_interface

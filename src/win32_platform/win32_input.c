@@ -1,3 +1,7 @@
+// NOTE: Get mouse position
+#define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
+#define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
+
 // NOTE: Functions as types
 typedef DWORD WINAPI XInputGetStateProc(DWORD dw_user_index, XINPUT_STATE *p_state);
 typedef DWORD WINAPI XInputSetStateProc(DWORD dw_user_index, XINPUT_VIBRATION *p_vibration);
@@ -65,6 +69,7 @@ internal void
 Win32InputUpdate(user_input *userInput)
 {
     user_input_keyboard *keyboard = &userInput->keyboard;
+    user_input_mouse *mouse = &userInput->mouse;
 
     MSG message;
     while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
@@ -74,6 +79,8 @@ Win32InputUpdate(user_input *userInput)
         {
             case WM_KEYUP:
             case WM_KEYDOWN:
+            case WM_SYSKEYUP:
+            case WM_SYSKEYDOWN:
             {
                 bool8 isKeyDown = (message.message == WM_KEYDOWN);
                 bool8 wasKeyDown = !!(message.lParam & (1 << 30));
@@ -93,6 +100,31 @@ Win32InputUpdate(user_input *userInput)
                 if(VKCode == VK_F12) KEYUpdate(KEY_F12)
                 if(VKCode == VK_ESCAPE) KEYUpdate(KEY_ESC)
                 else{} // NOTE: other keys
+                break;
+            }
+            case WM_MOUSEMOVE:
+            {
+                mouse->mousePosX = GET_X_LPARAM(message.lParam); 
+                mouse->mousePosY = GET_Y_LPARAM(message.lParam);
+                // Log("%d %d \n ",  mouse->mousePosX, mouse->mousePosY);
+                break;
+            }
+            case WM_LBUTTONUP:
+            case WM_LBUTTONDOWN:
+            {
+                mouse->left = (message.message == WM_LBUTTONDOWN);
+                break;
+            }
+            case WM_MBUTTONDOWN:
+            case WM_MBUTTONUP:
+            {
+                mouse->middle = (message.message == WM_MBUTTONDOWN);
+                break;
+            }
+            case WM_RBUTTONDOWN:
+            case WM_RBUTTONUP:
+            {
+                mouse->right = (message.message == WM_RBUTTONDOWN);
                 break;
             }
             default:
