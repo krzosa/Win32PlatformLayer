@@ -42,6 +42,7 @@ ConsoleLogExtra(char *prepend, char *text, ...)
     WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer[0], textLength + 1, 0, 0);
 }
 
+
 // NOTE: Attaches to the console that invoked the application
 //       if that fails it allocates a new console
 internal void

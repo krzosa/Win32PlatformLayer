@@ -27,7 +27,7 @@ typedef int32_t  bool32;
 #define Terabytes(value) (Gigabytes(value)*1024LL)
 
 #define Log(text, ...)         ConsoleLog(text, __VA_ARGS__)
-#define LogInfo(text, ...)     ConsoleLogExtra("INFO: ", text, __VA_ARGS__)
+#define LogInfo(text, ...)     ConsoleLogExtra("INFO:    ", text, __VA_ARGS__)
 #define LogSuccess(text, ...)  ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...)    ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define assert(expression)     if(!expression) PrivateSetDebuggerBreakpoint("ASSERT")

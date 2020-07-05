@@ -99,9 +99,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Window dimmension %d %d", win.width, win.height);
 
     // NOTE: Construct paths to exe and to dll
-    str *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
-    str *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
-    str *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
+    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
+    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
+    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
@@ -142,21 +142,21 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     win32_audio_data audioData = {0};
     
-    audioData.runningSampleIndex = 0;
     audioData.samplesPerSecond = 48000;
     audioData.numberOfChannels = 2;
     audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
     audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
     audioData.audioLatency = audioData.samplesPerSecond / 20;
 
-    audioData.cyclesPerSecondOrHz = 261;
-    audioData.wavePeriod = audioData.samplesPerSecond / audioData.cyclesPerSecondOrHz;
+    // NOTE: hertz is cycles per second so wave period here is how many
+    //       cycles per period (from one peak of sine wave to another)
+    i32 toneHz = 261;
+    i32 wavePeriod = audioData.samplesPerSecond / toneHz;
 
     audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, audioData.bufferSize); 
-    // Win32FillAudioBuffer(&audioData, 0, audioData.audioLatency * audioData.bytesPerSample);
-    Win32ZeroClearAudioBuffer(&audioData);
+    // Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, 0, audioData.audioLatency * audioData.bytesPerSample);
+    // Win32ZeroClearAudioBuffer(&audioData);
 
-    u32 positionInBuffer = 0;
     if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
 
     GLOBALAppStatus = true;
@@ -182,28 +182,30 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         DWORD playCursor;
         DWORD writeCursor;
         DWORD numberOfBytesToLock = 0;
-        DWORD byteToLock = positionInBuffer;
+        DWORD byteToLock = audioData.currentPositionInBuffer;
         if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
                                                              &playCursor, &writeCursor)))
         {
-
-            DWORD targetCursor = (playCursor + 
-                (audioData.audioLatency * audioData.bytesPerSample)) 
-                    % audioData.bufferSize;
+            i32 samplesOfLatency = (audioData.audioLatency * audioData.bytesPerSample);
+            DWORD targetCursor = (playCursor + samplesOfLatency) % audioData.bufferSize;
             if(byteToLock > targetCursor)
             {
                 numberOfBytesToLock = audioData.bufferSize - byteToLock;
                 numberOfBytesToLock += targetCursor;
             }
             else numberOfBytesToLock = targetCursor - byteToLock;
+
+            // NOTE: calculate next position in the audio buffer
+            audioData.currentPositionInBuffer += numberOfBytesToLock;
+            audioData.currentPositionInBuffer %= audioData.bufferSize;
         }
 
-        audioData.cyclesPerSecondOrHz = 261 + (os.userInput.controller[0].rightStickX * 100);
-        audioData.wavePeriod = (audioData.samplesPerSecond / audioData.cyclesPerSecondOrHz);
-        AudioOutputSound(os.pernamentStorage.memory, numberOfBytesToLock / audioData.bytesPerSample, audioData.wavePeriod);
-        Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, byteToLock, numberOfBytesToLock);
-        positionInBuffer = (positionInBuffer + numberOfBytesToLock) % audioData.bufferSize;
+        toneHz = 261 + (os.userInput.controller[0].rightStickX * 100);
+        wavePeriod = (audioData.samplesPerSecond / toneHz);
 
+        i32 samplesToFill = numberOfBytesToLock / audioData.bytesPerSample;
+        AudioFillBuffer(os.pernamentStorage.memory, samplesToFill, wavePeriod);
+        Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, byteToLock, numberOfBytesToLock);
 
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus

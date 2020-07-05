@@ -4,14 +4,11 @@ typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND *ppDS, L
 typedef struct win32_audio_data
 {
     LPDIRECTSOUNDBUFFER audioBuffer;
-    u32 runningSampleIndex;
-    i32 cyclesPerSecondOrHz;
     i32 samplesPerSecond;
     i32 numberOfChannels;
     i32 bytesPerSample;
+    u32 currentPositionInBuffer;
     i32 bufferSize;
-    i32 wavePeriod;
-    i16 toneVolume;
     i32 audioLatency;
 } win32_audio_data;
 
@@ -174,8 +171,9 @@ Win32ZeroClearAudioBuffer(win32_audio_data *audioData)
 }
 
 internal void
-AudioOutputSound(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
+AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 {
+    assert(sampleCount > 48000);
     local_scoped_global f32 tSine;
 
     i16 *sample = (i16 *)audioBuffer;

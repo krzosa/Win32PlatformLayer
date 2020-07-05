@@ -55,7 +55,7 @@ Win32ReadEntireFile(char *filename)
     return(result);
 }
 
-internal str *
+internal str8 *
 Win32ExecutableDirectoryPathGet()
 {
     char fileName[MAX_PATH];
