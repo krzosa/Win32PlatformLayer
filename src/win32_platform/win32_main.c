@@ -5,6 +5,7 @@
 // CStandard Lib and Windows
 #include <windows.h>
 #include <stdio.h>
+#include <math.h>
 #include <xinput.h>
 #include <intrin.h>
 
@@ -15,6 +16,7 @@
 
 global_variable bool32 GLOBALAppStatus;
 global_variable time_data GLOBALTime;
+#define MATH_PI 3.14159265358979323846f
 
 // Custom
 #include "../shared_string.c"
@@ -33,6 +35,7 @@ global_variable time_data GLOBALTime;
  * audio latency? 
  * fill audio buffer
 */
+
 
 LRESULT CALLBACK 
 Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
@@ -137,17 +140,25 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
 
+    win32_audio_data audioData = {0};
+    
+    audioData.runningSampleIndex = 0;
+    audioData.cyclesPerSecondOrHz = 261;
+    audioData.samplesPerSecond = 48000;
+    audioData.numberOfChannels = 2;
+    audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
+    audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
+    audioData.wavePeriod = audioData.samplesPerSecond / audioData.cyclesPerSecondOrHz;
 
-    u32 runningSampleIndex = 0;
-    i32 cyclesPerSecondOrHz = 261;
-    i32 samplesPerSecond = 48000;
-    i32 numberOfAudioChannels = 2;
-    i32 bytesPerSample = sizeof(i16) * numberOfAudioChannels;
-    i32 audioBufferSize = samplesPerSecond * bytesPerSample;
-    i32 squareWavePeriod = samplesPerSecond / cyclesPerSecondOrHz;
-
-    LPDIRECTSOUNDBUFFER audioBuffer = Win32AudioInitialize(windowHandle, samplesPerSecond, audioBufferSize); 
-    if(!SUCCEEDED(audioBuffer->lpVtbl->Play(audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
+    audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, audioData.bufferSize); 
+    Win32FillAudioBuffer(&audioData, 0, audioData.bufferSize);
+    audioData.soundIsPlaying = 0;
+    if(!audioData.soundIsPlaying)
+    {
+        if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
+        audioData.soundIsPlaying = !audioData.soundIsPlaying;
+    }
+    
 
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
@@ -171,52 +182,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         DWORD playCursor;
         DWORD writeCursor;
-        if(SUCCEEDED(audioBuffer->lpVtbl->GetCurrentPosition(audioBuffer, 
+        if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
                                                              &playCursor, &writeCursor)))
         {
-            i32 byteToLock = runningSampleIndex * bytesPerSample % audioBufferSize;
+            DWORD byteToLock = (audioData.runningSampleIndex * audioData.bytesPerSample) % audioData.bufferSize;
             DWORD numberOfBytesToLock;
             if(byteToLock > playCursor)
             {
-                numberOfBytesToLock = audioBufferSize - byteToLock;
+                numberOfBytesToLock = audioData.bufferSize - byteToLock;
                 numberOfBytesToLock += playCursor;
             }
-            else if(byteToLock == playCursor) numberOfBytesToLock = audioBufferSize; 
             else numberOfBytesToLock = playCursor - byteToLock;
 
-            VOID *region1 = 0;
-            VOID *region2 = 0;
-            DWORD region1Size = 0;
-            DWORD region2Size = 0;
-            if(SUCCEEDED(audioBuffer->lpVtbl->Lock(audioBuffer, 
-                                                   byteToLock, numberOfBytesToLock, 
-                                                   &region1, &region1Size, 
-                                                   &region2, &region2Size, 0)))
-            {
-                i16 *sample = (i16 *)region1;
-                i32 region1SampleCount = region1Size / bytesPerSample;
-
-                for(i32 i = 0; i != region1SampleCount; i++)
-                {
-                    i16 sampleValue = runningSampleIndex++ / (squareWavePeriod / 2) % 2 ? 4000 : -4000;
-                    *sample++ = sampleValue;
-                    *sample++ = sampleValue;
-                }
-
-                sample = (i16 *)region2;
-                i32 region2SampleCount = region2Size / bytesPerSample;
-
-                for(i32 i = 0; i != region2SampleCount; i++)
-                {
-                    i16 sampleValue = runningSampleIndex++ / (squareWavePeriod / 2) % 2 ? 4000 : -4000;
-                    *sample++ = sampleValue;    
-                    *sample++ = sampleValue;
-                }
-
-                audioBuffer->lpVtbl->Unlock(audioBuffer, 
-                                            region1, region1Size, 
-                                            region2, region2Size);
-            }
+            Win32FillAudioBuffer(&audioData, byteToLock, numberOfBytesToLock);
         }
 
         // NOTE: Call Update function from the dll, bit "and" operator here

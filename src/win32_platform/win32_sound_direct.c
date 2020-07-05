@@ -3,15 +3,30 @@ typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND *ppDS, L
 
 typedef struct win32_audio_data
 {
+    LPDIRECTSOUNDBUFFER audioBuffer;
+    // NOTE: keeps track of where are we in the buffer in terms of writing
+    u32 runningSampleIndex;
+    // NOTE: this value determines the tone of the sound, we use it to calculate the period of the wave
+    //       period of the wave is equal to how far apart are the peaks of the wave
+    // it describes how many full peaks we should hit in a second to get a pitch
+    i32 cyclesPerSecondOrHz;
+    // NOTE: how many samples to output in a second, that means that there are about 800 samples to output
+    //       per frame at 60 fps becuase 60 fps is 16ms per frame
     i32 samplesPerSecond;
-    i32 toneHz;
-    i16 toneVolume;
-    i32 runningSampleIndex;
-    i32 wavePeriod;
+    // NOTE: audio channels determine how many output speakers we want to output to, we want stereo sound
+    //      aka we want to output into 2 speakers
+    i32 numberOfChannels;
+    // NOTE: how big is one samples in terms of bytes. One sample should be 16 bits but we have 2 channels
+    //      so there are 2 channel samples per sample in format || 16b left channel | 16b right channel || ...
     i32 bytesPerSample;
-    i32 secondaryBufferSize;
-    f32 tSine;
-    i32 latencySampleCount;
+    // NOTE: how big in bytes is the buffer. So we need to know how big is one sample in bytes.
+    //       and we multiply how many samples we want by the one sample size which is 16 bit
+    //       in this case but there are 2 channels per sample so 32 bit in the end
+    i32 bufferSize;
+    // NOTE: wave period is how many samples it takes to go from one peak of the wave to another
+    i32 wavePeriod;
+    i16 toneVolume;
+    bool32 soundIsPlaying;
 } win32_audio_data;
 
 internal LPDIRECTSOUNDBUFFER
@@ -101,84 +116,48 @@ Win32AudioInitialize(HWND window, i32 samplesPerSecond, i32 bufferSize)
     return secondaryBuffer;
 }
 
-// internal void
-// Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD BytesToWrite)
-// {
-//     VOID *Region1;
-//     DWORD Region1Size;
-//     VOID *Region2;
-//     DWORD Region2Size;
-//     if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
-//                                              &Region1, &Region1Size,
-//                                              &Region2, &Region2Size, 0)))
-//     {
-//         DWORD Region1SampleCount = Region1Size/SoundOutput->bytesPerSample;
-//         i16 *SampleOut = (i16 *)Region1;
-//         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
-//         {
-//             float SineValue = sinf(SoundOutput->tSine);
-//             i16 SampleValue = (i16)(SineValue * SoundOutput->toneVolume);
-//             *SampleOut++ = SampleValue;
-//             *SampleOut++ = SampleValue;
+internal void 
+Win32FillAudioBuffer(win32_audio_data *audioData, DWORD byteToLock, DWORD numberOfBytesToLock)
+{
+    VOID *region1 = 0;
+    VOID *region2 = 0;
+    DWORD region1Size = 0;
+    DWORD region2Size = 0;
+    LPDIRECTSOUNDBUFFER audioBuffer = audioData->audioBuffer;
 
-//             SoundOutput->tSine += 2.0f*Pi32*1.0f/(float)SoundOutput->wavePeriod;
-//             ++SoundOutput->runningSampleIndex;
-//         }
+    if(SUCCEEDED(audioBuffer->lpVtbl->Lock(audioBuffer, 
+                                            byteToLock, numberOfBytesToLock, 
+                                            &region1, &region1Size, 
+                                            &region2, &region2Size, 0)))
+    {
+        i16 *sample = (i16 *)region1;
+        i32 region1SampleCount = region1Size / audioData->bytesPerSample;
 
-//         DWORD Region2SampleCount = Region2Size/SoundOutput->bytesPerSample;
-//         SampleOut = (i16 *)Region2;
-//         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
-//         {
-//             float SineValue = sinf(SoundOutput->tSine);
-//             i16 SampleValue = (i16)(SineValue * SoundOutput->toneVolume);
-//             *SampleOut++ = SampleValue;
-//             *SampleOut++ = SampleValue;
+        for(i32 i = 0; i != region1SampleCount; i++)
+        {
+            f32 t = 2 * MATH_PI * (f32)audioData->runningSampleIndex / (f32)audioData->wavePeriod;
+            f32 sinValue = sinf(t);
+            i16 sampleValue = (i16)(sinValue * 6000);
+            *sample++ = sampleValue;
+            *sample++ = sampleValue;
+            audioData->runningSampleIndex++;
+        }
 
-//             SoundOutput->tSine += 2.0f*Pi32*1.0f/(float)SoundOutput->wavePeriod;
-//             ++SoundOutput->runningSampleIndex;
-//         }
+        sample = (i16 *)region2;
+        i32 region2SampleCount = region2Size / audioData->bytesPerSample;
 
-//         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
-//     }
-// }
+        for(i32 i = 0; i != region2SampleCount; i++)
+        {
+            f32 t = 2 * MATH_PI * (f32)audioData->runningSampleIndex / (f32)audioData->wavePeriod;
+            f32 sinValue = sinf(t);
+            i16 sampleValue = (i16)(sinValue * 6000);
+            *sample++ = sampleValue;    
+            *sample++ = sampleValue;
+            audioData->runningSampleIndex++;
+        }
 
-// win32_sound_output SoundOutput = {};
-// {
-//     SoundOutput.samplesPerSecond = 48000;
-//     SoundOutput.toneHz = 256;
-//     SoundOutput.toneVolume = 1500;
-//     SoundOutput.wavePeriod = SoundOutput.samplesPerSecond/SoundOutput.toneHz;
-//     SoundOutput.bytesPerSample = sizeof(i16)*2;
-//     SoundOutput.secondaryBufferSize = SoundOutput.samplesPerSecond*SoundOutput.bytesPerSample;
-//     SoundOutput.latencySampleCount = SoundOutput.samplesPerSecond / 15;
-// }
-
-// Win32InitDSound(Window, SoundOutput.samplesPerSecond, SoundOutput.secondaryBufferSize);
-// Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.latencySampleCount*SoundOutput.bytesPerSample);
-// GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
-
-// DWORD PlayCursor;
-// DWORD WriteCursor;
-// if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
-// {
-//     DWORD ByteToLock = ((SoundOutput.runningSampleIndex*SoundOutput.bytesPerSample) %
-//                         SoundOutput.secondaryBufferSize);
-
-//     DWORD TargetCursor = ((PlayCursor +
-//         (SoundOutput.latencySampleCount*SoundOutput.bytesPerSample)) %
-//             SoundOutput.secondaryBufferSize);
-
-//     DWORD BytesToWrite;
-
-//     if(ByteToLock > TargetCursor)
-//     {
-//         BytesToWrite = (SoundOutput.secondaryBufferSize - ByteToLock);
-//         BytesToWrite += TargetCursor;
-//     }
-//     else
-//     {
-//         BytesToWrite = TargetCursor - ByteToLock;
-//     }
-
-//     Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
-// }
+        audioBuffer->lpVtbl->Unlock(audioBuffer, 
+                                    region1, region1Size, 
+                                    region2, region2Size);
+    } 
+}
