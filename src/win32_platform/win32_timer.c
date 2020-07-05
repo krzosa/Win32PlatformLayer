@@ -60,7 +60,7 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     {
         if(time->sleepIsGranular)
         {
-            Sleep(time->targetMsPerFrame - time->updateMilliseconds);
+            Sleep((DWORD)(time->targetMsPerFrame - time->updateMilliseconds));
         }
         else
         {

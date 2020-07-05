@@ -74,7 +74,7 @@ Win32InputUpdate(user_input *userInput)
     MSG message;
     while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
     {
-        u32 VKCode = message.wParam;
+        WPARAM VKCode = message.wParam;
         switch (message.message)
         {
             case WM_KEYUP:
@@ -138,8 +138,6 @@ Win32InputUpdate(user_input *userInput)
 internal void
 Win32XInputUpdate(user_input *userInput)
 {
-    DWORD xinputState;    
-
     // NOTE: i = controller index
     for (DWORD i=0; i < XUSER_MAX_COUNT; i++ )
     {

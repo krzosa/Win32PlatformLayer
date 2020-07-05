@@ -74,7 +74,7 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
 }
 
 internal void
-OpenGLTriangleSetup()
+OpenGLTriangleSetup(void)
 {
 
     u32 shaders[2];

@@ -37,7 +37,7 @@ bool32 Update(operating_system_interface *operatingSystemInterface)
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    i32 toneHz = 261 + (os->userInput.controller[0].rightStickX * 100);
+    i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     i32 wavePeriod = (48000 / toneHz);
     AudioFillBuffer(os->pernamentStorage.memory, os->numberOfSamplesToUpdate, wavePeriod);
 

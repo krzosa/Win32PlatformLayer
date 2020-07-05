@@ -34,10 +34,18 @@ typedef int32_t  bool32;
 #define Assert(expression,text)if(!(expression)) PrivateSetDebuggerBreakpoint(text)
 #define dbg()                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 
-typedef struct v2
+typedef union v2
 {
-    f32 x;
-    f32 y;
+    struct
+    {
+        f32 x;
+        f32 y;
+    };
+    struct
+    {
+        f32 width;
+        f32 height;
+    };
 } v2;
 
 #if _MSC_VER

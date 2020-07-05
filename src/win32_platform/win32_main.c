@@ -213,7 +213,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
 
-    uint32_t VKCode = wParam;
+    WPARAM VKCode = wParam;
     switch (message) 
     {
         case WM_QUIT:

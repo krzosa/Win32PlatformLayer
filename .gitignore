@@ -8,6 +8,7 @@
 *.dll
 *.exp
 *.lib
+*.o
 
 handmade/
 run.bat
