@@ -173,7 +173,6 @@ Win32ZeroClearAudioBuffer(win32_audio_data *audioData)
 internal void
 AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 {
-    assert(sampleCount > 48000);
     local_scoped_global f32 tSine;
 
     i16 *sample = (i16 *)audioBuffer;

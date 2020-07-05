@@ -10,7 +10,6 @@ internal void
 AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 {
     #define MATH_PI 3.14159265f
-    assert(sampleCount > 48000);
     local_scoped_global f32 tSine;
 
     i16 *sample = (i16 *)audioBuffer;

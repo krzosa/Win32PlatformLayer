@@ -7,7 +7,7 @@ internal void *
 Win32OpenGLFunctionLoad(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
-  assert(p != 0);
+  assert(p);
 
   return p;
 }

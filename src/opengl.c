@@ -1,28 +1,47 @@
 // TODO: move maybe to dynamically allocated string, but probably I need a custom allocator first
-#define ERROR_BUFFER_SIZE 1028
+#define ERROR_BUFFER_SIZE 1024
+
+const char *vertexShaderSource = 
+    "#version 330 core\n"
+    "layout (location = 0) in vec3 aPos;"
+    "void main()"
+    "{"
+    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+    "}\0";
+
+const char *fragmentShaderSource =
+    "#version 330 core\n"
+    "out vec4 FragColor;"
+    "void main(){"
+        "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
 
 internal u32 
-ShaderCreate(GLenum shaderType, char **nullTerminatedShaderFile)
+ShaderCreate(GLenum shaderType, const char *nullTerminatedShaderFile)
 {
     u32 shader = glCreateShader(shaderType);
-    glShaderSource(shader, 1, nullTerminatedShaderFile, NULL);
+    glShaderSource(shader, 1, &nullTerminatedShaderFile, NULL);
     glCompileShader(shader);
+
+    char log[ERROR_BUFFER_SIZE];
+    glGetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
+
+    char *strShaderType = NULL;
+    switch(shaderType)
+    {
+        case GL_VERTEX_SHADER: strShaderType = "Vertex"; break;
+        case GL_GEOMETRY_SHADER: strShaderType = "Geometry"; break;
+        case GL_FRAGMENT_SHADER: strShaderType = "Fragment"; break;
+    }
 
     i32 status;
     glGetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
     if (!status)
     {
-        char log[ERROR_BUFFER_SIZE];
-        glGetShaderInfoLog(shader, ERROR_BUFFER_SIZE - 1, NULL, log);
-
-        char *strShaderType = NULL;
-        switch(shaderType)
-        {
-            case GL_VERTEX_SHADER: strShaderType = "vertex"; break;
-            case GL_GEOMETRY_SHADER: strShaderType = "geometry"; break;
-            case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
-        }
-        LogError("%s Shader compilation %s", strShaderType, log);
+        LogError("%s shader compilation %s", strShaderType, log);
+    }
+    else
+    {
+        LogSuccess("%s shader compiled", strShaderType);
     }
 
     return shader;
@@ -57,26 +76,12 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
 internal void
 OpenGLTriangleSetup()
 {
-    // dbg()
-    char *vertexShaderSource = 
-        "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;"
-        "void main()"
-        "{"
-        "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-        "}\0";
-
-    char *fragmentShaderSource =
-        "#version 330 core\n"
-        "out vec4 FragColor;"
-        "void main(){"
-            "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
 
     u32 shaders[2];
     u32 shaderCount = 0;
 
-    shaders[shaderCount++] = ShaderCreate(GL_VERTEX_SHADER, &vertexShaderSource);
-    shaders[shaderCount++] = ShaderCreate(GL_FRAGMENT_SHADER, &fragmentShaderSource);
+    shaders[shaderCount++] = ShaderCreate(GL_VERTEX_SHADER, vertexShaderSource);
+    shaders[shaderCount++] = ShaderCreate(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
     u32 shaderProgram = ProgramCreate(shaders, shaderCount);
 
