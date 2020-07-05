@@ -8,7 +8,7 @@ ConsoleLog(char *text, ...)
 {
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer[0], text, args);
+    vsprintf_s(GLOBALRandomAccessTextBuffer[0], TEXT_BUFFER_SIZE, text, args);
     va_end(args);
 
     int textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);
@@ -27,7 +27,8 @@ ConsoleLogExtra(char *prepend, char *text, ...)
 
     va_list args;
     va_start(args, text);
-    vsprintf(GLOBALRandomAccessTextBuffer[0], GLOBALRandomAccessTextBuffer[1], args);
+    vsprintf_s(GLOBALRandomAccessTextBuffer[0], TEXT_BUFFER_SIZE, 
+               GLOBALRandomAccessTextBuffer[1], args);
     va_end(args);
 
     textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);

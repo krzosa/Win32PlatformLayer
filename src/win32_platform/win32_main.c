@@ -4,10 +4,10 @@
 
 // CStandard Lib and Windows
 #include <windows.h>
-#include <stdio.h>
 #include <math.h>
 #include <xinput.h>
 #include <intrin.h>
+#include <stdio.h>
 
 // OpenGL
 #include <gl/GL.h>
@@ -179,14 +179,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
 
-
         DWORD playCursor;
         DWORD writeCursor;
         if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
                                                              &playCursor, &writeCursor)))
         {
             DWORD byteToLock = (audioData.runningSampleIndex * audioData.bytesPerSample) % audioData.bufferSize;
-            DWORD numberOfBytesToLock;
+            DWORD numberOfBytesToLock = 0;
             if(byteToLock > playCursor)
             {
                 numberOfBytesToLock = audioData.bufferSize - byteToLock;
