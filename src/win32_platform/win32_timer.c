@@ -69,7 +69,7 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     }
     else
     {
-        LogError("Missed framerate!");
+        LogInfo("Missed framerate!");
     }
 
     time->totalFrameCount = Win32PerformanceCountGet() - *prevFrame;

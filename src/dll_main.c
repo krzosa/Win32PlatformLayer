@@ -1,12 +1,10 @@
-#include "shared_custom.h"
+#include "shared_language_layer.h"
 #include "shared_operating_system_interface.h"
 #include "operating_system_interface.c"
 #include <math.h>
 
 #include "opengl.h"
 #include "opengl.c"
-
-
 
 internal void
 AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
