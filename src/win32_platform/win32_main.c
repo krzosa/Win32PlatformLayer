@@ -16,7 +16,7 @@
 
 global_variable bool32 GLOBALAppStatus;
 global_variable time_data GLOBALTime;
-#define MATH_PI 3.14159265358979323846f
+#define MATH_PI 3.14159265f
 
 // Custom
 #include "../shared_string.c"
@@ -148,11 +148,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
     audioData.audioLatency = audioData.samplesPerSecond / 20;
 
-    // NOTE: hertz is cycles per second so wave period here is how many
-    //       cycles per period (from one peak of sine wave to another)
-    i32 toneHz = 261;
-    i32 wavePeriod = audioData.samplesPerSecond / toneHz;
-
     audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, audioData.bufferSize); 
     // Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, 0, audioData.audioLatency * audioData.bytesPerSample);
     // Win32ZeroClearAudioBuffer(&audioData);
@@ -178,7 +173,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
 
-
         DWORD playCursor;
         DWORD writeCursor;
         DWORD numberOfBytesToLock = 0;
@@ -200,16 +194,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             audioData.currentPositionInBuffer %= audioData.bufferSize;
         }
 
-        toneHz = 261 + (os.userInput.controller[0].rightStickX * 100);
-        wavePeriod = (audioData.samplesPerSecond / toneHz);
-
-        i32 samplesToFill = numberOfBytesToLock / audioData.bytesPerSample;
-        AudioFillBuffer(os.pernamentStorage.memory, samplesToFill, wavePeriod);
+        os.numberOfSamplesToUpdate = numberOfBytesToLock / audioData.bytesPerSample;
+        GLOBALAppStatus &= dllCode.update(&os);
         Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, byteToLock, numberOfBytesToLock);
 
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
-        GLOBALAppStatus &= dllCode.update(&os);
+        
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
     }

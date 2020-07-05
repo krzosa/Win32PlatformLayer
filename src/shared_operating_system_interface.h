@@ -96,6 +96,7 @@ typedef struct operating_system_interface
     memory_storage temporaryStorage;
 
     user_input userInput;
+    i32 numberOfSamplesToUpdate;
 
     void  (*log)(char *text, ...);
     void  (*logExtra)(char *prepend, char *text, ...);

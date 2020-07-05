@@ -1,13 +1,31 @@
 #include "shared_custom.h"
 #include "shared_operating_system_interface.h"
 #include "operating_system_interface.c"
-
-#define ConsoleLog(text, ...) os->log(text, __VA_ARGS__)
-#define ConsoleLogExtra(prepend, text, ...) os->logExtra(prepend, text, __VA_ARGS__)
+#include <math.h>
 
 #include "opengl.h"
 #include "opengl.c"
 
+
+
+internal void
+AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
+{
+    #define MATH_PI 3.14159265f
+    assert(sampleCount > 48000);
+    local_scoped_global f32 tSine;
+
+    i16 *sample = (i16 *)audioBuffer;
+    for(i32 i = 0; i != sampleCount; i++)
+    {
+        f32 sineValue = sinf(tSine);
+        i16 sampleValue = (i16)(sineValue * 6000);
+        *sample++ = sampleValue;
+        *sample++ = sampleValue;
+
+        tSine += 2 * MATH_PI * (f32)1.0f / (f32)wavePeriod;
+    }
+}
 
 void Initialize(operating_system_interface *operatingSystemInterface)
 {
@@ -21,6 +39,10 @@ bool32 Update(operating_system_interface *operatingSystemInterface)
 {
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    i32 toneHz = 261 + (os->userInput.controller[0].rightStickX * 100);
+    i32 wavePeriod = (48000 / toneHz);
+    AudioFillBuffer(os->pernamentStorage.memory, os->numberOfSamplesToUpdate, wavePeriod);
 
     if(IsKeyDown(KEY_W)) Log("W\n");
     if(IsKeyPressedOnce(KEY_ESC)) return 0;
