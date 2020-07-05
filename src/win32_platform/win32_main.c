@@ -26,7 +26,7 @@ global_variable time_data GLOBALTime;
 #include "win32_fileio.c"
 #include "win32_input.c"
 #include "win32_hot_reload.c"
-#include "win32_sound_direct.c"
+#include "win32_audio_direct_sound.c"
 
 /* TODO: 
  * os status abstraction
@@ -143,22 +143,21 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     win32_audio_data audioData = {0};
     
     audioData.runningSampleIndex = 0;
-    audioData.cyclesPerSecondOrHz = 261;
     audioData.samplesPerSecond = 48000;
     audioData.numberOfChannels = 2;
     audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
     audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
+    audioData.audioLatency = audioData.samplesPerSecond / 20;
+
+    audioData.cyclesPerSecondOrHz = 261;
     audioData.wavePeriod = audioData.samplesPerSecond / audioData.cyclesPerSecondOrHz;
 
     audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, audioData.bufferSize); 
-    Win32FillAudioBuffer(&audioData, 0, audioData.bufferSize);
-    audioData.soundIsPlaying = 0;
-    if(!audioData.soundIsPlaying)
-    {
-        if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
-        audioData.soundIsPlaying = !audioData.soundIsPlaying;
-    }
-    
+    // Win32FillAudioBuffer(&audioData, 0, audioData.audioLatency * audioData.bytesPerSample);
+    Win32ZeroClearAudioBuffer(&audioData);
+
+    u32 positionInBuffer = 0;
+    if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
 
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
@@ -179,22 +178,32 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
 
+
         DWORD playCursor;
         DWORD writeCursor;
+        DWORD numberOfBytesToLock = 0;
+        DWORD byteToLock = positionInBuffer;
         if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
                                                              &playCursor, &writeCursor)))
         {
-            DWORD byteToLock = (audioData.runningSampleIndex * audioData.bytesPerSample) % audioData.bufferSize;
-            DWORD numberOfBytesToLock = 0;
-            if(byteToLock > playCursor)
+
+            DWORD targetCursor = (playCursor + 
+                (audioData.audioLatency * audioData.bytesPerSample)) 
+                    % audioData.bufferSize;
+            if(byteToLock > targetCursor)
             {
                 numberOfBytesToLock = audioData.bufferSize - byteToLock;
-                numberOfBytesToLock += playCursor;
+                numberOfBytesToLock += targetCursor;
             }
-            else numberOfBytesToLock = playCursor - byteToLock;
-
-            Win32FillAudioBuffer(&audioData, byteToLock, numberOfBytesToLock);
+            else numberOfBytesToLock = targetCursor - byteToLock;
         }
+
+        audioData.cyclesPerSecondOrHz = 261 + (os.userInput.controller[0].rightStickX * 100);
+        audioData.wavePeriod = (audioData.samplesPerSecond / audioData.cyclesPerSecondOrHz);
+        AudioOutputSound(os.pernamentStorage.memory, numberOfBytesToLock / audioData.bytesPerSample, audioData.wavePeriod);
+        Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, byteToLock, numberOfBytesToLock);
+        positionInBuffer = (positionInBuffer + numberOfBytesToLock) % audioData.bufferSize;
+
 
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus

@@ -26,12 +26,13 @@ typedef int32_t  bool32;
 #define Gigabytes(value) (Megabytes(value)*1024LL)
 #define Terabytes(value) (Gigabytes(value)*1024LL)
 
-#define Log(text, ...)        ConsoleLog(text, __VA_ARGS__)
-#define LogInfo(text, ...)    ConsoleLogExtra("INFO: ", text, __VA_ARGS__)
-#define LogSuccess(text, ...) ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
-#define LogError(text, ...)   ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define assert(expression)    if(!expression) PrivateSetDebuggerBreakpoint("ASSERT")
-#define dbg()                 PrivateSetDebuggerBreakpoint("BREAKPOINT") 
+#define Log(text, ...)         ConsoleLog(text, __VA_ARGS__)
+#define LogInfo(text, ...)     ConsoleLogExtra("INFO: ", text, __VA_ARGS__)
+#define LogSuccess(text, ...)  ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
+#define LogError(text, ...)    ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define assert(expression)     if(!expression) PrivateSetDebuggerBreakpoint("ASSERT")
+#define Assert(expression,text)if(!expression) PrivateSetDebuggerBreakpoint(text)
+#define dbg()                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 
 typedef struct v2
 {
@@ -41,6 +42,8 @@ typedef struct v2
 
 #if _MSC_VER
     #define PrivateSetDebuggerBreakpoint(text) {LogError(text); __debugbreak();}
+    #define SilentSetDebuggerBreakpoint() {__debugbreak();}
 #else
     #define PrivateSetDebuggerBreakpoint(text) {LogError(text); *(volatile int *)0 = 0;}
+    #define SilentSetDebuggerBreakpoint() { *(volatile int *)0 = 0;}
 #endif

@@ -8,7 +8,7 @@ ConsoleLog(char *text, ...)
 {
     va_list args;
     va_start(args, text);
-    vsprintf_s(GLOBALRandomAccessTextBuffer[0], TEXT_BUFFER_SIZE, text, args);
+    vsprintf(GLOBALRandomAccessTextBuffer[0], text, args);
     va_end(args);
 
     int textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);
@@ -20,6 +20,12 @@ ConsoleLogExtra(char *prepend, char *text, ...)
 {
     int textLength = CharLength(text);
     int prependLength = CharLength(prepend);
+    if(textLength + prependLength > TEXT_BUFFER_SIZE)
+    {
+        MessageBoxA(0, "Text buffer overflow", "ERROR", MB_OK);
+        OutputDebugStringA("Text buffer overflow!\n");
+        SilentSetDebuggerBreakpoint();
+    }
 
     memcpy(GLOBALRandomAccessTextBuffer[1], prepend, prependLength);
     memcpy(GLOBALRandomAccessTextBuffer[1] + prependLength, text, textLength);
@@ -27,8 +33,7 @@ ConsoleLogExtra(char *prepend, char *text, ...)
 
     va_list args;
     va_start(args, text);
-    vsprintf_s(GLOBALRandomAccessTextBuffer[0], TEXT_BUFFER_SIZE, 
-               GLOBALRandomAccessTextBuffer[1], args);
+    vsprintf(GLOBALRandomAccessTextBuffer[0], GLOBALRandomAccessTextBuffer[1], args);
     va_end(args);
 
     textLength = CharLength(GLOBALRandomAccessTextBuffer[0]);
@@ -37,7 +42,6 @@ ConsoleLogExtra(char *prepend, char *text, ...)
     WriteConsole(GLOBALConsoleHandle, GLOBALRandomAccessTextBuffer[0], textLength + 1, 0, 0);
 }
 
-//
 // NOTE: Attaches to the console that invoked the application
 //       if that fails it allocates a new console
 internal void

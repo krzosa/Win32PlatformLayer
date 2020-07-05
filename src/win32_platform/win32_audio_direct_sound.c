@@ -4,29 +4,15 @@ typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND *ppDS, L
 typedef struct win32_audio_data
 {
     LPDIRECTSOUNDBUFFER audioBuffer;
-    // NOTE: keeps track of where are we in the buffer in terms of writing
     u32 runningSampleIndex;
-    // NOTE: this value determines the tone of the sound, we use it to calculate the period of the wave
-    //       period of the wave is equal to how far apart are the peaks of the wave
-    // it describes how many full peaks we should hit in a second to get a pitch
     i32 cyclesPerSecondOrHz;
-    // NOTE: how many samples to output in a second, that means that there are about 800 samples to output
-    //       per frame at 60 fps becuase 60 fps is 16ms per frame
     i32 samplesPerSecond;
-    // NOTE: audio channels determine how many output speakers we want to output to, we want stereo sound
-    //      aka we want to output into 2 speakers
     i32 numberOfChannels;
-    // NOTE: how big is one samples in terms of bytes. One sample should be 16 bits but we have 2 channels
-    //      so there are 2 channel samples per sample in format || 16b left channel | 16b right channel || ...
     i32 bytesPerSample;
-    // NOTE: how big in bytes is the buffer. So we need to know how big is one sample in bytes.
-    //       and we multiply how many samples we want by the one sample size which is 16 bit
-    //       in this case but there are 2 channels per sample so 32 bit in the end
     i32 bufferSize;
-    // NOTE: wave period is how many samples it takes to go from one peak of the wave to another
     i32 wavePeriod;
     i16 toneVolume;
-    bool32 soundIsPlaying;
+    i32 audioLatency;
 } win32_audio_data;
 
 internal LPDIRECTSOUNDBUFFER
@@ -117,7 +103,46 @@ Win32AudioInitialize(HWND window, i32 samplesPerSecond, i32 bufferSize)
 }
 
 internal void 
-Win32FillAudioBuffer(win32_audio_data *audioData, DWORD byteToLock, DWORD numberOfBytesToLock)
+Win32FillAudioBuffer(win32_audio_data *audioData, void *bufferToPlay, DWORD byteToLock, DWORD numberOfBytesToLock)
+{
+    VOID *region1 = 0;
+    VOID *region2 = 0;
+    DWORD region1Size = 0;
+    DWORD region2Size = 0;
+    local_scoped_global f32 tSine;
+    LPDIRECTSOUNDBUFFER audioBuffer = audioData->audioBuffer;
+
+    if(SUCCEEDED(audioBuffer->lpVtbl->Lock(audioBuffer, 
+                                            byteToLock, numberOfBytesToLock, 
+                                            &region1, &region1Size, 
+                                            &region2, &region2Size, 0)))
+    {
+        i16 *sampleIn = (i16 *)bufferToPlay;
+        i32 region1SampleCount = region1Size / audioData->bytesPerSample;
+        i32 region2SampleCount = region2Size / audioData->bytesPerSample;
+
+        i16 *sampleOut = (i16 *)region1;
+        for(i32 i = 0; i != region1SampleCount; i++)
+        {
+            *sampleOut++ = *sampleIn++;
+            *sampleOut++ = *sampleIn++;
+        }
+
+        sampleOut = (i16 *)region2;
+        for(i32 i = 0; i != region2SampleCount; i++)
+        {
+            *sampleOut++ = *sampleIn++;    
+            *sampleOut++ = *sampleIn++;
+        }
+
+        audioBuffer->lpVtbl->Unlock(audioBuffer, 
+                                    region1, region1Size, 
+                                    region2, region2Size);
+    } 
+}
+
+internal void 
+Win32ZeroClearAudioBuffer(win32_audio_data *audioData)
 {
     VOID *region1 = 0;
     VOID *region2 = 0;
@@ -126,38 +151,41 @@ Win32FillAudioBuffer(win32_audio_data *audioData, DWORD byteToLock, DWORD number
     LPDIRECTSOUNDBUFFER audioBuffer = audioData->audioBuffer;
 
     if(SUCCEEDED(audioBuffer->lpVtbl->Lock(audioBuffer, 
-                                            byteToLock, numberOfBytesToLock, 
+                                            0, audioData->bufferSize, 
                                             &region1, &region1Size, 
                                             &region2, &region2Size, 0)))
     {
-        i16 *sample = (i16 *)region1;
-        i32 region1SampleCount = region1Size / audioData->bytesPerSample;
-
-        for(i32 i = 0; i != region1SampleCount; i++)
+        i8 *sample = (i8 *)region1;
+        for(i32 i = 0; i != region1Size; i++)
         {
-            f32 t = 2 * MATH_PI * (f32)audioData->runningSampleIndex / (f32)audioData->wavePeriod;
-            f32 sinValue = sinf(t);
-            i16 sampleValue = (i16)(sinValue * 6000);
-            *sample++ = sampleValue;
-            *sample++ = sampleValue;
-            audioData->runningSampleIndex++;
+            *sample++ = 0;
         }
 
-        sample = (i16 *)region2;
-        i32 region2SampleCount = region2Size / audioData->bytesPerSample;
-
-        for(i32 i = 0; i != region2SampleCount; i++)
+        sample = (i8 *)region2;
+        for(i32 i = 0; i != region2Size; i++)
         {
-            f32 t = 2 * MATH_PI * (f32)audioData->runningSampleIndex / (f32)audioData->wavePeriod;
-            f32 sinValue = sinf(t);
-            i16 sampleValue = (i16)(sinValue * 6000);
-            *sample++ = sampleValue;    
-            *sample++ = sampleValue;
-            audioData->runningSampleIndex++;
+            *sample++ = 0;
         }
 
         audioBuffer->lpVtbl->Unlock(audioBuffer, 
                                     region1, region1Size, 
                                     region2, region2Size);
     } 
+}
+
+internal void
+AudioOutputSound(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
+{
+    local_scoped_global f32 tSine;
+
+    i16 *sample = (i16 *)audioBuffer;
+    for(i32 i = 0; i != sampleCount; i++)
+    {
+        f32 sineValue = sinf(tSine);
+        i16 sampleValue = (i16)(sineValue * 6000);
+        *sample++ = sampleValue;
+        *sample++ = sampleValue;
+
+        tSine += 2 * MATH_PI * (f32)1.0f / (f32)wavePeriod;
+    }
 }
