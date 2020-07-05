@@ -58,7 +58,7 @@ Win32XInputLoad(void)
 }
 
 #define KEYUpdate(KEY){ \
-    keyboard->previousKeyState[KEY] = wasKeyDown; \
+    keyboard->previousKeyState[KEY] = keyboard->currentKeyState[KEY]; \
     keyboard->currentKeyState[KEY] = isKeyDown;}
 
 #define BUTTONUpdate(BUTTON, XINPUT_BUTTON) \
@@ -83,7 +83,6 @@ Win32InputUpdate(user_input *userInput)
             case WM_SYSKEYDOWN:
             {
                 bool8 isKeyDown = (message.message == WM_KEYDOWN);
-                bool8 wasKeyDown = !!(message.lParam & (1 << 30));
 
                 if(VKCode == 'W') KEYUpdate(KEY_W)
                 if(VKCode == 'S') KEYUpdate(KEY_S)
@@ -99,14 +98,13 @@ Win32InputUpdate(user_input *userInput)
                 if(VKCode == VK_F4) KEYUpdate(KEY_F4)
                 if(VKCode == VK_F12) KEYUpdate(KEY_F12)
                 if(VKCode == VK_ESCAPE) KEYUpdate(KEY_ESC)
-                else{} // NOTE: other keys
+                else{} // NOTE: eat other keys
                 break;
             }
             case WM_MOUSEMOVE:
             {
                 mouse->mousePosX = GET_X_LPARAM(message.lParam); 
                 mouse->mousePosY = GET_Y_LPARAM(message.lParam);
-                // Log("%d %d \n ",  mouse->mousePosX, mouse->mousePosY);
                 break;
             }
             case WM_LBUTTONUP:

@@ -13,12 +13,12 @@ Win32OpenGLFunctionLoad(char *name)
 }
 
 window_dimension 
-Win32GetWindowDimension(HWND Window)
+Win32GetWindowDimension(HWND window)
 {
     RECT ClientRect;
     window_dimension windowDimension;
     // get size of the window, without the border
-    GetClientRect(Window, &ClientRect);
+    GetClientRect(window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;
     windowDimension.height = ClientRect.bottom - ClientRect.top;
     return windowDimension;
@@ -117,14 +117,11 @@ Win32OpenGLInit(HDC deviceContext)
 internal void
 Win32OpenGLAspectRatioUpdate(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
 {
-    RECT ClientRect;
-    // NOTE: get size of the window, without the border
-    GetClientRect(windowHandle, &ClientRect);
-    i32 width = ClientRect.right - ClientRect.left;
-    i32 height = ClientRect.bottom - ClientRect.top;
-    // NOTE: keep aspect ratio of 16:9
-    i32 transformedWidth = height * ratioWidth / ratioHeight;
-    i32 centerTheThing = (width - transformedWidth) / 2;
+    window_dimension win = Win32GetWindowDimension(windowHandle);
 
-    glViewport(centerTheThing, 0, transformedWidth, height);
+    // NOTE: keep aspect ratio of 16:9
+    i32 transformedWidth = win.height * ratioWidth / ratioHeight;
+    i32 centerTheThing = (win.width - transformedWidth) / 2;
+
+    glViewport(centerTheThing, 0, transformedWidth, win.height);
 }

@@ -30,8 +30,8 @@ typedef int32_t  bool32;
 #define LogInfo(text, ...)    ConsoleLogExtra("INFO: ", text, __VA_ARGS__)
 #define LogSuccess(text, ...) ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...)   ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define assert(expression)    if(!expression) PrivateSetDebuggerBreakpoint()
-#define dbg()                 PrivateSetDebuggerBreakpoint() 
+#define assert(expression)    if(!expression) PrivateSetDebuggerBreakpoint("ASSERT")
+#define dbg()                 PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 
 typedef struct v2
 {
@@ -40,7 +40,7 @@ typedef struct v2
 } v2;
 
 #if _MSC_VER
-    #define PrivateSetDebuggerBreakpoint() {LogError("BREAKPOINT"); __debugbreak();}
+    #define PrivateSetDebuggerBreakpoint(text) {LogError(text); __debugbreak();}
 #else
-    #define PrivateSetDebuggerBreakpoint() {LogError("BREAKPOINT"); *(volatile int *)0 = 0;}
+    #define PrivateSetDebuggerBreakpoint(text) {LogError(text); *(volatile int *)0 = 0;}
 #endif

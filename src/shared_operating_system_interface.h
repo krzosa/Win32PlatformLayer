@@ -1,8 +1,3 @@
-typedef void console_log(char *text, ...);
-typedef void console_log_extra(char *prepend, char *text, ...);
-typedef void *opengl_function_load(char *name);
-typedef f32 time_current_get();
-
 typedef struct memory_storage
 {
     void *memory;
@@ -102,10 +97,10 @@ typedef struct operating_system_interface
 
     user_input userInput;
 
-    console_log *log;
-    console_log_extra *logExtra;
-    time_current_get *timeCurrentGet;
-    opengl_function_load *OpenGLFunctionLoad;
+    void  (*log)(char *text, ...);
+    void  (*logExtra)(char *prepend, char *text, ...);
+    f32   (*timeCurrentGet)();
+    void *(*OpenGLFunctionLoad)(char *name);
 } operating_system_interface;
 
 

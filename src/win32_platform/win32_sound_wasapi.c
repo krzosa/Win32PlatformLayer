@@ -26,6 +26,7 @@ typedef struct audio_data
     u32 samplesPerSecond;
     u32 numberOfChannels;
     u32 bufferFrameCount;
+    u32 latencyFrameCount;
     REFERENCE_TIME bufferDuration;
 } audio_data;
 
@@ -182,6 +183,10 @@ Win32AudioInitialize()
     audio.bufferDuration = 
         (f64)REFERENCE_TIMES_PER_SEC * audio.bufferFrameCount / audio.samplesPerSecond;
 
+    //TODO:
+    #define LATENCY_FPS 60
+    audio.latencyFrameCount = audio.samplesPerSecond / LATENCY_FPS; 
+
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
 
     if(result != S_OK)
@@ -196,18 +201,20 @@ Win32AudioInitialize()
 }
 
 internal void
-Win32FillSoundBuffer(u32 samplesToWrite, f32 *samples, audio_data *output)
+Win32FillSoundBuffer(u32 samplesToWrite, i16 *samples, audio_data *output)
 {
     if(samplesToWrite)
     {
         BYTE *data = 0;
         DWORD flags = 0;
         
-        output->audioRenderClient->lpVtbl->GetBuffer(output->audioRenderClient, samplesToWrite, &data);
+        output->audioRenderClient->lpVtbl->GetBuffer(
+            output->audioRenderClient, samplesToWrite, &data
+        );
         if(data)
         {
             i16 *destination = (i16 *)data;
-            f32 *source = samples;
+            i16 *source = samples;
             for(UINT32 i = 0; i < samplesToWrite; ++i)
             {
                 i16 left = (i16)(*source++);
@@ -216,6 +223,26 @@ Win32FillSoundBuffer(u32 samplesToWrite, f32 *samples, audio_data *output)
                 *destination++ = right;
             }
         }
-        output->audioRenderClient->lpVtbl->ReleaseBuffer(output->audioRenderClient, samplesToWrite, flags);
+        output->audioRenderClient->lpVtbl->ReleaseBuffer(
+            output->audioRenderClient, samplesToWrite, flags
+        );
     }
 }
+
+// UINT32 padding;
+// int samplesToWrite = 0;
+// if(SUCCEEDED(audioData.audioClient->lpVtbl->
+//     GetCurrentPadding(audioData.audioClient, &padding)))
+// {
+//     samplesToWrite = audioData.latencyFrameCount - padding;
+//     if (samplesToWrite > audioData.latencyFrameCount)
+//     {
+//         samplesToWrite = audioData.latencyFrameCount;
+//     }
+//     LogInfo("Padding: %u %u", padding, audioData.bufferDuration);
+
+//     for(i32 i = 0; i < samplesToWrite; i++)
+//     {
+//         samples[i] = 40000;
+//     }
+// }
