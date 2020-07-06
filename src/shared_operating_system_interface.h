@@ -100,13 +100,11 @@ typedef struct operating_system_interface
     u32 requestedSamples; // number of samples to fill requested from the os
     u32 samplesPerSecond;
 
-
     user_input userInput;
-    
-    i32 numberOfSamplesToUpdate;
 
     i32 windowHeight;
     i32 windowWidth;
+    f32 monitorRefreshRate;
 
     void  (*log)(char *text, ...);
     void  (*logExtra)(char *prepend, char *text, ...);

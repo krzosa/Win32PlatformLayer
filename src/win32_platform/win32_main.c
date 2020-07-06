@@ -49,10 +49,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     // NOTE: Init time data
     {
-        // NOTE: Set windows scheduler to wake up every 1 millisecond
+        // NOTE: Set windows scheduler to wake up every 1 millisecond so
+        //       so that the Sleep function will work properly for our purposes
         GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
         GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
-
+        Assert(GLOBALTime.sleepIsGranular, "Sleep is not granular");
         
         // NOTE: Set timers to application start
         GLOBALTime.startAppCycles = GetProcessorClockCycles();
@@ -60,7 +61,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         GLOBALTime.startAppMilliseconds = PerformanceCountToMilliseconds(
                                             GLOBALTime.startAppCount);
 
-        GLOBALTime.targetMsPerFrame = 8.f;
+        GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
@@ -116,6 +117,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         audioData.audioLatency = audioData.samplesPerSecond / 20;
     }
 
+    // NOTE: Get refresh rate
+    f32 monitorRefreshRate = 60.f;
+    {
+        DEVMODEA deviceMode = {0};
+        if(EnumDisplaySettingsA(0, ENUM_CURRENT_SETTINGS, &deviceMode))
+        {
+            monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
+        }
+    }
+
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
     {
@@ -138,6 +149,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.samplesPerSecond = audioData.samplesPerSecond;
         os.windowWidth = READ_ONLYWindowWidth;
         os.windowHeight = READ_ONLYWindowHeight;
+        os.monitorRefreshRate = monitorRefreshRate;
 
         os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
 
@@ -160,8 +172,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     Win32AudioBufferZeroClear(&audioData);
 
-
-    bool32 audioIsPlaying = 0;
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
@@ -181,8 +191,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
 
-        DWORD playCursor;
-        DWORD writeCursor;
+        // NOTE: Figure out how much sound we want to request and our position in the
+        //       direct sound buffer
+        DWORD playCursor = 0;
+        DWORD writeCursor = 0;
         DWORD numberOfBytesToLock = 0;
         DWORD byteToLock = audioData.currentPositionInBuffer;
         bool32 soundIsValid = false;
@@ -207,7 +219,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         // NOTE: Update operating system status
         {
-            os.numberOfSamplesToUpdate = numberOfBytesToLock / audioData.bytesPerSample;
+            os.requestedSamples = numberOfBytesToLock / audioData.bytesPerSample;
+            os.samplesPerSecond = audioData.samplesPerSecond;
             os.windowWidth = READ_ONLYWindowWidth;
             os.windowHeight = READ_ONLYWindowHeight;
 
@@ -224,7 +237,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             Win32AudioBufferFill(&audioData, os.audioBuffer, 
                                  byteToLock, numberOfBytesToLock);
         }
-        if(!audioIsPlaying)
+        if(!audioData.isPlaying)
         {
             if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, 
                                                             DSBPLAY_LOOPING))) 
@@ -232,7 +245,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                 LogError("AudioBuffer Play");
                 assert(0);
             }
-            audioIsPlaying = !audioIsPlaying;
+            audioData.isPlaying = !audioData.isPlaying;
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);

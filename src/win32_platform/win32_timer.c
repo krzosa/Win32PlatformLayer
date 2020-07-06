@@ -58,13 +58,16 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateFrameCount);
     if(time->updateMilliseconds < time->targetMsPerFrame)
     {
-        if(time->sleepIsGranular)
+        time->totalMsPerFrame = time->updateMilliseconds;
+        while(time->totalMsPerFrame < time->targetMsPerFrame)
         {
-            Sleep((DWORD)(time->targetMsPerFrame - time->updateMilliseconds));
-        }
-        else
-        {
-            LogError("Sleep is not granular!");
+            DWORD timeToSleep = (DWORD)(time->targetMsPerFrame - time->totalMsPerFrame);
+            if(timeToSleep > 0)
+            {
+                Sleep(timeToSleep);
+            }
+            time->totalFrameCount = Win32PerformanceCountGet() - *prevFrame;
+            time->totalMsPerFrame = PerformanceCountToMilliseconds(time->totalFrameCount);
         }
     }
     else
@@ -72,12 +75,10 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
         LogInfo("Missed framerate!");
     }
 
-    time->totalFrameCount = Win32PerformanceCountGet() - *prevFrame;
     time->totalFrameCycles = GetProcessorClockCycles() - *prevFrameCycles;
-    time->totalMsPerFrame = PerformanceCountToMilliseconds(time->totalFrameCount);
     time->framesPerSec = 1 / PerformanceCountToSeconds(time->totalFrameCount); 
 
-    // Log("frame = %ffps %lucycles %fms\n", time->framesPerSec, time->totalFrameCycles, time->totalMsPerFrame);
+    Log("frame = %ffps %lucycles %fms\n", time->framesPerSec, time->totalFrameCycles, time->totalMsPerFrame);
     *prevFrame = Win32PerformanceCountGet();
     *prevFrameCycles = GetProcessorClockCycles();
 }

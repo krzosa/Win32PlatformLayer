@@ -10,6 +10,7 @@ typedef struct win32_audio_data
     i32 bytesPerSample;
     i32 bufferSize;
     i32 audioLatency;
+    bool32 isPlaying;
 } win32_audio_data;
 
 internal LPDIRECTSOUNDBUFFER
