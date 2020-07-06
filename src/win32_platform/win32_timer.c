@@ -68,8 +68,8 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     //
     // NOTE: Time the frame and sleep to hit target framerate
     //
-
     time->updateCount = Win32PerformanceCountGet() - *prevFrame;
+    time->updateCycles = ProcessorClockCycles() - *prevFrameCycles;
     time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateCount);
     time->frameMilliseconds = time->updateMilliseconds;
 
@@ -105,7 +105,10 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
         LogInfo("Missed framerate!");
     }
 
-    Log("frame = %.02fms\n", time->frameMilliseconds);
+    time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
+
+    Log("frame = %fms %llucycles\n", time->frameMilliseconds, time->frameCycles);
+    *prevFrameCycles = ProcessorClockCycles();
     *prevFrame = Win32PerformanceCountGet();
 }
 
