@@ -21,6 +21,11 @@ Win32GetWindowDimension(HWND window)
     GetClientRect(window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;
     windowDimension.height = ClientRect.bottom - ClientRect.top;
+
+    // NOTE: Update global window width and height
+    READ_ONLYWindowWidth = windowDimension.width;
+    READ_ONLYWindowHeight = windowDimension.height;
+
     return windowDimension;
 }
 

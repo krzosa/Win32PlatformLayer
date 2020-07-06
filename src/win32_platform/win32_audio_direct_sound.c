@@ -4,10 +4,10 @@ typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND *ppDS, L
 typedef struct win32_audio_data
 {
     LPDIRECTSOUNDBUFFER audioBuffer;
+    u32 currentPositionInBuffer;
     i32 samplesPerSecond;
     i32 numberOfChannels;
     i32 bytesPerSample;
-    u32 currentPositionInBuffer;
     i32 bufferSize;
     i32 audioLatency;
 } win32_audio_data;
@@ -100,7 +100,7 @@ Win32AudioInitialize(HWND window, i32 samplesPerSecond, i32 bufferSize)
 }
 
 internal void 
-Win32FillAudioBuffer(win32_audio_data *audioData, void *bufferToPlay, DWORD byteToLock, DWORD numberOfBytesToLock)
+Win32AudioBufferFill(win32_audio_data *audioData, void *bufferToPlay, DWORD byteToLock, DWORD numberOfBytesToLock)
 {
     VOID *region1 = 0;
     VOID *region2 = 0;
@@ -139,7 +139,7 @@ Win32FillAudioBuffer(win32_audio_data *audioData, void *bufferToPlay, DWORD byte
 }
 
 internal void 
-Win32ZeroClearAudioBuffer(win32_audio_data *audioData)
+Win32AudioBufferZeroClear(win32_audio_data *audioData)
 {
     VOID *region1 = 0;
     VOID *region2 = 0;
@@ -168,21 +168,4 @@ Win32ZeroClearAudioBuffer(win32_audio_data *audioData)
                                     region1, region1Size, 
                                     region2, region2Size);
     } 
-}
-
-internal void
-AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
-{
-    local_scoped_global f32 tSine;
-
-    i16 *sample = (i16 *)audioBuffer;
-    for(i32 i = 0; i != sampleCount; i++)
-    {
-        f32 sineValue = sinf(tSine);
-        i16 sampleValue = (i16)(sineValue * 6000);
-        *sample++ = sampleValue;
-        *sample++ = sampleValue;
-
-        tSine += 2 * MATH_PI * (f32)1.0f / (f32)wavePeriod;
-    }
 }

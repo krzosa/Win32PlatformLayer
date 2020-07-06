@@ -14,8 +14,10 @@
 #include "../opengl_headers/wglext.h"
 #include "../opengl_headers/glext.h"
 
-global_variable bool32 GLOBALAppStatus;
-global_variable time_data GLOBALTime;
+global_variable bool32 GLOBALAppStatus; // Loop status, the app closes if it equals 0
+global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
+global_variable i32 READ_ONLYWindowWidth; // These values are passed to the os, never used 
+global_variable i32 READ_ONLYWindowHeight; // in the platform layer, updated in Win32GetWindowDimension
 #define MATH_PI 3.14159265f
 
 // Custom
@@ -30,7 +32,6 @@ global_variable time_data GLOBALTime;
 
 /* TODO: 
  * os status abstraction
- * add better input handling 
  * memory stuff
  * audio latency? 
  * fill audio buffer
@@ -106,23 +107,37 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
     win32_dll_code dllCode = {0};
+    win32_audio_data audioData = {0};
+    {
+        audioData.samplesPerSecond = 48000;
+        audioData.numberOfChannels = 2;
+        audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
+        audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
+        audioData.audioLatency = audioData.samplesPerSecond / 20;
+    }
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
     {
-        os.pernamentStorage.memory = VirtualAlloc(
-            NULL, Megabytes(64), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
-        );
         os.pernamentStorage.maxSize = Megabytes(64);
-        os.pernamentStorage.allocatedSize = 0;
-
-        os.temporaryStorage.memory = VirtualAlloc(
-            NULL, Megabytes(32), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+        os.temporaryStorage.maxSize = Megabytes(64);
+        os.audioBufferSize = audioData.bufferSize;
+        
+        os.pernamentStorage.memory = VirtualAlloc(NULL, 
+            os.pernamentStorage.maxSize + 
+            os.temporaryStorage.maxSize + 
+            os.audioBufferSize, 
+            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
-        os.temporaryStorage.maxSize = Megabytes(32);
-        os.temporaryStorage.allocatedSize = 0;
+
+        os.temporaryStorage.memory = ((i8 *)os.pernamentStorage.memory + os.pernamentStorage.maxSize);
+        os.audioBuffer = (i8 *)os.temporaryStorage.memory + os.temporaryStorage.maxSize;
         
         LogSuccess("OS Memory allocated");
+
+        os.samplesPerSecond = audioData.samplesPerSecond;
+        os.windowWidth = READ_ONLYWindowWidth;
+        os.windowHeight = READ_ONLYWindowHeight;
 
         os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
 
@@ -139,21 +154,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     i64 beginFrame = Win32PerformanceCountGet();
     u64 beginFrameCycles = GetProcessorClockCycles();
+        audioData.audioBuffer = Win32AudioInitialize(
+            windowHandle, audioData.samplesPerSecond, audioData.bufferSize
+        ); 
 
-    win32_audio_data audioData = {0};
-    
-    audioData.samplesPerSecond = 48000;
-    audioData.numberOfChannels = 2;
-    audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
-    audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
-    audioData.audioLatency = audioData.samplesPerSecond / 20;
+    Win32AudioBufferZeroClear(&audioData);
 
-    audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, audioData.bufferSize); 
-    // Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, 0, audioData.audioLatency * audioData.bytesPerSample);
-    // Win32ZeroClearAudioBuffer(&audioData);
 
-    if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, DSBPLAY_LOOPING))) assert(0);
-
+    bool32 audioIsPlaying = 0;
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
@@ -177,6 +185,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         DWORD writeCursor;
         DWORD numberOfBytesToLock = 0;
         DWORD byteToLock = audioData.currentPositionInBuffer;
+        bool32 soundIsValid = false;
         if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
                                                              &playCursor, &writeCursor)))
         {
@@ -192,15 +201,40 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             // NOTE: calculate next position in the audio buffer
             audioData.currentPositionInBuffer += numberOfBytesToLock;
             audioData.currentPositionInBuffer %= audioData.bufferSize;
+
+            soundIsValid = true;
         }
 
-        os.numberOfSamplesToUpdate = numberOfBytesToLock / audioData.bytesPerSample;
-        GLOBALAppStatus &= dllCode.update(&os);
-        Win32FillAudioBuffer(&audioData, os.pernamentStorage.memory, byteToLock, numberOfBytesToLock);
+        // NOTE: Update operating system status
+        {
+            os.numberOfSamplesToUpdate = numberOfBytesToLock / audioData.bytesPerSample;
+            os.windowWidth = READ_ONLYWindowWidth;
+            os.windowHeight = READ_ONLYWindowHeight;
 
+        }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
-        
+        GLOBALAppStatus &= dllCode.update(&os);
+
+
+
+
+        if(soundIsValid)
+        {
+            Win32AudioBufferFill(&audioData, os.audioBuffer, 
+                                 byteToLock, numberOfBytesToLock);
+        }
+        if(!audioIsPlaying)
+        {
+            if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, 
+                                                            DSBPLAY_LOOPING))) 
+            {
+                LogError("AudioBuffer Play");
+                assert(0);
+            }
+            audioIsPlaying = !audioIsPlaying;
+        }
+
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
     }

@@ -39,7 +39,7 @@ bool32 Update(operating_system_interface *operatingSystemInterface)
 
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     i32 wavePeriod = (48000 / toneHz);
-    AudioFillBuffer(os->pernamentStorage.memory, os->numberOfSamplesToUpdate, wavePeriod);
+    AudioFillBuffer(os->audioBuffer, os->numberOfSamplesToUpdate, wavePeriod);
 
     if(IsKeyDown(KEY_W)) Log("W\n");
     if(IsKeyPressedOnce(KEY_ESC)) return 0;
