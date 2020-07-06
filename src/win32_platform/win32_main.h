@@ -7,13 +7,11 @@ typedef struct window_dimension
 typedef struct time_data
 {
     // NOTE: count == QueryPerformanceCount
-    // performanceCounterFrequency says 
+    // countsPerSecond says 
     // how many counts there are per second
-    i64 performanceCounterFrequency;
-
-    // Can we assume that Sleep will get called every millisecond
-    bool32 sleepIsGranular;
+    i64 countsPerSecond;
     f32 targetMsPerFrame;
+    bool32 sleepIsGranular;
 
     // TimeStamp taken at the program start
     // Cycles as in processor clock cycles
@@ -22,14 +20,14 @@ typedef struct time_data
     f32 startAppMilliseconds;
 
     // Length of the update, without the sleep 
-    u64 updateFrameCycles;
-    i64 updateFrameCount;
+    u64 updateCycles;
+    i64 updateCount;
     f32 updateMilliseconds;
 
     // Length of the update, with sleep
-    u64 totalFrameCycles;
-    i64 totalFrameCount;
-    f32 totalMsPerFrame;
+    u64 frameCycles;
+    i64 frameCount;
+    f32 frameMilliseconds;
 
     f32 framesPerSec;
     

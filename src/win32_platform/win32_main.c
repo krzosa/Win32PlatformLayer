@@ -52,16 +52,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Set windows scheduler to wake up every 1 millisecond so
         //       so that the Sleep function will work properly for our purposes
         GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        GLOBALTime.performanceCounterFrequency = Win32PerformanceFrequencyGet();
-        Assert(GLOBALTime.sleepIsGranular, "Sleep is not granular");
+        GLOBALTime.countsPerSecond = Win32PerformanceFrequencyGet();
         
         // NOTE: Set timers to application start
-        GLOBALTime.startAppCycles = GetProcessorClockCycles();
+        GLOBALTime.startAppCycles = ProcessorClockCycles();
         GLOBALTime.startAppCount = Win32PerformanceCountGet();
         GLOBALTime.startAppMilliseconds = PerformanceCountToMilliseconds(
                                             GLOBALTime.startAppCount);
-
-        GLOBALTime.targetMsPerFrame = 16.6f;
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
@@ -126,6 +123,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
+    GLOBALTime.targetMsPerFrame = 1 / (monitorRefreshRate / 2) * 1000;
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
@@ -164,17 +162,18 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(&os);
     
-    i64 beginFrame = Win32PerformanceCountGet();
-    u64 beginFrameCycles = GetProcessorClockCycles();
-        audioData.audioBuffer = Win32AudioInitialize(
-            windowHandle, audioData.samplesPerSecond, audioData.bufferSize
-        ); 
-
+    audioData.audioBuffer = Win32AudioInitialize(
+        windowHandle, audioData.samplesPerSecond, audioData.bufferSize
+    ); 
     Win32AudioBufferZeroClear(&audioData);
+
+    
+    u64 beginFrameCycles = ProcessorClockCycles();
 
     GLOBALAppStatus = true;
     while(GLOBALAppStatus)
     {
+        i64 beginFrame = Win32PerformanceCountGet();
         // NOTE: Check if dll was rebuild and load it again if it did
         FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
         if(CompareFileTime(&newDLLWriteTime, &dllCode.lastDllWriteTime) != 0)
@@ -248,8 +247,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             audioData.isPlaying = !audioData.isPlaying;
         }
 
-        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
+        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
     }
     
     return(1);
