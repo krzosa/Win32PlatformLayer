@@ -63,7 +63,7 @@ Win32TimeGetCurrent()
 }
 
 internal void
-TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles, f32 targetMsPerFrame)
+TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
 {
     //
     // NOTE: Time the frame and sleep to hit target framerate
@@ -73,12 +73,12 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles, f32 
     time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateCount);
 
     time->frameMilliseconds = time->updateMilliseconds;
-    if(time->frameMilliseconds < targetMsPerFrame)
+    if(time->frameMilliseconds < time->targetMsPerFrame)
     {
-        if(time->sleepIsGranular)
+        if(STATUSSleepIsGranular)
         {
             // TODO: Test on varied frame rate
-            f32 timeToSleep = (targetMsPerFrame - time->frameMilliseconds) - 1.0f;
+            f32 timeToSleep = (time->targetMsPerFrame - time->frameMilliseconds) - 1.0f;
             if(timeToSleep > 0)
             {
                 Sleep((DWORD)timeToSleep);
@@ -88,13 +88,13 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles, f32 
         // NOTE: report if slept too much
         time->frameCount = Win32PerformanceCountGet() - *prevFrame;
         time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
-        if(time->frameMilliseconds > targetMsPerFrame) 
+        if(time->frameMilliseconds > time->targetMsPerFrame) 
         {
             LogInfo("Slept too much!");
         }
 
         // NOTE: stall if we didnt hit the final ms per frame
-        while(time->frameMilliseconds < targetMsPerFrame)
+        while(time->frameMilliseconds < time->targetMsPerFrame)
         {
             time->frameCount = Win32PerformanceCountGet() - *prevFrame;
             time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);

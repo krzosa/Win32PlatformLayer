@@ -90,6 +90,34 @@ typedef struct user_input
     user_input_mouse mouse;
 } user_input;
 
+typedef struct time_data
+{
+    // NOTE: changing this value affects the fps
+    f32 targetMsPerFrame;
+
+    // READ ONLY
+    // NOTE: count is a very granular unit of time
+    // countsPerSecond says how many counts there are per second
+    // I would advice to only use counts for debugging 
+    i64 countsPerSecond;
+
+    // TimeStamp taken at the program start
+    // Cycles as in processor clock cycles
+    u64 startAppCycles;
+    u64 startAppCount;
+    f32 startAppMilliseconds;
+
+    // Length of the update, without the sleep 
+    u64 updateCycles;
+    i64 updateCount;
+    f32 updateMilliseconds;
+
+    // Length of the update, with sleep
+    u64 frameCycles;
+    i64 frameCount;
+    f32 frameMilliseconds;
+} time_data;
+
 typedef struct operating_system_interface
 {
     memory_storage pernamentStorage;
@@ -102,7 +130,7 @@ typedef struct operating_system_interface
 
     user_input userInput;
 
-    f32 targetMsPerFrame;
+    time_data timeData;
     f32 monitorRefreshRate;
     iv2 windowSize;
     bool32 vsync;

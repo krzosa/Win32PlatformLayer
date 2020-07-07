@@ -1,6 +1,5 @@
 #include "../shared_language_layer.h"
 #include "../shared_operating_system_interface.h"
-#include "win32_main.h"
 
 // CStandard Lib and Windows
 #include <windows.h>
@@ -15,6 +14,7 @@
 #include "../opengl_headers/glext.h"
 
 global_variable operating_system_interface GLOBALOs;
+global_variable bool32 STATUSSleepIsGranular;
 global_variable bool32 GLOBALAppStatus; // Loop status, the app closes if it equals 0
 global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
 
@@ -51,7 +51,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     {
         // NOTE: Set windows scheduler to wake up every 1 millisecond so
         //       so that the Sleep function will work properly for our purposes
-        GLOBALTime.sleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+        STATUSSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
         GLOBALTime.countsPerSecond = Win32PerformanceFrequencyGet();
         
         // NOTE: Set timers to application start
@@ -123,7 +123,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
-    GLOBALOs.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
+    GLOBALOs.timeData.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
@@ -243,7 +243,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles, os->targetMsPerFrame);
+        TimeEndFrameAndSleep(&GLOBALOs.timeData, &beginFrame, &beginFrameCycles);
     }
     
     return(1);
