@@ -71,24 +71,24 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     time->updateCount = Win32PerformanceCountGet() - *prevFrame;
     time->updateCycles = ProcessorClockCycles() - *prevFrameCycles;
     time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateCount);
-    time->frameMilliseconds = time->updateMilliseconds;
 
+    time->frameMilliseconds = time->updateMilliseconds;
     if(time->frameMilliseconds < time->targetMsPerFrame)
     {
         if(time->sleepIsGranular)
         {
-            // TODO: Test on varied frame rate | maybe subtract and clamp | caution DWORD unsigned danger of wraping
-            DWORD timeToSleep = (DWORD)((time->targetMsPerFrame - time->frameMilliseconds) / 1.5f);
+            // TODO: Test on varied frame rate
+            f32 timeToSleep = (time->targetMsPerFrame - time->frameMilliseconds) - 1.0f;
             if(timeToSleep > 0)
             {
-                Sleep(timeToSleep);
+                Sleep((DWORD)timeToSleep);
             }
         }
 
         // NOTE: report if slept too much
         time->frameCount = Win32PerformanceCountGet() - *prevFrame;
         time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
-        if(time->frameMilliseconds > time->targetMsPerFrame + 0.5) 
+        if(time->frameMilliseconds > time->targetMsPerFrame) 
         {
             LogInfo("Slept too much!");
         }
@@ -105,9 +105,11 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
         LogInfo("Missed framerate!");
     }
 
+    time->frameCount = Win32PerformanceCountGet() - *prevFrame;
+    time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
     time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
 
-    Log("frame = %fms %llucycles\n", time->frameMilliseconds, time->frameCycles);
+    Log("frame = %fms %fcycles\n", time->updateMilliseconds, time->frameMilliseconds);
     *prevFrameCycles = ProcessorClockCycles();
     *prevFrame = Win32PerformanceCountGet();
 }

@@ -1,3 +1,9 @@
+// NOTE: Pointers to windows opengl functions
+internal PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = 0;
+internal PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = 0;
+internal PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB = 0;
+internal PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
+
 // NOTE: forward declarations
 internal void *Win32OpenGLFunctionLoad(char *name);
 internal void PrintLastErrorMessage(char *text);
@@ -23,12 +29,13 @@ Win32GetWindowDimension(HWND window)
     windowDimension.height = ClientRect.bottom - ClientRect.top;
 
     // NOTE: Update global window width and height
-    READ_ONLYWindowWidth = windowDimension.width;
-    READ_ONLYWindowHeight = windowDimension.height;
+    STATUSWindowWidth = windowDimension.width;
+    STATUSWindowHeight = windowDimension.height;
 
     return windowDimension;
 }
 
+// Pass 1 to enable vsync
 internal HGLRC
 Win32OpenGLInit(HDC deviceContext)
 {
@@ -68,12 +75,6 @@ Win32OpenGLInit(HDC deviceContext)
     if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
         Win32LastErrorMessagePrint("FAILED: to make dummy opengl context current");
 
-    // NOTE: Pointers to windows opengl functions
-    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = 0;
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = 0;
-    PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB = 0;
-    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
-
     // NOTE: Load windows opengl functions
     wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLFunctionLoad("wglChoosePixelFormatARB");
     wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)Win32OpenGLFunctionLoad("wglCreateContextAttribsARB");
@@ -111,7 +112,6 @@ Win32OpenGLInit(HDC deviceContext)
             wglMakeCurrent(deviceContext, 0);
             wglDeleteContext(dummyOpenglContext);
             wglMakeCurrent(deviceContext, mainOpenglContext);
-            wglSwapIntervalEXT(0);
         }
     }
 
@@ -130,3 +130,20 @@ Win32OpenGLAspectRatioUpdate(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
 
     glViewport(centerTheThing, 0, transformedWidth, win.height);
 }
+
+// NOTE: Vsync is an openGL extension so it can fail
+//       @returns true if success 
+internal bool32
+Win32OpenGLSetVSync(bool32 state)
+{
+    bool32 result = false;
+    if(wglSwapIntervalEXT)
+    {
+        STATUSVsync = state;
+        wglSwapIntervalEXT(state);
+        result = true;
+    }
+
+    return result;
+}
+

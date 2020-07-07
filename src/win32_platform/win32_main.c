@@ -16,9 +16,10 @@
 
 global_variable bool32 GLOBALAppStatus; // Loop status, the app closes if it equals 0
 global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
-global_variable i32 READ_ONLYWindowWidth; // These values are passed to the os, never used 
-global_variable i32 READ_ONLYWindowHeight; // in the platform layer, updated in Win32GetWindowDimension
-#define MATH_PI 3.14159265f
+
+global_variable i32 STATUSWindowWidth; // These values are passed to the os, never used 
+global_variable i32 STATUSWindowHeight; // in the platform layer, updated in Win32GetWindowDimension
+global_variable bool32 STATUSVsync;
 
 // Custom
 #include "../shared_string.c"
@@ -35,6 +36,8 @@ global_variable i32 READ_ONLYWindowHeight; // in the platform layer, updated in 
  * memory stuff
  * audio latency? 
  * fill audio buffer
+ * fullscreen
+ * control window size
 */
 
 
@@ -90,12 +93,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Window context setup and opengl context setup
     HDC deviceContext = GetDC(windowHandle);
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
-    LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
-
     Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
+    LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
     window_dimension win = Win32GetWindowDimension(windowHandle);
     LogInfo("Window dimmension %d %d", win.width, win.height);
+
 
     // NOTE: Construct paths to exe and to dll
     str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
@@ -111,7 +114,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         audioData.numberOfChannels = 2;
         audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
         audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
-        audioData.audioLatency = audioData.samplesPerSecond / 20;
+        audioData.audioLatency = audioData.samplesPerSecond / 15;
     }
 
     // NOTE: Get refresh rate
@@ -123,7 +126,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
-    GLOBALTime.targetMsPerFrame = 1 / (monitorRefreshRate / 2) * 1000;
+    GLOBALTime.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
+    // GLOBALTime.targetMsPerFrame = 1 / (monitorRefreshRate / 2) * 1000;
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
@@ -145,15 +149,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         LogSuccess("OS Memory allocated");
 
         os.samplesPerSecond = audioData.samplesPerSecond;
-        os.windowWidth = READ_ONLYWindowWidth;
-        os.windowHeight = READ_ONLYWindowHeight;
+        os.windowWidth = STATUSWindowWidth;
+        os.windowHeight = STATUSWindowHeight;
         os.monitorRefreshRate = monitorRefreshRate;
 
-        os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
 
         os.log = &ConsoleLog;
         os.logExtra = &ConsoleLogExtra;
         os.timeCurrentGet = &Win32TimeGetCurrent;
+        os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
+        os.SetVsync = &Win32OpenGLSetVSync;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -162,9 +167,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(&os);
     
-    audioData.audioBuffer = Win32AudioInitialize(
-        windowHandle, audioData.samplesPerSecond, audioData.bufferSize
-    ); 
+    audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, 
+                                                 audioData.bufferSize); 
     Win32AudioBufferZeroClear(&audioData);
 
     
@@ -190,8 +194,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
 
-        // NOTE: Figure out how much sound we want to request and our position in the
-        //       direct sound buffer
+        // NOTE: Figure out how much sound we want to request and figure out
+        //       our position in the direct sound buffer
         DWORD playCursor = 0;
         DWORD writeCursor = 0;
         DWORD numberOfBytesToLock = 0;
@@ -220,9 +224,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         {
             os.requestedSamples = numberOfBytesToLock / audioData.bytesPerSample;
             os.samplesPerSecond = audioData.samplesPerSecond;
-            os.windowWidth = READ_ONLYWindowWidth;
-            os.windowHeight = READ_ONLYWindowHeight;
-
+            os.windowWidth = STATUSWindowWidth;
+            os.windowHeight = STATUSWindowHeight;
+            os.vsync = STATUSVsync;
         }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
@@ -247,8 +251,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             audioData.isPlaying = !audioData.isPlaying;
         }
 
-        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
+        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
     }
     
     return(1);

@@ -105,11 +105,14 @@ typedef struct operating_system_interface
     i32 windowHeight;
     i32 windowWidth;
     f32 monitorRefreshRate;
+    bool32 vsync;
 
-    void  (*log)(char *text, ...);
-    void  (*logExtra)(char *prepend, char *text, ...);
-    f32   (*timeCurrentGet)();
-    void *(*OpenGLFunctionLoad)(char *name);
+    void   (*log)(char *text, ...);
+    void   (*logExtra)(char *prepend, char *text, ...);
+    f32    (*timeCurrentGet)();
+    void  *(*OpenGLFunctionLoad)(char *name);
+    bool32 (*SetVsync)(bool32 state);
+    void   (*RefreshScreen)();
 } operating_system_interface;
 
 
