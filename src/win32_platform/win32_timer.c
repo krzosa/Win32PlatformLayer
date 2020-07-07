@@ -78,7 +78,7 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
         if(STATUSSleepIsGranular)
         {
             // TODO: Test on varied frame rate
-            f32 timeToSleep = (time->targetMsPerFrame - time->frameMilliseconds) - 1.0f;
+            f32 timeToSleep = (time->targetMsPerFrame - time->frameMilliseconds) / 2;
             if(timeToSleep > 0)
             {
                 Sleep((DWORD)timeToSleep);

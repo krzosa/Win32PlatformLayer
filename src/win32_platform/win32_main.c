@@ -118,7 +118,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
     }
 
-    win32_audio_data audioData = Win32AudioInitialize(48000);
+    win32_audio_data audioData = Win32AudioInitialize(48000, 30);
     if(!audioData.initialized) Win32WasapiCleanup(&audioData);
 
     // NOTE: init operating system interface, allocate memory etc.
@@ -142,7 +142,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         os->samplesPerSecond = audioData.samplesPerSecond;
         os->monitorRefreshRate = monitorRefreshRate;
-        os->timeData.targetMsPerFrame = (1 / monitorRefreshRate * 1000);
+        os->timeData.targetMsPerFrame = (1 / (monitorRefreshRate/2) * 1000);
 
 
         os->Log = &ConsoleLog;

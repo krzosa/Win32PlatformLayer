@@ -21,8 +21,6 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
-// NOTE: Bigger number, smaller latency frameCount == smaller latency
-#define AUDIO_LATENCY_FPS 30 
 // NOTE: Number of REFERENCE_TIME units per second
 // One unit is equal to 100 nano seconds
 #define REF_TIMES_PER_SECOND 10000000
@@ -86,9 +84,9 @@ Win32COMLoad(void)
     }
 }
 
-// NOTE: Initialize Wasapi audio
+// NOTE: Bigger number, smaller latency 
 internal win32_audio_data
-Win32AudioInitialize(i32 samplesPerSecond)
+Win32AudioInitialize(i32 samplesPerSecond, i32 latencyDivisor)
 {
     Win32COMLoad();
 
@@ -203,7 +201,7 @@ Win32AudioInitialize(i32 samplesPerSecond)
 
     LogInfo("WASAPI Audio buffer duration: %lld", audio.bufferDuration);
 
-    audio.latencyFrameCount = audio.samplesPerSecond / AUDIO_LATENCY_FPS; 
+    audio.latencyFrameCount = audio.samplesPerSecond / latencyDivisor; 
     LogInfo("WASAPI LatencyFrameCount: %u", audio.latencyFrameCount);
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
