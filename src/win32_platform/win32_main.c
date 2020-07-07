@@ -14,12 +14,9 @@
 #include "../opengl_headers/wglext.h"
 #include "../opengl_headers/glext.h"
 
+global_variable operating_system_interface GLOBALOs;
 global_variable bool32 GLOBALAppStatus; // Loop status, the app closes if it equals 0
 global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
-
-global_variable i32 STATUSWindowWidth; // These values are passed to the os, never used 
-global_variable i32 STATUSWindowHeight; // in the platform layer, updated in Win32GetWindowDimension
-global_variable bool32 STATUSVsync;
 
 // Custom
 #include "../shared_string.c"
@@ -96,7 +93,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
     LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
-    window_dimension win = Win32GetWindowDimension(windowHandle);
+    iv2 win = Win32GetWindowDimension(windowHandle);
     LogInfo("Window dimmension %d %d", win.width, win.height);
 
 
@@ -126,46 +123,43 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
-    GLOBALTime.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
-    // GLOBALTime.targetMsPerFrame = 1 / (monitorRefreshRate / 2) * 1000;
+    GLOBALOs.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
 
     // NOTE: init operating system interface, allocate memory etc.
-    operating_system_interface os = {0};
+    operating_system_interface *os = &GLOBALOs;
     {
-        os.pernamentStorage.maxSize = Megabytes(64);
-        os.temporaryStorage.maxSize = Megabytes(64);
-        os.audioBufferSize = audioData.bufferSize;
+        os->pernamentStorage.maxSize = Megabytes(64);
+        os->temporaryStorage.maxSize = Megabytes(64);
+        os->audioBufferSize = audioData.bufferSize;
         
-        os.pernamentStorage.memory = VirtualAlloc(NULL, 
-            os.pernamentStorage.maxSize + 
-            os.temporaryStorage.maxSize + 
-            os.audioBufferSize, 
+        os->pernamentStorage.memory = VirtualAlloc(NULL, 
+            os->pernamentStorage.maxSize + 
+            os->temporaryStorage.maxSize + 
+            os->audioBufferSize, 
             MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
         );
 
-        os.temporaryStorage.memory = ((i8 *)os.pernamentStorage.memory + os.pernamentStorage.maxSize);
-        os.audioBuffer = (i8 *)os.temporaryStorage.memory + os.temporaryStorage.maxSize;
+        os->temporaryStorage.memory = ((i8 *)os->pernamentStorage.memory + os->pernamentStorage.maxSize);
+        os->audioBuffer = (i8 *)os->temporaryStorage.memory + os->temporaryStorage.maxSize;
         
         LogSuccess("OS Memory allocated");
 
-        os.samplesPerSecond = audioData.samplesPerSecond;
-        os.windowWidth = STATUSWindowWidth;
-        os.windowHeight = STATUSWindowHeight;
-        os.monitorRefreshRate = monitorRefreshRate;
+        os->samplesPerSecond = audioData.samplesPerSecond;
+        os->monitorRefreshRate = monitorRefreshRate;
 
 
-        os.log = &ConsoleLog;
-        os.logExtra = &ConsoleLogExtra;
-        os.timeCurrentGet = &Win32TimeGetCurrent;
-        os.OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
-        os.SetVsync = &Win32OpenGLSetVSync;
+        os->log = &ConsoleLog;
+        os->logExtra = &ConsoleLogExtra;
+        os->timeCurrentGet = &Win32TimeGetCurrent;
+        os->OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
+        os->VSyncSet = &Win32OpenGLSetVSync;
 
         LogSuccess("OS Functions Loaded");
     }
 
     // NOTE: Load the dll and call initialize function
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
-    dllCode.initialize(&os);
+    dllCode.initialize(os);
     
     audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, 
                                                  audioData.bufferSize); 
@@ -186,13 +180,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
 
             // NOTE: Call HotReload function from the dll
-            dllCode.hotReload(&os);
+            dllCode.hotReload(os);
         }
 
         // NOTE: Process input, keyboard and mouse
-        Win32InputUpdate(&os.userInput);
+        Win32InputUpdate(&os->userInput);
         // NOTE: Process input, controller
-        Win32XInputUpdate(&os.userInput);
+        Win32XInputUpdate(&os->userInput);
 
         // NOTE: Figure out how much sound we want to request and figure out
         //       our position in the direct sound buffer
@@ -222,22 +216,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         // NOTE: Update operating system status
         {
-            os.requestedSamples = numberOfBytesToLock / audioData.bytesPerSample;
-            os.samplesPerSecond = audioData.samplesPerSecond;
-            os.windowWidth = STATUSWindowWidth;
-            os.windowHeight = STATUSWindowHeight;
-            os.vsync = STATUSVsync;
+            os->requestedSamples = numberOfBytesToLock / audioData.bytesPerSample;
+            os->samplesPerSecond = audioData.samplesPerSecond;
         }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
-        GLOBALAppStatus &= dllCode.update(&os);
+        GLOBALAppStatus &= dllCode.update(os);
 
 
 
 
         if(soundIsValid)
         {
-            Win32AudioBufferFill(&audioData, os.audioBuffer, 
+            Win32AudioBufferFill(&audioData, os->audioBuffer, 
                                  byteToLock, numberOfBytesToLock);
         }
         if(!audioData.isPlaying)
@@ -252,7 +243,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles);
+        TimeEndFrameAndSleep(&GLOBALTime, &beginFrame, &beginFrameCycles, os->targetMsPerFrame);
     }
     
     return(1);

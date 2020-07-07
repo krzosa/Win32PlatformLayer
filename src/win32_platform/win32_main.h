@@ -1,9 +1,3 @@
-typedef struct window_dimension
-{
-    i32 width;
-    i32 height;
-} window_dimension;
-
 typedef struct time_data
 {
     // NOTE: count == QueryPerformanceCount

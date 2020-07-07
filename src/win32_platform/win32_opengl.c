@@ -18,19 +18,18 @@ Win32OpenGLFunctionLoad(char *name)
   return p;
 }
 
-window_dimension 
+iv2 
 Win32GetWindowDimension(HWND window)
 {
     RECT ClientRect;
-    window_dimension windowDimension;
+    iv2 windowDimension;
     // get size of the window, without the border
     GetClientRect(window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;
     windowDimension.height = ClientRect.bottom - ClientRect.top;
 
     // NOTE: Update global window width and height
-    STATUSWindowWidth = windowDimension.width;
-    STATUSWindowHeight = windowDimension.height;
+    GLOBALOs.windowSize = windowDimension;
 
     return windowDimension;
 }
@@ -122,7 +121,7 @@ Win32OpenGLInit(HDC deviceContext)
 internal void
 Win32OpenGLAspectRatioUpdate(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
 {
-    window_dimension win = Win32GetWindowDimension(windowHandle);
+    iv2 win = Win32GetWindowDimension(windowHandle);
 
     // NOTE: keep aspect ratio of 16:9
     i32 transformedWidth = win.height * ratioWidth / ratioHeight;
@@ -139,11 +138,10 @@ Win32OpenGLSetVSync(bool32 state)
     bool32 result = false;
     if(wglSwapIntervalEXT)
     {
-        STATUSVsync = state;
+        GLOBALOs.vsync = state;
         wglSwapIntervalEXT(state);
         result = true;
     }
 
     return result;
 }
-

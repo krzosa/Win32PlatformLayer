@@ -8,11 +8,11 @@ struct win32_offscreen_buffer
     // Note: Pixels are always 32bits wide
 };
 
-window_dimension 
+iv2 
 Win32GetWindowDimension(HWND Window)
 {
     RECT ClientRect;
-    window_dimension windowDimension;
+    iv2 windowDimension;
     // get size of the window, without the border
     GetClientRect(Window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;

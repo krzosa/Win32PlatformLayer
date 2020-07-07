@@ -29,9 +29,8 @@ void Initialize(operating_system_interface *operatingSystemInterface)
     os = operatingSystemInterface;
     LogSuccess("INIT Operating system attached");
     OpenGLFunctionsLoad(os->OpenGLFunctionLoad);
-    os->SetVsync(1);
+    os->VSyncSet(1);
     OpenGLTriangleSetup();
-    
 }
 bool32 Update(operating_system_interface *operatingSystemInterface)
 {

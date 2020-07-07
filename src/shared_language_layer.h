@@ -48,6 +48,20 @@ typedef union v2
     };
 } v2;
 
+typedef union iv2
+{
+    struct
+    {
+        i32 x;
+        i32 y;
+    };
+    struct
+    {
+        i32 width;
+        i32 height;
+    };
+} iv2;
+
 #if _MSC_VER
     #define PrivateSetDebuggerBreakpoint(text) {LogError(text); __debugbreak();}
     #define SilentSetDebuggerBreakpoint() {__debugbreak();}
