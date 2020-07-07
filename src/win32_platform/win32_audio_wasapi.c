@@ -21,7 +21,10 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
-#define LATENCY_FRAME_COUNT 10 // frame is 2 samples
+// NOTE: Bigger number, smaller latency frameCount == smaller latency
+#define AUDIO_LATENCY_FPS 30 
+// NOTE: Number of REFERENCE_TIME units per second
+// One unit is equal to 100 nano seconds
 #define REF_TIMES_PER_SECOND 10000000
 
 typedef struct win32_audio_data
@@ -200,7 +203,8 @@ Win32AudioInitialize(i32 samplesPerSecond)
 
     LogInfo("WASAPI Audio buffer duration: %lld", audio.bufferDuration);
 
-    audio.latencyFrameCount = audio.samplesPerSecond / LATENCY_FRAME_COUNT; 
+    audio.latencyFrameCount = audio.samplesPerSecond / AUDIO_LATENCY_FPS; 
+    LogInfo("WASAPI LatencyFrameCount: %u", audio.latencyFrameCount);
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
     if(result != S_OK)
@@ -209,19 +213,18 @@ Win32AudioInitialize(i32 samplesPerSecond)
         return audio;
     };
 
-    
-
-    audio.initialized = 1;
-    LogSuccess("WASAPI Initialized");
-
     REFERENCE_TIME defaultDevicePeriod;
     REFERENCE_TIME minimumDevicePeriod;
 
     audio.audioClient->lpVtbl->GetDevicePeriod(audio.audioClient, &defaultDevicePeriod, 
                                                                     &minimumDevicePeriod);
-
     LogInfo("WASAPI DefaultDevicePeriod: %lld", defaultDevicePeriod);
     LogInfo("WASAPI MinimumDevicePeriod: %lld", minimumDevicePeriod);
+
+    audio.initialized = 1;
+    LogSuccess("WASAPI Initialized");
+
+
 
     return audio;
 }
@@ -252,5 +255,28 @@ Win32FillAudioBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
         output->audioRenderClient->lpVtbl->ReleaseBuffer(
             output->audioRenderClient, samplesToWrite, flags
         );
+    }
+}
+
+internal void
+Win32WasapiCleanup(win32_audio_data *audio)
+{
+    if(audio->initialized)
+    {
+        audio->audioClient->lpVtbl->Stop(audio->audioClient);
+        
+        audio->deviceEnum->lpVtbl->Release(audio->deviceEnum);
+        audio->device->lpVtbl->Release(audio->device);
+        audio->audioClient->lpVtbl->Release(audio->audioClient);
+        audio->audioRenderClient->lpVtbl->Release(audio->audioRenderClient);
+    }
+    else
+    {
+        if(audio->deviceEnum) audio->deviceEnum->lpVtbl->Release(audio->deviceEnum);
+        if(audio->device) audio->device->lpVtbl->Release(audio->device);
+        if(audio->audioClient) audio->audioClient->lpVtbl->Release(audio->audioClient);
+        if(audio->audioRenderClient) audio->audioRenderClient->lpVtbl->Release(audio->audioRenderClient);
+        audio->bufferFrameCount = 0;
+        audio->bitsPerSample = 0;
     }
 }

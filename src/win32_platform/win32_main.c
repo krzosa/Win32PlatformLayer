@@ -119,6 +119,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     }
 
     win32_audio_data audioData = Win32AudioInitialize(48000);
+    if(!audioData.initialized) Win32WasapiCleanup(&audioData);
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
@@ -188,7 +189,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             UINT32 padding;
             if(SUCCEEDED(audioData.audioClient->lpVtbl->GetCurrentPadding(audioData.audioClient, &padding)))
             {
-                samplesToWrite = audioData.bufferFrameCount - padding;
+                samplesToWrite = audioData.latencyFrameCount - padding;
                 if(samplesToWrite > audioData.latencyFrameCount)
                 {
                     samplesToWrite = audioData.latencyFrameCount;
