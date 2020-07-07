@@ -123,19 +123,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
     {
-        // os->pernamentStorage.maxSize = Megabytes(64);
-        // os->temporaryStorage.maxSize = Megabytes(64);
-        // os->audioBufferSize = audioData.bufferSize;
+        os->pernamentStorage.maxSize = Megabytes(64);
+        os->temporaryStorage.maxSize = Megabytes(64);
+        os->audioBufferSize = AudioBufferSize(audioData);
         
-        // os->pernamentStorage.memory = VirtualAlloc(NULL, 
-        //     os->pernamentStorage.maxSize + 
-        //     os->temporaryStorage.maxSize + 
-        //     os->audioBufferSize, 
-        //     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
-        // );
+        os->pernamentStorage.memory = VirtualAlloc(NULL, 
+            os->pernamentStorage.maxSize + 
+            os->temporaryStorage.maxSize + 
+            os->audioBufferSize, 
+            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+        );
 
-        // os->temporaryStorage.memory = ((i8 *)os->pernamentStorage.memory + os->pernamentStorage.maxSize);
-        // os->audioBuffer = (i8 *)os->temporaryStorage.memory + os->temporaryStorage.maxSize;
+        os->temporaryStorage.memory = ((i8 *)os->pernamentStorage.memory + os->pernamentStorage.maxSize);
+        os->audioBuffer = (i8 *)os->temporaryStorage.memory + os->temporaryStorage.maxSize;
         
         LogSuccess("OS Memory allocated");
 
@@ -181,15 +181,34 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os->userInput);
 
+        // NOTE: Figure out how much sound to write and where 
+        u32 samplesToWrite = 0;
+        if(audioData.initialized)
+        {
+            UINT32 padding;
+            if(SUCCEEDED(audioData.audioClient->lpVtbl->GetCurrentPadding(audioData.audioClient, &padding)))
+            {
+                samplesToWrite = audioData.bufferFrameCount - padding;
+                if(samplesToWrite > audioData.latencyFrameCount)
+                {
+                    samplesToWrite = audioData.latencyFrameCount;
+                }
+            }
+        }
+
         // NOTE: Update operating system status
         {
-            // os->requestedSamples = toLock.numberOfBytesToLock / audioData.bytesPerSample;
+            os->requestedSamples = samplesToWrite;
             os->samplesPerSecond = audioData.samplesPerSecond;
         }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
         STATUSOfApplication &= dllCode.update(os);
 
+        if(audioData.initialized)
+        {
+            Win32FillAudioBuffer(samplesToWrite, os->audioBuffer, &audioData);
+        }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALOs.timeData, &beginFrame, &beginFrameCycles);

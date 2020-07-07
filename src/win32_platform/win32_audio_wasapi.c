@@ -21,7 +21,7 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
-#define LATENCY_FPS 10 // TODO:
+#define LATENCY_FRAME_COUNT 10 // frame is 2 samples
 #define REF_TIMES_PER_SECOND 10000000
 
 typedef struct win32_audio_data
@@ -44,9 +44,9 @@ typedef struct win32_audio_data
 } win32_audio_data;
 
 internal inline u32
-AudioFrameToBits(u32 frameCount, i32 bitsPerSample)
+AudioBufferSize(win32_audio_data audioData)
 {
-    return frameCount * (bitsPerSample * 2);
+    return audioData.bufferFrameCount * (audioData.bitsPerSample * 2);
 }
 
 // NOTE: Load COM Library functions dynamically, 
@@ -195,29 +195,39 @@ Win32AudioInitialize(i32 samplesPerSecond)
     audio.audioClient->lpVtbl->GetBufferSize(audio.audioClient, &audio.bufferFrameCount);
     LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
 
-    audio.bufferDuration = 
-        (REF_TIMES_PER_SECOND * audio.bufferFrameCount / audio.samplesPerSecond);
+    audio.bufferDuration = (REFERENCE_TIME)((f64)REF_TIMES_PER_SECOND *
+                            (audio.bufferFrameCount / audio.samplesPerSecond));
 
-    LogInfo("WASAPI Audio buffer duration: %d", audio.bufferDuration);
+    LogInfo("WASAPI Audio buffer duration: %lld", audio.bufferDuration);
 
-    audio.latencyFrameCount = audio.samplesPerSecond / LATENCY_FPS; 
+    audio.latencyFrameCount = audio.samplesPerSecond / LATENCY_FRAME_COUNT; 
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
-
     if(result != S_OK)
     {
         LogError("IAudioClient Start");
         return audio;
-    }
+    };
+
+    
 
     audio.initialized = 1;
     LogSuccess("WASAPI Initialized");
+
+    REFERENCE_TIME defaultDevicePeriod;
+    REFERENCE_TIME minimumDevicePeriod;
+
+    audio.audioClient->lpVtbl->GetDevicePeriod(audio.audioClient, &defaultDevicePeriod, 
+                                                                    &minimumDevicePeriod);
+
+    LogInfo("WASAPI DefaultDevicePeriod: %lld", defaultDevicePeriod);
+    LogInfo("WASAPI MinimumDevicePeriod: %lld", minimumDevicePeriod);
 
     return audio;
 }
 
 internal void
-Win32FillSoundBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
+Win32FillAudioBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
 {
     if(samplesToWrite)
     {
