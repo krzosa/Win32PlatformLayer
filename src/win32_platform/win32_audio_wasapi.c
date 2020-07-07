@@ -3,6 +3,12 @@
 #include <audiopolicy.h>
 #include <mmdeviceapi.h>
 
+static const GUID IID_IAudioClient = {0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2};
+static const GUID IID_IAudioRenderClient = {0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2};
+static const GUID CLSID_MMDeviceEnumerator = {0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E};
+static const GUID IID_IMMDeviceEnumerator = {0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6};
+static const GUID PcmSubformatGuid = {STATIC_KSDATAFORMAT_SUBTYPE_PCM};
+
 // NOTE: typedefines for the functions which are goint to be loaded
 typedef HRESULT CoCreateInstanceFunction(REFCLSID rclsid, LPUNKNOWN *pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
 typedef HRESULT CoInitializeExFunction(LPVOID pvReserved, DWORD dwCoInit);
@@ -15,20 +21,33 @@ HRESULT CoInitializeExStub(LPVOID pvReserved, DWORD dwCoInit) { return 0; }
 CoCreateInstanceFunction *CoCreateInstanceFunctionPointer = CoCreateInstanceStub;
 CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 
-typedef struct audio_data
+#define LATENCY_FPS 10 // TODO:
+#define REF_TIMES_PER_SECOND 10000000
+
+typedef struct win32_audio_data
 {
     IMMDevice *device;
     IAudioClient *audioClient;
     IMMDeviceEnumerator *deviceEnum;
     IAudioRenderClient *audioRenderClient;
 
-    bool32 initialized;
     u32 samplesPerSecond;
     u32 numberOfChannels;
-    u32 bufferFrameCount;
+
+    // NOTE: one frame is 2 samples (left, right) 32 bits if
+    // one sample is equal 16 bit
+    u32 bufferFrameCount; 
     u32 latencyFrameCount;
+    i32 bitsPerSample;
     REFERENCE_TIME bufferDuration;
-} audio_data;
+    bool32 initialized;
+} win32_audio_data;
+
+internal inline u32
+AudioFrameToBits(u32 frameCount, i32 bitsPerSample)
+{
+    return frameCount * (bitsPerSample * 2);
+}
 
 // NOTE: Load COM Library functions dynamically, 
 //       this way sound is not necessary to run the game
@@ -65,12 +84,12 @@ Win32COMLoad(void)
 }
 
 // NOTE: Initialize Wasapi audio
-internal audio_data
-Win32AudioInitialize()
+internal win32_audio_data
+Win32AudioInitialize(i32 samplesPerSecond)
 {
     Win32COMLoad();
 
-    audio_data audio = {0};
+    win32_audio_data audio = {0};
 
     HRESULT result;
     result = CoInitializeExFunctionPointer(0, COINIT_SPEED_OVER_MEMORY);
@@ -80,11 +99,6 @@ Win32AudioInitialize()
         LogError("CoInitializeExFunction");
         return audio;
     }
-
-    GUID IID_IAudioClient = {0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2};
-    GUID IID_IAudioRenderClient = {0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2};
-    GUID CLSID_MMDeviceEnumerator = {0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E};
-    GUID IID_IMMDeviceEnumerator = {0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6};
 
     result = CoCreateInstanceFunctionPointer(
         &CLSID_MMDeviceEnumerator, NULL,
@@ -120,21 +134,21 @@ Win32AudioInitialize()
     // WAVEFORMATEX *currWaveFormat = 0;
     // audioClient->lpVtbl->GetMixFormat(audioClient, &currWaveFormat);
 
-    audio.samplesPerSecond = 48000;
+    audio.bitsPerSample = 16;
     audio.numberOfChannels = 2;
+    audio.samplesPerSecond = samplesPerSecond;
     WAVEFORMATEX waveFormat = {0};
     {
         waveFormat.wFormatTag = WAVE_FORMAT_PCM;
         waveFormat.nChannels = audio.numberOfChannels;
         waveFormat.nSamplesPerSec = audio.samplesPerSecond;
-        waveFormat.wBitsPerSample = 16;
+        waveFormat.wBitsPerSample = audio.bitsPerSample;
         waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
         waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
         waveFormat.cbSize = 0;
     }
 
-    #define REFERENCE_TIMES_PER_SEC 10000000
-    REFERENCE_TIME requestedBufferDuration = REFERENCE_TIMES_PER_SEC * 2;
+    REFERENCE_TIME requestedBufferDuration = REF_TIMES_PER_SECOND * 2;
 
     result = audio.audioClient->lpVtbl->Initialize(
         audio.audioClient, AUDCLNT_SHAREMODE_SHARED, 
@@ -179,12 +193,13 @@ Win32AudioInitialize()
     }
 
     audio.audioClient->lpVtbl->GetBufferSize(audio.audioClient, &audio.bufferFrameCount);
+    LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
 
     audio.bufferDuration = 
-        (f64)REFERENCE_TIMES_PER_SEC * audio.bufferFrameCount / audio.samplesPerSecond;
+        (REF_TIMES_PER_SECOND * audio.bufferFrameCount / audio.samplesPerSecond);
 
-    //TODO:
-    #define LATENCY_FPS 60
+    LogInfo("WASAPI Audio buffer duration: %d", audio.bufferDuration);
+
     audio.latencyFrameCount = audio.samplesPerSecond / LATENCY_FPS; 
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
@@ -195,13 +210,14 @@ Win32AudioInitialize()
         return audio;
     }
 
+    audio.initialized = 1;
     LogSuccess("WASAPI Initialized");
 
     return audio;
 }
 
 internal void
-Win32FillSoundBuffer(u32 samplesToWrite, i16 *samples, audio_data *output)
+Win32FillSoundBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
 {
     if(samplesToWrite)
     {
@@ -228,21 +244,3 @@ Win32FillSoundBuffer(u32 samplesToWrite, i16 *samples, audio_data *output)
         );
     }
 }
-
-// UINT32 padding;
-// int samplesToWrite = 0;
-// if(SUCCEEDED(audioData.audioClient->lpVtbl->
-//     GetCurrentPadding(audioData.audioClient, &padding)))
-// {
-//     samplesToWrite = audioData.latencyFrameCount - padding;
-//     if (samplesToWrite > audioData.latencyFrameCount)
-//     {
-//         samplesToWrite = audioData.latencyFrameCount;
-//     }
-//     LogInfo("Padding: %u %u", padding, audioData.bufferDuration);
-
-//     for(i32 i = 0; i < samplesToWrite; i++)
-//     {
-//         samples[i] = 40000;
-//     }
-// }

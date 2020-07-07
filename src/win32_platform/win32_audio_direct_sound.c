@@ -1,4 +1,6 @@
 #include <dsound.h>
+
+// NOTE: we will load this function dynamically from a dll
 typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
 
 typedef struct win32_audio_data
@@ -12,6 +14,13 @@ typedef struct win32_audio_data
     i32 audioLatency;
     bool32 isPlaying;
 } win32_audio_data;
+
+typedef struct to_lock
+{
+    DWORD numberOfBytesToLock;
+    DWORD byteToLock;
+    bool32 soundIsValid;
+} to_lock;
 
 internal LPDIRECTSOUNDBUFFER
 Win32AudioInitialize(HWND window, i32 samplesPerSecond, i32 bufferSize)
@@ -170,3 +179,58 @@ Win32AudioBufferZeroClear(win32_audio_data *audioData)
                                     region2, region2Size);
     } 
 }
+
+internal to_lock
+Win32FigureItOut(win32_audio_data *audioData)
+{
+    // NOTE: Figure out how much sound we want to request and figure out
+    //       our position in the direct sound buffer
+    to_lock toLock = {0};
+    DWORD playCursor = 0;
+    DWORD writeCursor = 0;
+    toLock.byteToLock = audioData->currentPositionInBuffer;
+    if(SUCCEEDED(audioData->audioBuffer->lpVtbl->GetCurrentPosition(audioData->audioBuffer, 
+                                                            &playCursor, &writeCursor)))
+    {
+        i32 samplesOfLatency = (audioData->audioLatency * audioData->bytesPerSample);
+        DWORD targetCursor = (playCursor + samplesOfLatency) % audioData->bufferSize;
+        if(toLock.byteToLock > targetCursor)
+        {
+            toLock.numberOfBytesToLock = audioData->bufferSize - toLock.byteToLock;
+            toLock.numberOfBytesToLock += targetCursor;
+        }
+        else toLock.numberOfBytesToLock = targetCursor - toLock.byteToLock;
+
+        // NOTE: calculate next position in the audio buffer
+        audioData->currentPositionInBuffer += toLock.numberOfBytesToLock;
+        audioData->currentPositionInBuffer %= audioData->bufferSize;
+
+        toLock.soundIsValid = true;
+    }
+
+    return toLock;
+}
+
+internal void
+Win32PlayAudio(win32_audio_data *audioData)
+{
+    if(!audioData->isPlaying)
+    {
+        if(!SUCCEEDED(audioData->audioBuffer->lpVtbl->Play(audioData->audioBuffer, 0, 0, 
+                                                        DSBPLAY_LOOPING))) 
+        {
+            LogError("AudioBuffer Play");
+            assert(0);
+        }
+        audioData->isPlaying = !audioData->isPlaying;
+    }
+}
+
+// if(toLock.soundIsValid)
+// {
+//     Win32AudioBufferFill(&audioData, os->audioBuffer, toLock.byteToLock, toLock.numberOfBytesToLock);
+// }
+
+// audioData.audioBuffer = Win32AudioInitialize(windowHandle, 
+//                                                  audioData.samplesPerSecond, 
+//                                                  audioData.bufferSize);

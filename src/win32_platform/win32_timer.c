@@ -13,7 +13,7 @@ Win32SecondsGet()
 {
     LARGE_INTEGER count;
     QueryPerformanceCounter(&count);
-    return ((f32)count.QuadPart / (f32)GLOBALTime.countsPerSecond);
+    return ((f32)count.QuadPart / (f32)GLOBALOs.timeData.countsPerSecond);
 }
 
 inline internal f32
@@ -21,7 +21,7 @@ Win32MillisecondsGet()
 {
     LARGE_INTEGER count;
     QueryPerformanceCounter(&count);
-    return ((f32)(count.QuadPart * 1000) / (f32)GLOBALTime.countsPerSecond);
+    return ((f32)(count.QuadPart * 1000) / (f32)GLOBALOs.timeData.countsPerSecond);
 }
 
 // NOTE: Frequency = the number of counts per second
@@ -36,21 +36,21 @@ Win32PerformanceFrequencyGet()
 inline internal f32
 PerformanceCountToMilliseconds(i64 count)
 {
-    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALTime.countsPerSecond;
+    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALOs.timeData.countsPerSecond;
     return result;
 }
 
 inline internal f32
 PerformanceCountToSeconds(i64 count)
 {
-    f32 result = (f32)count / (f32)GLOBALTime.countsPerSecond;
+    f32 result = (f32)count / (f32)GLOBALOs.timeData.countsPerSecond;
     return result;
 }
 
 inline internal f32
 PerformanceCountToFramesPerSecond(i64 count)
 {
-    f32 result = 1 / ((f32)count / (f32)GLOBALTime.countsPerSecond);
+    f32 result = 1 / ((f32)count / (f32)GLOBALOs.timeData.countsPerSecond);
     return result;
 }
 
@@ -59,7 +59,7 @@ Win32TimeGetCurrent()
 {
     i64 currentCount = Win32PerformanceCountGet();
     f32 currentSeconds = PerformanceCountToSeconds(currentCount);
-    return currentSeconds - GLOBALTime.startAppMilliseconds / 1000;
+    return currentSeconds - GLOBALOs.timeData.startAppMilliseconds / 1000;
 }
 
 internal void

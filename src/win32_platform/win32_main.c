@@ -13,10 +13,9 @@
 #include "../opengl_headers/wglext.h"
 #include "../opengl_headers/glext.h"
 
-global_variable operating_system_interface GLOBALOs;
+global_variable operating_system_interface GLOBALOs; 
 global_variable bool32 STATUSSleepIsGranular;
-global_variable bool32 GLOBALAppStatus; // Loop status, the app closes if it equals 0
-global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
+global_variable bool32 STATUSOfApplication; // Loop status, the app closes if it equals 0
 
 // Custom
 #include "../shared_string.c"
@@ -26,15 +25,15 @@ global_variable time_data GLOBALTime; // Called only in win32_timer and winmain
 #include "win32_fileio.c"
 #include "win32_input.c"
 #include "win32_hot_reload.c"
-#include "win32_audio_direct_sound.c"
+#include "win32_audio_wasapi.c"
 
 /* TODO: 
  * os status abstraction
  * memory stuff
  * audio latency? 
- * fill audio buffer
  * fullscreen
  * control window size
+ * wasapi ? ?
 */
 
 
@@ -52,13 +51,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Set windows scheduler to wake up every 1 millisecond so
         //       so that the Sleep function will work properly for our purposes
         STATUSSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        GLOBALTime.countsPerSecond = Win32PerformanceFrequencyGet();
+        GLOBALOs.timeData.countsPerSecond = Win32PerformanceFrequencyGet();
         
         // NOTE: Set timers to application start
-        GLOBALTime.startAppCycles = ProcessorClockCycles();
-        GLOBALTime.startAppCount = Win32PerformanceCountGet();
-        GLOBALTime.startAppMilliseconds = PerformanceCountToMilliseconds(
-                                            GLOBALTime.startAppCount);
+        GLOBALOs.timeData.startAppCycles = ProcessorClockCycles();
+        GLOBALOs.timeData.startAppCount = Win32PerformanceCountGet();
+        GLOBALOs.timeData.startAppMilliseconds = PerformanceCountToMilliseconds(
+                                            GLOBALOs.timeData.startAppCount);
     }
 
     // NOTE: Load XInput(xbox controllers) dynamically 
@@ -87,9 +86,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     if(!windowHandle) {LogError("Create Window"); return 0;}
 
-    // NOTE: Window context setup and opengl context setup
+    // NOTE: Window context setup
     HDC deviceContext = GetDC(windowHandle);
+
+    // NOTE: Setup openGL context, choose pixel format, load wgl functions
+    //       function for setting vsync is loaded here
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
+
+    // NOTE: Set the opengl viewport to match the aspect ratio
     Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
     LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
@@ -104,17 +108,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
-    win32_dll_code dllCode = {0};
-    win32_audio_data audioData = {0};
-    {
-        audioData.samplesPerSecond = 48000;
-        audioData.numberOfChannels = 2;
-        audioData.bytesPerSample = sizeof(i16) * audioData.numberOfChannels;
-        audioData.bufferSize = audioData.samplesPerSecond * audioData.bytesPerSample;
-        audioData.audioLatency = audioData.samplesPerSecond / 15;
-    }
-
-    // NOTE: Get refresh rate
+    // NOTE: Get monitor refresh rate
     f32 monitorRefreshRate = 60.f;
     {
         DEVMODEA deviceMode = {0};
@@ -123,55 +117,54 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
-    GLOBALOs.timeData.targetMsPerFrame = 1 / monitorRefreshRate * 1000;
+
+    win32_audio_data audioData = Win32AudioInitialize(48000);
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
     {
-        os->pernamentStorage.maxSize = Megabytes(64);
-        os->temporaryStorage.maxSize = Megabytes(64);
-        os->audioBufferSize = audioData.bufferSize;
+        // os->pernamentStorage.maxSize = Megabytes(64);
+        // os->temporaryStorage.maxSize = Megabytes(64);
+        // os->audioBufferSize = audioData.bufferSize;
         
-        os->pernamentStorage.memory = VirtualAlloc(NULL, 
-            os->pernamentStorage.maxSize + 
-            os->temporaryStorage.maxSize + 
-            os->audioBufferSize, 
-            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
-        );
+        // os->pernamentStorage.memory = VirtualAlloc(NULL, 
+        //     os->pernamentStorage.maxSize + 
+        //     os->temporaryStorage.maxSize + 
+        //     os->audioBufferSize, 
+        //     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+        // );
 
-        os->temporaryStorage.memory = ((i8 *)os->pernamentStorage.memory + os->pernamentStorage.maxSize);
-        os->audioBuffer = (i8 *)os->temporaryStorage.memory + os->temporaryStorage.maxSize;
+        // os->temporaryStorage.memory = ((i8 *)os->pernamentStorage.memory + os->pernamentStorage.maxSize);
+        // os->audioBuffer = (i8 *)os->temporaryStorage.memory + os->temporaryStorage.maxSize;
         
         LogSuccess("OS Memory allocated");
 
         os->samplesPerSecond = audioData.samplesPerSecond;
         os->monitorRefreshRate = monitorRefreshRate;
+        os->timeData.targetMsPerFrame = (1 / monitorRefreshRate * 1000);
 
 
-        os->log = &ConsoleLog;
-        os->logExtra = &ConsoleLogExtra;
-        os->timeCurrentGet = &Win32TimeGetCurrent;
+        os->Log = &ConsoleLog;
+        os->LogExtra = &ConsoleLogExtra;
+        os->TimeCurrent = &Win32TimeGetCurrent;
         os->OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
         os->VSyncSet = &Win32OpenGLSetVSync;
 
         LogSuccess("OS Functions Loaded");
     }
 
+    win32_dll_code dllCode = {0};
+
     // NOTE: Load the dll and call initialize function
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(os);
     
-    audioData.audioBuffer = Win32AudioInitialize(windowHandle, audioData.samplesPerSecond, 
-                                                 audioData.bufferSize); 
-    Win32AudioBufferZeroClear(&audioData);
-
-    
     u64 beginFrameCycles = ProcessorClockCycles();
+    i64 beginFrame = Win32PerformanceCountGet();
 
-    GLOBALAppStatus = true;
-    while(GLOBALAppStatus)
+    STATUSOfApplication = true;
+    while(STATUSOfApplication)
     {
-        i64 beginFrame = Win32PerformanceCountGet();
         // NOTE: Check if dll was rebuild and load it again if it did
         FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
         if(CompareFileTime(&newDLLWriteTime, &dllCode.lastDllWriteTime) != 0)
@@ -188,59 +181,15 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Process input, controller
         Win32XInputUpdate(&os->userInput);
 
-        // NOTE: Figure out how much sound we want to request and figure out
-        //       our position in the direct sound buffer
-        DWORD playCursor = 0;
-        DWORD writeCursor = 0;
-        DWORD numberOfBytesToLock = 0;
-        DWORD byteToLock = audioData.currentPositionInBuffer;
-        bool32 soundIsValid = false;
-        if(SUCCEEDED(audioData.audioBuffer->lpVtbl->GetCurrentPosition(audioData.audioBuffer, 
-                                                             &playCursor, &writeCursor)))
-        {
-            i32 samplesOfLatency = (audioData.audioLatency * audioData.bytesPerSample);
-            DWORD targetCursor = (playCursor + samplesOfLatency) % audioData.bufferSize;
-            if(byteToLock > targetCursor)
-            {
-                numberOfBytesToLock = audioData.bufferSize - byteToLock;
-                numberOfBytesToLock += targetCursor;
-            }
-            else numberOfBytesToLock = targetCursor - byteToLock;
-
-            // NOTE: calculate next position in the audio buffer
-            audioData.currentPositionInBuffer += numberOfBytesToLock;
-            audioData.currentPositionInBuffer %= audioData.bufferSize;
-
-            soundIsValid = true;
-        }
-
         // NOTE: Update operating system status
         {
-            os->requestedSamples = numberOfBytesToLock / audioData.bytesPerSample;
+            // os->requestedSamples = toLock.numberOfBytesToLock / audioData.bytesPerSample;
             os->samplesPerSecond = audioData.samplesPerSecond;
         }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
-        GLOBALAppStatus &= dllCode.update(os);
+        STATUSOfApplication &= dllCode.update(os);
 
-
-
-
-        if(soundIsValid)
-        {
-            Win32AudioBufferFill(&audioData, os->audioBuffer, 
-                                 byteToLock, numberOfBytesToLock);
-        }
-        if(!audioData.isPlaying)
-        {
-            if(!SUCCEEDED(audioData.audioBuffer->lpVtbl->Play(audioData.audioBuffer, 0, 0, 
-                                                            DSBPLAY_LOOPING))) 
-            {
-                LogError("AudioBuffer Play");
-                assert(0);
-            }
-            audioData.isPlaying = !audioData.isPlaying;
-        }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
         TimeEndFrameAndSleep(&GLOBALOs.timeData, &beginFrame, &beginFrameCycles);
@@ -261,7 +210,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_CLOSE:
         case WM_DESTROY:
         {
-            GLOBALAppStatus = false;
+            STATUSOfApplication = false;
             break;
         } 
         case WM_WINDOWPOSCHANGING:

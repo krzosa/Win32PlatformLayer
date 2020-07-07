@@ -135,12 +135,13 @@ typedef struct operating_system_interface
     iv2 windowSize;
     bool32 vsync;
 
-    void   (*log)(char *text, ...);
-    void   (*logExtra)(char *prepend, char *text, ...);
-    f32    (*timeCurrentGet)();
-    void  *(*OpenGLFunctionLoad)(char *name);
+    void   (*Log)(char *text, ...);
+    void   (*LogExtra)(char *prepend, char *text, ...);
+    f32    (*TimeCurrent)();
+    
     bool32 (*VSyncSet)(bool32 state);
     void   (*RefreshScreen)();
+    void  *(*OpenGLFunctionLoad)(char *name);
 } operating_system_interface;
 
 

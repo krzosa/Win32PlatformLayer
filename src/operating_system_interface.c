@@ -88,5 +88,5 @@ IsButtonUp(controller_buttons BUTTON)
     return false;
 }
 
-#define ConsoleLog(text, ...) os->log(text, __VA_ARGS__)
-#define ConsoleLogExtra(prepend, text, ...) os->logExtra(prepend, text, __VA_ARGS__)
+#define ConsoleLog(text, ...) os->Log(text, __VA_ARGS__)
+#define ConsoleLogExtra(prepend, text, ...) os->LogExtra(prepend, text, __VA_ARGS__)
