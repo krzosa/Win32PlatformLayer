@@ -86,7 +86,7 @@ Win32COMLoad(void)
 
 // NOTE: Bigger number, smaller latency 
 internal win32_audio_data
-Win32AudioInitialize(i32 samplesPerSecond, i32 latencyDivisor)
+Win32AudioInitialize(i32 samplesPerSecond)
 {
     Win32COMLoad();
 
@@ -194,15 +194,12 @@ Win32AudioInitialize(i32 samplesPerSecond, i32 latencyDivisor)
     }
 
     audio.audioClient->lpVtbl->GetBufferSize(audio.audioClient, &audio.bufferFrameCount);
-    LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
 
     audio.bufferDuration = (REFERENCE_TIME)((f64)REF_TIMES_PER_SECOND *
                             (audio.bufferFrameCount / audio.samplesPerSecond));
 
+    LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
     LogInfo("WASAPI Audio buffer duration: %lld", audio.bufferDuration);
-
-    audio.latencyFrameCount = audio.samplesPerSecond / latencyDivisor; 
-    LogInfo("WASAPI LatencyFrameCount: %u", audio.latencyFrameCount);
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
     if(result != S_OK)
@@ -211,18 +208,8 @@ Win32AudioInitialize(i32 samplesPerSecond, i32 latencyDivisor)
         return audio;
     };
 
-    REFERENCE_TIME defaultDevicePeriod;
-    REFERENCE_TIME minimumDevicePeriod;
-
-    audio.audioClient->lpVtbl->GetDevicePeriod(audio.audioClient, &defaultDevicePeriod, 
-                                                                    &minimumDevicePeriod);
-    LogInfo("WASAPI DefaultDevicePeriod: %lld", defaultDevicePeriod);
-    LogInfo("WASAPI MinimumDevicePeriod: %lld", minimumDevicePeriod);
-
     audio.initialized = 1;
     LogSuccess("WASAPI Initialized");
-
-
 
     return audio;
 }
@@ -267,14 +254,5 @@ Win32WasapiCleanup(win32_audio_data *audio)
         audio->device->lpVtbl->Release(audio->device);
         audio->audioClient->lpVtbl->Release(audio->audioClient);
         audio->audioRenderClient->lpVtbl->Release(audio->audioRenderClient);
-    }
-    else
-    {
-        if(audio->deviceEnum) audio->deviceEnum->lpVtbl->Release(audio->deviceEnum);
-        if(audio->device) audio->device->lpVtbl->Release(audio->device);
-        if(audio->audioClient) audio->audioClient->lpVtbl->Release(audio->audioClient);
-        if(audio->audioRenderClient) audio->audioRenderClient->lpVtbl->Release(audio->audioRenderClient);
-        audio->bufferFrameCount = 0;
-        audio->bitsPerSample = 0;
     }
 }

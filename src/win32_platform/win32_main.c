@@ -7,6 +7,7 @@
 #include <xinput.h>
 #include <intrin.h>
 #include <stdio.h>
+#include "win32_main.h"
 
 // OpenGL
 #include <gl/GL.h>
@@ -14,8 +15,16 @@
 #include "../opengl_headers/glext.h"
 
 global_variable operating_system_interface GLOBALOs; 
-global_variable bool32 STATUSSleepIsGranular;
-global_variable bool32 STATUSOfApplication; // Loop status, the app closes if it equals 0
+global_variable bool32 GLOBALSleepIsGranular;
+global_variable bool32 GLOBALApplicationIsRunning; // Loop status, the app closes if it equals 0
+global_variable iv2    GLOBALDrawAreaSize;
+global_variable f32    GLOBALMonitorRefreshRate;
+global_variable bool32 GLOBALVSyncState;
+
+#define DEFAULT_WINDOW_WIDTH 1280
+#define DEFAULT_WINDOW_HEIGHT 720
+#define DEFAULT_WINDOW_POS_X CW_USEDEFAULT
+#define DEFAULT_WINDOW_POS_Y CW_USEDEFAULT
 
 // Custom
 #include "../shared_string.c"
@@ -37,9 +46,6 @@ global_variable bool32 STATUSOfApplication; // Loop status, the app closes if it
 */
 
 
-LRESULT CALLBACK 
-Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
@@ -50,7 +56,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     {
         // NOTE: Set windows scheduler to wake up every 1 millisecond so
         //       so that the Sleep function will work properly for our purposes
-        STATUSSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+        GLOBALSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
         GLOBALOs.timeData.countsPerSecond = Win32PerformanceFrequencyGet();
         
         // NOTE: Set timers to application start
@@ -68,21 +74,19 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     {
         windowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
         windowClass.lpfnWndProc    = Win32MainWindowCallback;
-        windowClass.cbClsExtra     = 0;
-        windowClass.cbWndExtra     = 0;
         windowClass.hInstance      = instance;
         windowClass.hIcon          = LoadIcon(instance, IDI_APPLICATION);
-        windowClass.hCursor        = LoadCursor(NULL, IDC_ARROW);
-        windowClass.lpszMenuName   = NULL;
+        windowClass.hCursor        = LoadCursor(0, IDC_ARROW);
         windowClass.lpszClassName  = ("PLACEHOLDER");
     }
     
     if (!RegisterClassA(&windowClass)) {LogError("Register windowClass"); return 0;}
 
-    HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, 
-        "TITLE_PLACEHOLDER", WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, 
-        CW_USEDEFAULT, NULL, NULL, instance, NULL);
+    HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, "TITLE_PLACEHOLDER", 
+                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                        DEFAULT_WINDOW_POS_X, DEFAULT_WINDOW_POS_Y, 
+                                        DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, 
+                                        0, 0, instance, 0);
 
     if(!windowHandle) {LogError("Create Window"); return 0;}
 
@@ -109,17 +113,22 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
     // NOTE: Get monitor refresh rate
-    f32 monitorRefreshRate = 60.f;
+    f32 GLOBALMonitorRefreshRate = 60.f;
     {
         DEVMODEA deviceMode = {0};
         if(EnumDisplaySettingsA(0, ENUM_CURRENT_SETTINGS, &deviceMode))
         {
-            monitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
+            GLOBALMonitorRefreshRate = (f32)deviceMode.dmDisplayFrequency;
         }
     }
+    LogInfo("Monitor refresh rate: %f", GLOBALMonitorRefreshRate);
 
-    win32_audio_data audioData = Win32AudioInitialize(48000, 30);
-    if(!audioData.initialized) Win32WasapiCleanup(&audioData);
+    // NOTE: INIT WASAPI and set audio latency
+    win32_audio_data audioData = Win32AudioInitialize(44100);
+    audioData.latencyFrameCount = (u32)(audioData.samplesPerSecond / GLOBALMonitorRefreshRate) * 3;
+    LogInfo("WASAPI LatencyFrameCount: %u", audioData.latencyFrameCount);
+
+
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
@@ -128,7 +137,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->temporaryStorage.maxSize = Megabytes(64);
         os->audioBufferSize = AudioBufferSize(audioData);
         
-        os->pernamentStorage.memory = VirtualAlloc(NULL, 
+        os->pernamentStorage.memory = VirtualAlloc(0, 
             os->pernamentStorage.maxSize + 
             os->temporaryStorage.maxSize + 
             os->audioBufferSize, 
@@ -141,15 +150,17 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         LogSuccess("OS Memory allocated");
 
         os->samplesPerSecond = audioData.samplesPerSecond;
-        os->monitorRefreshRate = monitorRefreshRate;
-        os->timeData.targetMsPerFrame = (1 / (monitorRefreshRate/2) * 1000);
-
+        os->targetMsPerFrame = (1 / GLOBALMonitorRefreshRate * 1000);
 
         os->Log = &ConsoleLog;
         os->LogExtra = &ConsoleLogExtra;
-        os->TimeCurrent = &Win32TimeGetCurrent;
+        os->TimeCurrenGet = &Win32TimeGetCurrent;
         os->OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
         os->VSyncSet = &Win32OpenGLSetVSync;
+        os->Quit = &Quit;
+        os->DrawAreaSizeGet = &DrawAreaSizeGet;
+        os->MonitorRefreshRateGet = &MonitorRefreshRateGet;
+        os->VSyncStateGet = &VSyncStateGet;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -160,11 +171,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(os);
     
+    // NOTE: Begin timming the frame
     u64 beginFrameCycles = ProcessorClockCycles();
     i64 beginFrame = Win32PerformanceCountGet();
 
-    STATUSOfApplication = true;
-    while(STATUSOfApplication)
+    GLOBALApplicationIsRunning = true;
+    while(GLOBALApplicationIsRunning)
     {
         // NOTE: Check if dll was rebuild and load it again if it did
         FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
@@ -195,6 +207,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                     samplesToWrite = audioData.latencyFrameCount;
                 }
             }
+
+            i32 *buffer = (i32 *)os->audioBuffer;
+            for(u32 i = 0; i < audioData.bufferFrameCount; i++)
+            {
+                buffer[i] = 0;
+            }
         }
 
         // NOTE: Update operating system status
@@ -204,7 +222,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
         // NOTE: Call Update function from the dll, bit "and" operator here
         //       because we dont want update to override appstatus
-        STATUSOfApplication &= dllCode.update(os);
+        dllCode.update(os);
 
         if(audioData.initialized)
         {
@@ -212,7 +230,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        TimeEndFrameAndSleep(&GLOBALOs.timeData, &beginFrame, &beginFrameCycles);
+        EndFrameAndSleep(&GLOBALOs.timeData, GLOBALOs.targetMsPerFrame, 
+                         &beginFrame, &beginFrameCycles);
     }
     
     return(1);
@@ -230,7 +249,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_CLOSE:
         case WM_DESTROY:
         {
-            STATUSOfApplication = false;
+            GLOBALApplicationIsRunning = false;
             break;
         } 
         case WM_WINDOWPOSCHANGING:
@@ -253,4 +272,44 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     return result;
+}
+
+internal void
+Quit()
+{
+    GLOBALApplicationIsRunning = !GLOBALApplicationIsRunning;
+}
+
+internal iv2 
+Win32GetWindowDimension(HWND window)
+{
+    RECT ClientRect;
+    iv2 windowDimension;
+    // get size of the window, without the border
+    GetClientRect(window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+
+    // NOTE: Update global window width and height
+    GLOBALDrawAreaSize = windowDimension;
+
+    return windowDimension;
+}
+
+internal iv2
+DrawAreaSizeGet()
+{
+    return GLOBALDrawAreaSize;
+}
+
+internal f32
+MonitorRefreshRateGet()
+{
+    return GLOBALMonitorRefreshRate;
+}
+
+internal bool32
+VSyncStateGet()
+{
+    return GLOBALVSyncState;
 }

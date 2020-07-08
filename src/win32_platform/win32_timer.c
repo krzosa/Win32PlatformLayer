@@ -57,13 +57,11 @@ PerformanceCountToFramesPerSecond(i64 count)
 internal f32
 Win32TimeGetCurrent()
 {
-    i64 currentCount = Win32PerformanceCountGet();
-    f32 currentSeconds = PerformanceCountToSeconds(currentCount);
-    return currentSeconds - GLOBALOs.timeData.startAppMilliseconds / 1000;
+    return Win32MillisecondsGet() - (GLOBALOs.timeData.startAppMilliseconds);
 }
 
 internal void
-TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
+EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *prevFrameCycles)
 {
     //
     // NOTE: Time the frame and sleep to hit target framerate
@@ -73,12 +71,12 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
     time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateCount);
 
     time->frameMilliseconds = time->updateMilliseconds;
-    if(time->frameMilliseconds < time->targetMsPerFrame)
+    if(time->frameMilliseconds < targetMsPerFrame)
     {
-        if(STATUSSleepIsGranular)
+        if(GLOBALSleepIsGranular)
         {
             // TODO: Test on varied frame rate
-            f32 timeToSleep = (time->targetMsPerFrame - time->frameMilliseconds) / 2;
+            f32 timeToSleep = (targetMsPerFrame - time->frameMilliseconds) / 2;
             if(timeToSleep > 0)
             {
                 Sleep((DWORD)timeToSleep);
@@ -88,13 +86,13 @@ TimeEndFrameAndSleep(time_data *time, i64 *prevFrame, u64 *prevFrameCycles)
         // NOTE: report if slept too much
         time->frameCount = Win32PerformanceCountGet() - *prevFrame;
         time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
-        if(time->frameMilliseconds > time->targetMsPerFrame) 
+        if(time->frameMilliseconds > targetMsPerFrame) 
         {
             LogInfo("Slept too much!");
         }
 
         // NOTE: stall if we didnt hit the final ms per frame
-        while(time->frameMilliseconds < time->targetMsPerFrame)
+        while(time->frameMilliseconds < targetMsPerFrame)
         {
             time->frameCount = Win32PerformanceCountGet() - *prevFrame;
             time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);

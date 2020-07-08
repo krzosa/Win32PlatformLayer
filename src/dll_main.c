@@ -29,27 +29,25 @@ void Initialize(operating_system_interface *operatingSystemInterface)
     os = operatingSystemInterface;
     LogSuccess("INIT Operating system attached");
     OpenGLFunctionsLoad(os->OpenGLFunctionLoad);
-    os->VSyncSet(1);
     OpenGLTriangleSetup();
 }
-bool32 Update(operating_system_interface *operatingSystemInterface)
+void Update(operating_system_interface *operatingSystemInterface)
 {
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
+    if(IsKeyDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
     AudioFillBuffer(os->audioBuffer, os->requestedSamples, wavePeriod);
 
-    if(IsKeyDown(KEY_W)) Log("W\n");
-    if(IsKeyPressedOnce(KEY_ESC)) return 0;
     if(IsKeyUnpressedOnce(KEY_A)) Log("A\n");
     if(IsButtonDown(BUTTON_UP)) Log("A\n");
     if(IsButtonPressedOnce(BUTTON_DOWN)) Log("FF\n");
     if(IsButtonUnpressedOnce(BUTTON_LEFT)) Log("A\n");
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
-    return 1;
+    if(IsKeyDown(KEY_ESC)) os->Quit();
 }
 void HotReload(operating_system_interface *operatingSystemInterface)
 {

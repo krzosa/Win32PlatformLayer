@@ -92,9 +92,6 @@ typedef struct user_input
 
 typedef struct time_data
 {
-    // NOTE: changing this value affects the fps
-    f32 targetMsPerFrame;
-
     // READ ONLY
     // NOTE: count is a very granular unit of time
     // countsPerSecond says how many counts there are per second
@@ -131,14 +128,17 @@ typedef struct operating_system_interface
     user_input userInput;
 
     time_data timeData;
-    f32 monitorRefreshRate;
-    iv2 windowSize;
-    bool32 vsync;
+    f32 targetMsPerFrame;
 
+    void   (*Quit)();
     void   (*Log)(char *text, ...);
     void   (*LogExtra)(char *prepend, char *text, ...);
-    f32    (*TimeCurrent)();
+
+    f32    (*TimeCurrenGet)();
+    iv2    (*DrawAreaSizeGet)();
+    f32    (*MonitorRefreshRateGet)();
     
+    bool32 (*VSyncStateGet)();
     bool32 (*VSyncSet)(bool32 state);
     void   (*RefreshScreen)();
     void  *(*OpenGLFunctionLoad)(char *name);

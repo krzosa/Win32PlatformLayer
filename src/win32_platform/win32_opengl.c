@@ -18,22 +18,6 @@ Win32OpenGLFunctionLoad(char *name)
   return p;
 }
 
-iv2 
-Win32GetWindowDimension(HWND window)
-{
-    RECT ClientRect;
-    iv2 windowDimension;
-    // get size of the window, without the border
-    GetClientRect(window, &ClientRect);
-    windowDimension.width = ClientRect.right - ClientRect.left;
-    windowDimension.height = ClientRect.bottom - ClientRect.top;
-
-    // NOTE: Update global window width and height
-    GLOBALOs.windowSize = windowDimension;
-
-    return windowDimension;
-}
-
 // Pass 1 to enable vsync
 internal HGLRC
 Win32OpenGLInit(HDC deviceContext)
@@ -138,7 +122,7 @@ Win32OpenGLSetVSync(bool32 state)
     bool32 result = false;
     if(wglSwapIntervalEXT)
     {
-        GLOBALOs.vsync = state;
+        GLOBALVSyncState = state;
         wglSwapIntervalEXT(state);
         result = true;
     }
