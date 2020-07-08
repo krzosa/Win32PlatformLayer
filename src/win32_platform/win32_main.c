@@ -149,17 +149,17 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->samplesPerSecond = audioData.samplesPerSecond;
         os->targetMsPerFrame = (1 / GLOBALMonitorRefreshRate * 1000);
 
-        os->Log = &ConsoleLog;
-        os->LogExtra = &ConsoleLogExtra;
-        os->TimeMillisecondsGet = &Win32MillisecondsGet;
-        os->TimeCountsGet = &Win32PerformanceCountGet;
-        os->ProcessorCyclesGet = &ProcessorCyclesGet;
-        os->OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
-        os->VSyncSet = &Win32OpenGLSetVSync;
-        os->Quit = &Quit;
-        os->DrawAreaSizeGet = &DrawAreaSizeGet;
-        os->MonitorRefreshRateGet = &MonitorRefreshRateGet;
-        os->VSyncStateGet = &VSyncStateGet;
+        os->Quit                                = &Quit;
+        os->TimeMillisecondsGet                 = &Win32MillisecondsGet;
+        os->TimeCountsGet                       = &Win32PerformanceCountGet;
+        os->ProcessorCyclesGet                  = &ProcessorCyclesGet;
+        os->OpenGLFunctionLoad                  = &Win32OpenGLFunctionLoad;
+        os->VSyncSet                            = &Win32OpenGLSetVSync;
+        os->DrawAreaSizeGet                     = &DrawAreaSizeGet;
+        os->MonitorRefreshRateGet               = &MonitorRefreshRateGet;
+        os->Log                                 = &ConsoleLog;
+        os->LogExtra                            = &ConsoleLogExtra;
+        os->VSyncStateGet                       = &VSyncStateGet;
 
         LogSuccess("OS Functions Loaded");
     }
