@@ -54,10 +54,10 @@ PerformanceCountToFramesPerSecond(i64 count)
     return result;
 }
 
-internal f32
-Win32TimeGetCurrent()
+inline internal f32
+MillisecondsPerFrameToFramesPerSecond(f32 millisecondsPerFrame)
 {
-    return Win32MillisecondsGet() - (GLOBALOs.timeData.startAppMilliseconds);
+    return (1 / millisecondsPerFrame) * 1000;
 }
 
 internal void

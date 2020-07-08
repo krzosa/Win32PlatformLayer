@@ -97,3 +97,18 @@ Win32DLLCodeUnload(win32_dll_code *dllCode)
 
     dllCode->isValid = false;
 }
+
+internal void
+Win32UpdateDLLCode(win32_dll_code *dllCode, char *mainDLLPath, char *tempDLLPath, operating_system_interface *os)
+{
+    // NOTE: Check if dll was rebuild and load it again if it did
+    FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
+    if(CompareFileTime(&newDLLWriteTime, &dllCode->lastDllWriteTime) != 0)
+    {
+        Win32DLLCodeUnload(dllCode);
+        *dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
+
+        // NOTE: Call HotReload function from the dll
+        dllCode->hotReload(os);
+    }
+}

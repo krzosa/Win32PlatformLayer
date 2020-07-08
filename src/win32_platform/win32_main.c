@@ -124,11 +124,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Monitor refresh rate: %f", GLOBALMonitorRefreshRate);
 
     // NOTE: INIT WASAPI and set audio latency
-    win32_audio_data audioData = Win32AudioInitialize(44100);
-    audioData.latencyFrameCount = (u32)(audioData.samplesPerSecond / GLOBALMonitorRefreshRate) * 3;
-    LogInfo("WASAPI LatencyFrameCount: %u", audioData.latencyFrameCount);
-
-
+    win32_audio_data audioData = Win32AudioInitialize(48000);
 
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface *os = &GLOBALOs;
@@ -149,12 +145,15 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("OS Memory allocated");
 
+        os->audioLatencyMultiplier = 2.5f;
         os->samplesPerSecond = audioData.samplesPerSecond;
         os->targetMsPerFrame = (1 / GLOBALMonitorRefreshRate * 1000);
 
         os->Log = &ConsoleLog;
         os->LogExtra = &ConsoleLogExtra;
-        os->TimeCurrenGet = &Win32TimeGetCurrent;
+        os->TimeMillisecondsGet = &Win32MillisecondsGet;
+        os->TimeCountsGet = &Win32PerformanceCountGet;
+        os->ProcessorCyclesGet = &ProcessorCyclesGet;
         os->OpenGLFunctionLoad = &Win32OpenGLFunctionLoad;
         os->VSyncSet = &Win32OpenGLSetVSync;
         os->Quit = &Quit;
@@ -178,26 +177,22 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     GLOBALApplicationIsRunning = true;
     while(GLOBALApplicationIsRunning)
     {
-        // NOTE: Check if dll was rebuild and load it again if it did
-        FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
-        if(CompareFileTime(&newDLLWriteTime, &dllCode.lastDllWriteTime) != 0)
-        {
-            Win32DLLCodeUnload(&dllCode);
-            dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
-
-            // NOTE: Call HotReload function from the dll
-            dllCode.hotReload(os);
-        }
+        Win32UpdateDLLCode(&dllCode, mainDLLPath, tempDLLPath, os);
 
         // NOTE: Process input, keyboard and mouse
         Win32InputUpdate(&os->userInput);
         // NOTE: Process input, controller
         Win32XInputUpdate(&os->userInput);
 
-        // NOTE: Figure out how much sound to write and where 
+        // NOTE: Figure out how much sound to write and where / update the latency based on
+        // potential fps changes
         u32 samplesToWrite = 0;
         if(audioData.initialized)
         {
+            f32 currentFramesPerSecond = MillisecondsPerFrameToFramesPerSecond(os->targetMsPerFrame);
+            audioData.latencyFrameCount = (u32)(audioData.samplesPerSecond / currentFramesPerSecond * 
+                                                os->audioLatencyMultiplier);
+
             UINT32 padding;
             if(SUCCEEDED(audioData.audioClient->lpVtbl->GetCurrentPadding(audioData.audioClient, &padding)))
             {
@@ -219,10 +214,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         {
             os->requestedSamples = samplesToWrite;
             os->samplesPerSecond = audioData.samplesPerSecond;
+
+            // NOTE: Call Update function from the dll, bit "and" operator here
+            //       because we dont want update to override appstatus
+            dllCode.update(os);
         }
-        // NOTE: Call Update function from the dll, bit "and" operator here
-        //       because we dont want update to override appstatus
-        dllCode.update(os);
 
         if(audioData.initialized)
         {
@@ -312,4 +308,10 @@ internal bool32
 VSyncStateGet()
 {
     return GLOBALVSyncState;
+}
+
+internal u64
+ProcessorCyclesGet()
+{
+    return __rdtsc();
 }

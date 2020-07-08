@@ -7,7 +7,7 @@
 #include "opengl.c"
 
 internal void
-AudioFillBuffer(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
+AudioGenerateSineWave(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 {
     #define MATH_PI 3.14159265f
     local_scoped_global f32 tSine;
@@ -36,15 +36,11 @@ void Update(operating_system_interface *operatingSystemInterface)
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // NOTE: Sine wave controlled by W Key and right controller stick
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     if(IsKeyDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
-    AudioFillBuffer(os->audioBuffer, os->requestedSamples, wavePeriod);
-
-    if(IsKeyUnpressedOnce(KEY_A)) Log("A\n");
-    if(IsButtonDown(BUTTON_UP)) Log("A\n");
-    if(IsButtonPressedOnce(BUTTON_DOWN)) Log("FF\n");
-    if(IsButtonUnpressedOnce(BUTTON_LEFT)) Log("A\n");
+    AudioGenerateSineWave(os->audioBuffer, os->requestedSamples, wavePeriod);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
     if(IsKeyDown(KEY_ESC)) os->Quit();

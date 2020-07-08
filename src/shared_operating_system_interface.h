@@ -124,21 +124,23 @@ typedef struct operating_system_interface
     u32 audioBufferSize;
     u32 requestedSamples; // number of samples to fill requested from the os
     u32 samplesPerSecond;
+    f32 audioLatencyMultiplier;
 
+    time_data timeData; 
+    f32 targetMsPerFrame; 
     user_input userInput;
-
-    time_data timeData;
-    f32 targetMsPerFrame;
 
     void   (*Quit)();
     void   (*Log)(char *text, ...);
     void   (*LogExtra)(char *prepend, char *text, ...);
 
-    f32    (*TimeCurrenGet)();
+    f32    (*TimeMillisecondsGet)();
+    i64    (*TimeCountsGet)();
+    u64    (*ProcessorCyclesGet)();
     iv2    (*DrawAreaSizeGet)();
     f32    (*MonitorRefreshRateGet)();
-    
     bool32 (*VSyncStateGet)();
+    
     bool32 (*VSyncSet)(bool32 state);
     void   (*RefreshScreen)();
     void  *(*OpenGLFunctionLoad)(char *name);
