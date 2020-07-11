@@ -1,11 +1,11 @@
-#define TEXT_BUFFER_SIZE 2048
-#define TEXT_BUFFER_COUNT 2
-static HANDLE GLOBALConsoleHandle;
-static char GLOBALRandomAccessTextBuffer[TEXT_BUFFER_COUNT][TEXT_BUFFER_SIZE];
+#define TEXT_BUFFER_SIZE 1024
+global_variable HANDLE GLOBALConsoleHandle;
 
 internal void 
 ConsoleLog(char *text, ...)
 {
+    static char GLOBALRandomAccessTextBuffer[1][TEXT_BUFFER_SIZE];
+
     va_list args;
     va_start(args, text);
     vsprintf_s(GLOBALRandomAccessTextBuffer[0], TEXT_BUFFER_SIZE, text, args);
@@ -18,6 +18,8 @@ ConsoleLog(char *text, ...)
 internal void
 ConsoleLogExtra(char *prepend, char *text, ...)
 {
+    static char GLOBALRandomAccessTextBuffer[2][TEXT_BUFFER_SIZE];
+
     size_t textLength = CharLength(text);
     size_t prependLength = CharLength(prepend);
     if(textLength + prependLength > TEXT_BUFFER_SIZE)

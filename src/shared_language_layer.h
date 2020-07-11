@@ -29,8 +29,8 @@ typedef int32_t  bool32;
 #define LogInfo(text, ...)     ConsoleLogExtra("INFO:    ", text, __VA_ARGS__)
 #define LogSuccess(text, ...)  ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...)    ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define assert(expression)     if(!(expression)) PrivateSetDebuggerBreakpoint("ASSERT")
-#define Assert(expression,text)if(!(expression)) PrivateSetDebuggerBreakpoint(text)
+#define Assert(expression)     if(!(expression)) 
+#define Error(text)            PrivateSetDebuggerBreakpoint(text)
 #define dbg()                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 
 typedef union v2

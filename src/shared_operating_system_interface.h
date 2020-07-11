@@ -14,10 +14,32 @@ typedef struct file_data
 
 typedef enum keyboard_keys
 {
+    KEY_Q,
     KEY_W,
-    KEY_S,
+    KEY_E,
+    KEY_R,
+    KEY_T,
+    KEY_Y,
+    KEY_U,
+    KEY_I,
+    KEY_O,
+    KEY_P,
     KEY_A,
+    KEY_S,
     KEY_D,
+    KEY_F,
+    KEY_G,
+    KEY_H,
+    KEY_J,
+    KEY_K,
+    KEY_L,
+    KEY_Z,
+    KEY_X,
+    KEY_C,
+    KEY_V,
+    KEY_B,
+    KEY_N,
+    KEY_M,
     KEY_UP,
     KEY_DOWN,
     KEY_LEFT,
@@ -139,12 +161,14 @@ typedef struct operating_system_interface
     f32    (*TimeGetMilliseconds)();
     i64    (*TimeGetCounts)();
     u64    (*TimeGetProcessorCycles)();
-    iv2    (*WindowGetSize)();
-    f32    (*MonitorGetRefreshRate)();
+
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
 
+    f32    (*MonitorGetRefreshRate)();
+    
+    iv2    (*WindowGetSize)();
     void   (*WindowSetTransparency)(u8 value);
     void   (*WindowAlwaysOnTop)();
     void   (*WindowNotAlwaysOnTop)();

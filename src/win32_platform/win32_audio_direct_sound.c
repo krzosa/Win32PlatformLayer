@@ -32,7 +32,7 @@ Win32AudioInitialize(HWND window, i32 samplesPerSecond, i32 bufferSize)
         direct_sound_create *directSoundCreateObject =
             (direct_sound_create *)GetProcAddress(DSoundLibrary, "DirectSoundCreate");
 
-        assert(directSoundCreateObject);
+        Assert(directSoundCreateObject);
 
         // NOTE: first buffer is for setting cooperative level and general settings
         //       we write to the second buffer only
@@ -220,7 +220,7 @@ Win32PlayAudio(win32_audio_data *audioData)
                                                         DSBPLAY_LOOPING))) 
         {
             LogError("AudioBuffer Play");
-            assert(0);
+            Assert(0);
         }
         audioData->isPlaying = !audioData->isPlaying;
     }

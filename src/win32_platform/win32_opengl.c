@@ -13,7 +13,7 @@ internal void *
 Win32OpenGLLoadProcedures(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
-  assert(p);
+  Assert(p);
 
   return p;
 }

@@ -254,7 +254,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_KEYUP:
         case WM_KEYDOWN:
         {
-            assert(0);
+            Assert(0);
         }
         default:
         {

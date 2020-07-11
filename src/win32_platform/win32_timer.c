@@ -107,7 +107,6 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
     time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
     time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
 
-    Log("%f update %f frame\n", time->updateMilliseconds, time->frameMilliseconds);
     *prevFrameCycles = ProcessorClockCycles();
     *prevFrame = Win32PerformanceCountGet();
 }
