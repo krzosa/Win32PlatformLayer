@@ -103,9 +103,9 @@ Win32OpenGLInit(HDC deviceContext)
 }
 
 internal void
-Win32OpenGLAspectRatioUpdate(HWND windowHandle, i32 ratioWidth, i32 ratioHeight)
+Win32OpenGLAspectRatioUpdate(i32 ratioWidth, i32 ratioHeight)
 {
-    iv2 win = GLOBALDrawAreaSize;
+    iv2 win = Win32WindowDrawAreaSize();
 
     // NOTE: keep aspect ratio of 16:9
     i32 transformedWidth = win.height * ratioWidth / ratioHeight;

@@ -17,8 +17,6 @@
 global_variable operating_system_interface GLOBALOs; 
 global_variable bool32 GLOBALSleepIsGranular;
 global_variable bool32 GLOBALApplicationIsRunning; // Loop status, the app closes if it equals 0
-global_variable iv2    GLOBALDrawAreaSize;
-global_variable iv2    GLOBALWindowSize;
 global_variable f32    GLOBALMonitorRefreshRate;
 global_variable bool32 GLOBALVSyncState;
 global_variable HWND   GLOBALWindow;
@@ -87,12 +85,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                                     WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                     DEFAULT_WINDOW_POS_X, 
                                     DEFAULT_WINDOW_POS_Y, 
-                                    DEFAULT_WINDOW_WIDTH, 
-                                    DEFAULT_WINDOW_HEIGHT, 
+                                    CW_USEDEFAULT, 
+                                    CW_USEDEFAULT, 
                                     0, 0, instance, 0);
 
     if(!GLOBALWindow) {LogError("Create Window"); return 0;}
+
     WindowSetTransparency(255);
+    WindowSetSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 
     // NOTE: Window context setup
     HDC deviceContext = GetDC(GLOBALWindow);
@@ -101,11 +101,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     //       function for setting vsync is loaded here
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
 
-    LogInfo("Window size %d %d", GLOBALWindowSize.width, GLOBALWindowSize.height);
-    LogInfo("Window draw area size %d %d", GLOBALDrawAreaSize.width, GLOBALDrawAreaSize.height);
+    iv2 windowSize = Win32WindowSize();
+    iv2 drawAreaSize = Win32WindowDrawAreaSize();
+    LogInfo("Window size %d %d", windowSize.width, windowSize.height);
+    LogInfo("Window draw area size %d %d", drawAreaSize.width, drawAreaSize.height);
 
     // NOTE: Set the opengl viewport to match the aspect ratio
-    Win32OpenGLAspectRatioUpdate(GLOBALWindow, 16, 9);
+    Win32OpenGLAspectRatioUpdate(16, 9);
     LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
 
@@ -152,7 +154,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->ProcessorCyclesGet                  = &ProcessorCyclesGet;
         os->OpenGLFunctionLoad                  = &Win32OpenGLFunctionLoad;
         os->VSyncSet                            = &Win32OpenGLSetVSync;
-        os->DrawAreaSizeGet                     = &DrawAreaSizeGet;
+        os->WindowGetSize                       = &Win32WindowDrawAreaSize;
         os->MonitorRefreshRateGet               = &MonitorRefreshRateGet;
         os->Log                                 = &ConsoleLog;
         os->LogExtra                            = &ConsoleLogExtra;
@@ -160,6 +162,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->WindowSetTransparency               = &WindowSetTransparency;
         os->WindowAlwaysOnTop                   = &WindowAlwaysOnTop;
         os->WindowNotAlwaysOnTop                = &WindowNotAlwaysOnTop;
+        os->WindowSetSize                       = &WindowSetSize;
+        os->WindowDrawBorder                    = &WindowDrawBorder;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -238,10 +242,8 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_WINDOWPOSCHANGING:
         case WM_SIZE:
         {
-            Win32WindowSizeUpdate(window);
-
             // NOTE: resize opengl viewport on window resize
-            Win32OpenGLAspectRatioUpdate(window, 16, 9);
+            Win32OpenGLAspectRatioUpdate(16, 9);
             break;
         }
         case WM_KEYUP:
@@ -265,31 +267,32 @@ Quit()
     GLOBALApplicationIsRunning = !GLOBALApplicationIsRunning;
 }
 
-internal void 
-Win32WindowSizeUpdate(HWND window)
+internal iv2
+Win32WindowDrawAreaSize()
 {
     RECT ClientRect;
-    iv2 windowDimension;
+    iv2 drawArea;
 
-    GetWindowRect(window, &ClientRect);
-    windowDimension.width = ClientRect.right - ClientRect.left;
-    windowDimension.height = ClientRect.bottom - ClientRect.top;
+    // NOTE: get size of the window, without the border
+    GetClientRect(GLOBALWindow, &ClientRect);
+    drawArea.width = ClientRect.right - ClientRect.left;
+    drawArea.height = ClientRect.bottom - ClientRect.top;
 
-    GLOBALWindowSize = windowDimension;
-
-    // get size of the window, without the border
-    GetClientRect(window, &ClientRect);
-    windowDimension.width = ClientRect.right - ClientRect.left;
-    windowDimension.height = ClientRect.bottom - ClientRect.top;
-
-    // NOTE: Update global window width and height
-    GLOBALDrawAreaSize = windowDimension;
+    return drawArea;
 }
 
 internal iv2
-DrawAreaSizeGet()
+Win32WindowSize()
 {
-    return GLOBALDrawAreaSize;
+    RECT ClientRect;
+    iv2 windowSize;
+
+    // NOTE: get size of the window, without the border
+    GetWindowRect(GLOBALWindow, &ClientRect);
+    windowSize.width = ClientRect.right - ClientRect.left;
+    windowSize.height = ClientRect.bottom - ClientRect.top;
+
+    return windowSize;
 }
 
 internal f32
@@ -357,8 +360,42 @@ WindowSetPosition(i32 x, i32 y)
     }
 }
 
+internal iv2
+WindowGetBorderSize()
+{
+    iv2 windowDrawAreaSize = Win32WindowDrawAreaSize();
+    iv2 windowSize = Win32WindowSize();
+
+    iv2 borderSize;
+    // NOTE: Calculate how big is the border
+    borderSize.width = windowSize.width - windowDrawAreaSize.width;
+    borderSize.height = windowSize.height - windowDrawAreaSize.height;
+
+    return borderSize;
+}
+
+
 internal void
 WindowSetSize(i32 width, i32 height)
+{
+    iv2 borderSize = WindowGetBorderSize();
+
+    // NOTE: Add border size to the total width and height
+    i32 actualWidth = width + borderSize.width;
+    i32 actualHeight = height + borderSize.height;
+
+    bool32 result = SetWindowPos(GLOBALWindow, 0, 
+                                 0, 0, actualWidth, actualHeight, 
+                                 SWP_NOMOVE | SWP_NOOWNERZORDER);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowWithBorderSetSize(i32 width, i32 height)
 {
     bool32 result = SetWindowPos(GLOBALWindow, 0, 
                                  0, 0, width, height, 
@@ -385,36 +422,39 @@ WindowRefresh()
     }
 }
 
+static iv2 GLOBALWindowBorderSize;
+static bool32 GLOBALIsBorderDrawn = 1;
+
 internal void
-WindowDrawFrame(bool32 draw)
+WindowDrawBorder(bool32 draw)
 {
+    if(GLOBALWindowBorderSize.width == 0 && GLOBALWindowBorderSize.height == 0)
+        GLOBALWindowBorderSize = WindowGetBorderSize();
+
     if(draw)
     {
         if(!SetWindowLongA(GLOBALWindow, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE))
         {
             LogError("");
         }
+        if(!GLOBALIsBorderDrawn)
+        {
+            iv2 windowSize = Win32WindowSize();
+            WindowWithBorderSetSize(windowSize.width + GLOBALWindowBorderSize.width,
+             windowSize.height + GLOBALWindowBorderSize.height);
+        } 
         WindowRefresh();
-
+        GLOBALIsBorderDrawn = 1;
     }
     else
     {
+        iv2 drawAreaSize = Win32WindowDrawAreaSize();
+        WindowWithBorderSetSize(drawAreaSize.width, drawAreaSize.height);
         if(!SetWindowLongA(GLOBALWindow, GWL_STYLE, WS_VISIBLE))
         {
             LogError("");
         }
         WindowRefresh();
+        GLOBALIsBorderDrawn = 0;
     }
-}
-
-internal iv2
-WindowSize()
-{
-    return GLOBALWindowSize;
-}
-
-internal iv2
-WindowDrawArea()
-{
-    return GLOBALDrawAreaSize;
 }

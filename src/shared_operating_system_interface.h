@@ -138,7 +138,7 @@ typedef struct operating_system_interface
     f32    (*TimeMillisecondsGet)();
     i64    (*TimeCountsGet)();
     u64    (*ProcessorCyclesGet)();
-    iv2    (*DrawAreaSizeGet)();
+    iv2    (*WindowGetSize)();
     f32    (*MonitorRefreshRateGet)();
     bool32 (*VSyncStateGet)();
     
@@ -147,6 +147,8 @@ typedef struct operating_system_interface
     void   (*WindowSetTransparency)(u8 value);
     void   (*WindowAlwaysOnTop)();
     void   (*WindowNotAlwaysOnTop)();
+    void   (*WindowSetSize)(i32 width, i32 height);
+    void   (*WindowDrawBorder)(bool32 draw);
     
     void  *(*OpenGLFunctionLoad)(char *name);
 } operating_system_interface;

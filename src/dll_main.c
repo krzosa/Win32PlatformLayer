@@ -33,17 +33,20 @@ void Initialize(operating_system_interface *operatingSystemInterface)
 }
 void Update(operating_system_interface *operatingSystemInterface)
 {
-    glClearColor(0, 0.5, 0.5, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-
+    if(IsKeyDown(KEY_ESC)) os->Quit();
     // NOTE: Sine wave controlled by W Key and right controller stick
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     if(IsKeyDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
+
     AudioGenerateSineWave(os->audioBuffer, os->requestedSamples, wavePeriod);
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    if(IsKeyDown(KEY_ESC)) os->Quit();
+    // NOTE: Draw
+    {
+        glClearColor(0, 0.5, 0.5, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
 }
 void HotReload(operating_system_interface *operatingSystemInterface)
 {
