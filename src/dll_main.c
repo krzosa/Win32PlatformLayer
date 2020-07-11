@@ -16,7 +16,7 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
     for(i32 i = 0; i != sampleCount; i++)
     {
         f32 sineValue = sinf(tSine);
-        i16 sampleValue = (i16)(sineValue * 6000);
+        i16 sampleValue = (i16)(sineValue * 3000);
         *sample++ = sampleValue;
         *sample++ = sampleValue;
 
@@ -27,7 +27,7 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 void Initialize(operating_system_interface *operatingSystemInterface)
 {
     os = operatingSystemInterface;
-    OpenGLLoadProcedures(os->OpenGLFunctionLoad);
+    OpenGLLoadProcedures(os->OpenGLLoadProcedures);
 
     OpenGLTriangleSetup();
 }
@@ -54,5 +54,5 @@ void Update(operating_system_interface *operatingSystemInterface)
 void HotReload(operating_system_interface *operatingSystemInterface)
 {
     os = operatingSystemInterface;
-    OpenGLLoadProcedures(os->OpenGLFunctionLoad);
+    OpenGLLoadProcedures(os->OpenGLLoadProcedures);
 }

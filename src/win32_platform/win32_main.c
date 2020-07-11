@@ -146,24 +146,29 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         os->audioLatencyMultiplier = 4.f;
         os->samplesPerSecond = audioData.samplesPerSecond;
-        os->targetMsPerFrame = (1 / GLOBALMonitorRefreshRate * 1000);
+        os->targetFramesPerSecond = GLOBALMonitorRefreshRate;
 
-        os->Quit                                = &Quit;
-        os->TimeMillisecondsGet                 = &Win32MillisecondsGet;
-        os->TimeCountsGet                       = &Win32PerformanceCountGet;
-        os->ProcessorGetCycles                  = &ProcessorGetCycles;
-        os->OpenGLFunctionLoad                  = &Win32OpenGLFunctionLoad;
-        os->VSyncSet                            = &Win32OpenGLSetVSync;
-        os->WindowGetSize                       = &Win32WindowDrawAreaGetSize;
-        os->MonitorGetRefreshRate               = &MonitorGetRefreshRate;
         os->Log                                 = &ConsoleLog;
         os->LogExtra                            = &ConsoleLogExtra;
+        os->Quit                                = &Quit;
+
+        os->TimeGetMilliseconds                 = &Win32MillisecondsGet;
+        os->TimeGetCounts                       = &Win32PerformanceCountGet;
+        os->TimeGetProcessorCycles              = &TimeGetProcessorCycles;
+
+        os->VSyncSetState                       = &Win32OpenGLSetVSync;
         os->VSyncGetState                       = &VSyncGetState;
+        os->MonitorGetRefreshRate               = &MonitorGetRefreshRate;
+
         os->WindowSetTransparency               = &WindowSetTransparency;
         os->WindowAlwaysOnTop                   = &WindowAlwaysOnTop;
         os->WindowNotAlwaysOnTop                = &WindowNotAlwaysOnTop;
+        os->WindowGetSize                       = &Win32WindowDrawAreaGetSize;
         os->WindowSetSize                       = &WindowDrawAreaSetSize;
+        os->WindowSetPosition                   = &WindowSetPosition;
         os->WindowDrawBorder                    = &WindowDrawBorder;
+
+        os->OpenGLLoadProcedures                = &Win32OpenGLLoadProcedures;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -198,7 +203,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         // NOTE: Figure out how much sound to write and where / update the latency based on
         // potential fps changes
         u32 samplesToWrite = Win32AudioStatusUpdate(&audioData, 
-                                                    MillisecondsPerFrameToFramesPerSecond(os->targetMsPerFrame),
+                                                    os->targetFramesPerSecond,
                                                     os->audioLatencyMultiplier);
 
         // NOTE: Update operating system status
@@ -217,7 +222,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        EndFrameAndSleep(&GLOBALOs.timeData, GLOBALOs.targetMsPerFrame, 
+        EndFrameAndSleep(&GLOBALOs.timeData, (1 / GLOBALOs.targetFramesPerSecond * 1000), 
                          &beginFrame, &beginFrameCycles);
     }
     
@@ -308,7 +313,7 @@ VSyncGetState()
 }
 
 internal u64
-ProcessorGetCycles()
+TimeGetProcessorCycles()
 {
     return __rdtsc();
 }

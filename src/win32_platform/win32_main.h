@@ -2,7 +2,7 @@ LRESULT CALLBACK Win32MainWindowCallback(HWND window, UINT message, WPARAM wPara
 void Win32WindowGetSizeUpdate();
 f32 MonitorGetRefreshRate();
 bool32 VSyncGetState();
-u64 ProcessorGetCycles();
+u64 TimeGetProcessorCycles();
 iv2 DrawAreaSizeGet();
 iv2 Win32WindowDrawAreaGetSize();
 iv2 Win32WindowGetSize();

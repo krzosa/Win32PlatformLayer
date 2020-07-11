@@ -128,29 +128,31 @@ typedef struct operating_system_interface
     f32 audioLatencyMultiplier;
 
     time_data timeData; 
-    f32 targetMsPerFrame; 
     user_input userInput;
+
+    f32 targetFramesPerSecond;
 
     void   (*Quit)();
     void   (*Log)(char *text, ...);
     void   (*LogExtra)(char *prepend, char *text, ...);
 
-    f32    (*TimeMillisecondsGet)();
-    i64    (*TimeCountsGet)();
-    u64    (*ProcessorGetCycles)();
+    f32    (*TimeGetMilliseconds)();
+    i64    (*TimeGetCounts)();
+    u64    (*TimeGetProcessorCycles)();
     iv2    (*WindowGetSize)();
     f32    (*MonitorGetRefreshRate)();
     
     bool32 (*VSyncGetState)();
-    bool32 (*VSyncSet)(bool32 state);
+    bool32 (*VSyncSetState)(bool32 state);
 
     void   (*WindowSetTransparency)(u8 value);
     void   (*WindowAlwaysOnTop)();
     void   (*WindowNotAlwaysOnTop)();
     void   (*WindowSetSize)(i32 width, i32 height);
+    void   (*WindowSetPosition)(i32 width, i32 height);
     void   (*WindowDrawBorder)(bool32 draw);
     
-    void  *(*OpenGLFunctionLoad)(char *name);
+    void  *(*OpenGLLoadProcedures)(char *name);
 } operating_system_interface;
 
 

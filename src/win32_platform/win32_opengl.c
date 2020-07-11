@@ -5,12 +5,12 @@ internal PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB = 0;
 internal PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = 0;
 
 // NOTE: forward declarations
-internal void *Win32OpenGLFunctionLoad(char *name);
+internal void *Win32OpenGLLoadProcedures(char *name);
 internal void PrintLastErrorMessage(char *text);
 internal HGLRC Win32OpenGLInit(HDC deviceContext);
 
 internal void * 
-Win32OpenGLFunctionLoad(char *name)
+Win32OpenGLLoadProcedures(char *name)
 {
   void *p = (void *)wglGetProcAddress(name);
   assert(p);
@@ -59,10 +59,10 @@ Win32OpenGLInit(HDC deviceContext)
         Win32LastErrorMessagePrint("FAILED: to make dummy opengl context current");
 
     // NOTE: Load windows opengl functions
-    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLFunctionLoad("wglChoosePixelFormatARB");
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)Win32OpenGLFunctionLoad("wglCreateContextAttribsARB");
-    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)Win32OpenGLFunctionLoad("wglMakeContextCurrentARB");
-    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)Win32OpenGLFunctionLoad("wglSwapIntervalEXT");
+    wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLLoadProcedures("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)Win32OpenGLLoadProcedures("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB = (PFNWGLMAKECONTEXTCURRENTARBPROC)Win32OpenGLLoadProcedures("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)Win32OpenGLLoadProcedures("wglSwapIntervalEXT");
 
     int attribList[] =
     {
