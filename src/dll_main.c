@@ -10,7 +10,7 @@ internal void
 AudioGenerateSineWave(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 {
     #define MATH_PI 3.14159265f
-    local_scoped_global f32 tSine;
+    static f32 tSine;
 
     i16 *sample = (i16 *)audioBuffer;
     for(i32 i = 0; i != sampleCount; i++)
@@ -38,6 +38,9 @@ void Update(operating_system_interface *operatingSystemInterface)
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     if(IsKeyDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
+
+    if(IsKeyDown(KEY_A)) os->WindowDrawBorder(0);
+    if(IsKeyDown(KEY_D)) os->WindowDrawBorder(1);
 
     AudioGenerateSineWave(os->audioBuffer, os->requestedSamples, wavePeriod);
 

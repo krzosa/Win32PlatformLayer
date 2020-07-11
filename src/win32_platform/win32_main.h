@@ -1,14 +1,14 @@
 LRESULT CALLBACK Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-void Win32WindowSizeUpdate();
-f32 MonitorRefreshRateGet();
-bool32 VSyncStateGet();
-u64 ProcessorCyclesGet();
+void Win32WindowGetSizeUpdate();
+f32 MonitorGetRefreshRate();
+bool32 VSyncGetState();
+u64 ProcessorGetCycles();
 iv2 DrawAreaSizeGet();
-iv2 Win32WindowDrawAreaSize();
-iv2 Win32WindowSize();
+iv2 Win32WindowDrawAreaGetSize();
+iv2 Win32WindowGetSize();
 
-void WindowWithBorderSetSize(i32 width, i32 height);
 void WindowSetSize(i32 width, i32 height);
+void WindowDrawAreaSetSize(i32 width, i32 height);
 void WindowSetPosition(i32 x, i32 y);
 
 void WindowRefresh();

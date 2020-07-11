@@ -15,7 +15,6 @@ typedef int16_t  bool16;
 typedef int32_t  bool32;
 
 #define global_variable static
-#define local_scoped_global static // global variable with local scope
 #define internal static // Function internal to the obj, file 
 
 #define true 1

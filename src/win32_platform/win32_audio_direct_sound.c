@@ -116,7 +116,7 @@ Win32AudioBufferFill(win32_audio_data *audioData, void *bufferToPlay, DWORD byte
     VOID *region2 = 0;
     DWORD region1Size = 0;
     DWORD region2Size = 0;
-    local_scoped_global f32 tSine;
+    static f32 tSine;
     LPDIRECTSOUNDBUFFER audioBuffer = audioData->audioBuffer;
 
     if(SUCCEEDED(audioBuffer->lpVtbl->Lock(audioBuffer, 

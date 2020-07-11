@@ -92,7 +92,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     if(!GLOBALWindow) {LogError("Create Window"); return 0;}
 
     WindowSetTransparency(255);
-    WindowSetSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+    WindowDrawAreaSetSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 
     // NOTE: Window context setup
     HDC deviceContext = GetDC(GLOBALWindow);
@@ -101,8 +101,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     //       function for setting vsync is loaded here
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
 
-    iv2 windowSize = Win32WindowSize();
-    iv2 drawAreaSize = Win32WindowDrawAreaSize();
+    iv2 windowSize = Win32WindowGetSize();
+    iv2 drawAreaSize = Win32WindowDrawAreaGetSize();
     LogInfo("Window size %d %d", windowSize.width, windowSize.height);
     LogInfo("Window draw area size %d %d", drawAreaSize.width, drawAreaSize.height);
 
@@ -151,18 +151,18 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->Quit                                = &Quit;
         os->TimeMillisecondsGet                 = &Win32MillisecondsGet;
         os->TimeCountsGet                       = &Win32PerformanceCountGet;
-        os->ProcessorCyclesGet                  = &ProcessorCyclesGet;
+        os->ProcessorGetCycles                  = &ProcessorGetCycles;
         os->OpenGLFunctionLoad                  = &Win32OpenGLFunctionLoad;
         os->VSyncSet                            = &Win32OpenGLSetVSync;
-        os->WindowGetSize                       = &Win32WindowDrawAreaSize;
-        os->MonitorRefreshRateGet               = &MonitorRefreshRateGet;
+        os->WindowGetSize                       = &Win32WindowDrawAreaGetSize;
+        os->MonitorGetRefreshRate               = &MonitorGetRefreshRate;
         os->Log                                 = &ConsoleLog;
         os->LogExtra                            = &ConsoleLogExtra;
-        os->VSyncStateGet                       = &VSyncStateGet;
+        os->VSyncGetState                       = &VSyncGetState;
         os->WindowSetTransparency               = &WindowSetTransparency;
         os->WindowAlwaysOnTop                   = &WindowAlwaysOnTop;
         os->WindowNotAlwaysOnTop                = &WindowNotAlwaysOnTop;
-        os->WindowSetSize                       = &WindowSetSize;
+        os->WindowSetSize                       = &WindowDrawAreaSetSize;
         os->WindowDrawBorder                    = &WindowDrawBorder;
 
         LogSuccess("OS Functions Loaded");
@@ -268,7 +268,7 @@ Quit()
 }
 
 internal iv2
-Win32WindowDrawAreaSize()
+Win32WindowDrawAreaGetSize()
 {
     RECT ClientRect;
     iv2 drawArea;
@@ -282,7 +282,7 @@ Win32WindowDrawAreaSize()
 }
 
 internal iv2
-Win32WindowSize()
+Win32WindowGetSize()
 {
     RECT ClientRect;
     iv2 windowSize;
@@ -296,19 +296,19 @@ Win32WindowSize()
 }
 
 internal f32
-MonitorRefreshRateGet()
+MonitorGetRefreshRate()
 {
     return GLOBALMonitorRefreshRate;
 }
 
 internal bool32
-VSyncStateGet()
+VSyncGetState()
 {
     return GLOBALVSyncState;
 }
 
 internal u64
-ProcessorCyclesGet()
+ProcessorGetCycles()
 {
     return __rdtsc();
 }
@@ -361,10 +361,10 @@ WindowSetPosition(i32 x, i32 y)
 }
 
 internal iv2
-WindowGetBorderSize()
+WindowBorderGetSize()
 {
-    iv2 windowDrawAreaSize = Win32WindowDrawAreaSize();
-    iv2 windowSize = Win32WindowSize();
+    iv2 windowDrawAreaSize = Win32WindowDrawAreaGetSize();
+    iv2 windowSize = Win32WindowGetSize();
 
     iv2 borderSize;
     // NOTE: Calculate how big is the border
@@ -375,10 +375,11 @@ WindowGetBorderSize()
 }
 
 
+// Sets the size of the draw area
 internal void
-WindowSetSize(i32 width, i32 height)
+WindowDrawAreaSetSize(i32 width, i32 height)
 {
-    iv2 borderSize = WindowGetBorderSize();
+    iv2 borderSize = WindowBorderGetSize();
 
     // NOTE: Add border size to the total width and height
     i32 actualWidth = width + borderSize.width;
@@ -395,7 +396,7 @@ WindowSetSize(i32 width, i32 height)
 }
 
 internal void
-WindowWithBorderSetSize(i32 width, i32 height)
+WindowSetSize(i32 width, i32 height)
 {
     bool32 result = SetWindowPos(GLOBALWindow, 0, 
                                  0, 0, width, height, 
@@ -422,14 +423,15 @@ WindowRefresh()
     }
 }
 
-static iv2 GLOBALWindowBorderSize;
-static bool32 GLOBALIsBorderDrawn = 1;
 
 internal void
 WindowDrawBorder(bool32 draw)
 {
+    static iv2 GLOBALWindowBorderSize;
+    static bool32 GLOBALIsBorderDrawn;
+
     if(GLOBALWindowBorderSize.width == 0 && GLOBALWindowBorderSize.height == 0)
-        GLOBALWindowBorderSize = WindowGetBorderSize();
+        GLOBALWindowBorderSize = WindowBorderGetSize();
 
     if(draw)
     {
@@ -439,8 +441,8 @@ WindowDrawBorder(bool32 draw)
         }
         if(!GLOBALIsBorderDrawn)
         {
-            iv2 windowSize = Win32WindowSize();
-            WindowWithBorderSetSize(windowSize.width + GLOBALWindowBorderSize.width,
+            iv2 windowSize = Win32WindowGetSize();
+            WindowSetSize(windowSize.width + GLOBALWindowBorderSize.width,
              windowSize.height + GLOBALWindowBorderSize.height);
         } 
         WindowRefresh();
@@ -448,8 +450,8 @@ WindowDrawBorder(bool32 draw)
     }
     else
     {
-        iv2 drawAreaSize = Win32WindowDrawAreaSize();
-        WindowWithBorderSetSize(drawAreaSize.width, drawAreaSize.height);
+        iv2 drawAreaSize = Win32WindowDrawAreaGetSize();
+        WindowSetSize(drawAreaSize.width, drawAreaSize.height);
         if(!SetWindowLongA(GLOBALWindow, GWL_STYLE, WS_VISIBLE))
         {
             LogError("");

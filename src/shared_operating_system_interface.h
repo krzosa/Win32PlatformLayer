@@ -137,11 +137,11 @@ typedef struct operating_system_interface
 
     f32    (*TimeMillisecondsGet)();
     i64    (*TimeCountsGet)();
-    u64    (*ProcessorCyclesGet)();
+    u64    (*ProcessorGetCycles)();
     iv2    (*WindowGetSize)();
-    f32    (*MonitorRefreshRateGet)();
-    bool32 (*VSyncStateGet)();
+    f32    (*MonitorGetRefreshRate)();
     
+    bool32 (*VSyncGetState)();
     bool32 (*VSyncSet)(bool32 state);
 
     void   (*WindowSetTransparency)(u8 value);
