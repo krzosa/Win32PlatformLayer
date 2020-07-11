@@ -143,7 +143,11 @@ typedef struct operating_system_interface
     bool32 (*VSyncStateGet)();
     
     bool32 (*VSyncSet)(bool32 state);
-    void   (*RefreshScreen)();
+
+    void   (*WindowSetTransparency)(u8 value);
+    void   (*WindowAlwaysOnTop)();
+    void   (*WindowNotAlwaysOnTop)();
+    
     void  *(*OpenGLFunctionLoad)(char *name);
 } operating_system_interface;
 

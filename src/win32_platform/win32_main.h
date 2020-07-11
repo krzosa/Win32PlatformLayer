@@ -9,7 +9,7 @@ void WindowSetSize(i32 width, i32 height);
 void WindowSetPosition(i32 x, i32 y);
 
 void WindowRefresh();
-void WindowTransparency(u8 level);
+void WindowSetTransparency(u8 level);
 void WindowNotAlwaysOnTop();
 void WindowAlwaysOnTop();
 void WindowDrawFrame(bool32 draw);

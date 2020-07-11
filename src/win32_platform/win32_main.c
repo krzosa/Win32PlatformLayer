@@ -92,7 +92,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                                     0, 0, instance, 0);
 
     if(!GLOBALWindow) {LogError("Create Window"); return 0;}
-    WindowTransparency(255);
+    WindowSetTransparency(255);
 
     // NOTE: Window context setup
     HDC deviceContext = GetDC(GLOBALWindow);
@@ -101,8 +101,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     //       function for setting vsync is loaded here
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
 
-    Win32WindowSizeUpdate(GLOBALWindow);
-    LogInfo("Window dimmension %d %d", GLOBALWindowSize.width, GLOBALWindowSize.height);
+    LogInfo("Window size %d %d", GLOBALWindowSize.width, GLOBALWindowSize.height);
+    LogInfo("Window draw area size %d %d", GLOBALDrawAreaSize.width, GLOBALDrawAreaSize.height);
 
     // NOTE: Set the opengl viewport to match the aspect ratio
     Win32OpenGLAspectRatioUpdate(GLOBALWindow, 16, 9);
@@ -142,7 +142,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("OS Memory allocated");
 
-        os->audioLatencyMultiplier = 2.5f;
+        os->audioLatencyMultiplier = 4.f;
         os->samplesPerSecond = audioData.samplesPerSecond;
         os->targetMsPerFrame = (1 / GLOBALMonitorRefreshRate * 1000);
 
@@ -157,6 +157,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os->Log                                 = &ConsoleLog;
         os->LogExtra                            = &ConsoleLogExtra;
         os->VSyncStateGet                       = &VSyncStateGet;
+        os->WindowSetTransparency               = &WindowSetTransparency;
+        os->WindowAlwaysOnTop                   = &WindowAlwaysOnTop;
+        os->WindowNotAlwaysOnTop                = &WindowNotAlwaysOnTop;
 
         LogSuccess("OS Functions Loaded");
     }
@@ -331,7 +334,7 @@ WindowNotAlwaysOnTop()
 }
 
 internal void
-WindowTransparency(u8 level)
+WindowSetTransparency(u8 level)
 {
     bool32 result = SetLayeredWindowAttributes(GLOBALWindow, 0, level, LWA_ALPHA);
     if(!result)
@@ -402,4 +405,16 @@ WindowDrawFrame(bool32 draw)
         }
         WindowRefresh();
     }
+}
+
+internal iv2
+WindowSize()
+{
+    return GLOBALWindowSize;
+}
+
+internal iv2
+WindowDrawArea()
+{
+    return GLOBALDrawAreaSize;
 }
