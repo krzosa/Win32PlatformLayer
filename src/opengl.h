@@ -16,7 +16,7 @@
 #undef GLLoad // undefine GLLoad macro
 
 internal void
-OpenGLFunctionsLoad(void *(*OpenGLFunctionLoad)(char *name))
+OpenGLLoadProcedures(void *(*OpenGLFunctionLoad)(char *name))
 {
     // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLFunctionLoad("glUseProgram");
     #define GLLoad(name, type) gl##name = (PFNGL##type##PROC)OpenGLFunctionLoad("gl" #name);

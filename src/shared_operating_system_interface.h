@@ -122,6 +122,7 @@ typedef struct operating_system_interface
 
     void *audioBuffer; 
     u32 audioBufferSize;
+    
     u32 requestedSamples; // number of samples to fill requested from the os
     u32 samplesPerSecond;
     f32 audioLatencyMultiplier;

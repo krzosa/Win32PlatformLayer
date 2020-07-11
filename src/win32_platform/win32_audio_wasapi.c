@@ -215,7 +215,7 @@ Win32AudioInitialize(i32 samplesPerSecond)
 }
 
 internal void
-Win32FillAudioBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
+Win32AudioBufferFill(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
 {
     if(samplesToWrite)
     {
@@ -241,6 +241,35 @@ Win32FillAudioBuffer(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
             output->audioRenderClient, samplesToWrite, flags
         );
     }
+}
+
+internal u32
+Win32AudioStatusUpdate(win32_audio_data *audioData, f32 currentFramesPerSecond, f32 latencyMultiplier)
+{
+    u32 samplesToWrite = 0;
+    if(audioData->initialized)
+    {
+        audioData->latencyFrameCount = (u32)(audioData->samplesPerSecond / 
+                                             currentFramesPerSecond * 
+                                             latencyMultiplier);
+        UINT32 padding;
+        if(SUCCEEDED(audioData->audioClient->lpVtbl->GetCurrentPadding(audioData->audioClient, &padding)))
+        {
+            samplesToWrite = audioData->latencyFrameCount - padding;
+            if(samplesToWrite > audioData->latencyFrameCount)
+            {
+                samplesToWrite = audioData->latencyFrameCount;
+            }
+        }
+
+        // i32 *buffer = (i32 *)os->audioBuffer;
+        // for(u32 i = 0; i < audioData->bufferFrameCount; i++)
+        // {
+        //     buffer[i] = 0;
+        // }
+    }
+
+    return samplesToWrite;
 }
 
 internal void

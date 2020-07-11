@@ -18,8 +18,10 @@ global_variable operating_system_interface GLOBALOs;
 global_variable bool32 GLOBALSleepIsGranular;
 global_variable bool32 GLOBALApplicationIsRunning; // Loop status, the app closes if it equals 0
 global_variable iv2    GLOBALDrawAreaSize;
+global_variable iv2    GLOBALWindowSize;
 global_variable f32    GLOBALMonitorRefreshRate;
 global_variable bool32 GLOBALVSyncState;
+global_variable HWND   GLOBALWindow;
 
 #define DEFAULT_WINDOW_WIDTH 1280
 #define DEFAULT_WINDOW_HEIGHT 720
@@ -37,12 +39,9 @@ global_variable bool32 GLOBALVSyncState;
 #include "win32_audio_wasapi.c"
 
 /* TODO: 
- * os status abstraction
  * memory stuff
- * audio latency? 
  * fullscreen
- * control window size
- * wasapi ? ?
+ * better window resize handling
 */
 
 
@@ -72,7 +71,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Window Setup
     WNDCLASSA windowClass = {0};
     {
-        windowClass.style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
+        windowClass.style          = CS_HREDRAW | CS_VREDRAW;
         windowClass.lpfnWndProc    = Win32MainWindowCallback;
         windowClass.hInstance      = instance;
         windowClass.hIcon          = LoadIcon(instance, IDI_APPLICATION);
@@ -82,35 +81,33 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     if (!RegisterClassA(&windowClass)) {LogError("Register windowClass"); return 0;}
 
-    HWND windowHandle = CreateWindowExA(0, windowClass.lpszClassName, "TITLE_PLACEHOLDER", 
-                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                        DEFAULT_WINDOW_POS_X, DEFAULT_WINDOW_POS_Y, 
-                                        DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, 
-                                        0, 0, instance, 0);
+    GLOBALWindow = CreateWindowExA(WS_EX_LAYERED, 
+                                    windowClass.lpszClassName, 
+                                    "TITLE_PLACEHOLDER", 
+                                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                    DEFAULT_WINDOW_POS_X, 
+                                    DEFAULT_WINDOW_POS_Y, 
+                                    DEFAULT_WINDOW_WIDTH, 
+                                    DEFAULT_WINDOW_HEIGHT, 
+                                    0, 0, instance, 0);
 
-    if(!windowHandle) {LogError("Create Window"); return 0;}
+    if(!GLOBALWindow) {LogError("Create Window"); return 0;}
+    WindowTransparency(255);
 
     // NOTE: Window context setup
-    HDC deviceContext = GetDC(windowHandle);
+    HDC deviceContext = GetDC(GLOBALWindow);
 
     // NOTE: Setup openGL context, choose pixel format, load wgl functions
     //       function for setting vsync is loaded here
     HGLRC openglContext = Win32OpenGLInit(deviceContext);
 
+    Win32WindowSizeUpdate(GLOBALWindow);
+    LogInfo("Window dimmension %d %d", GLOBALWindowSize.width, GLOBALWindowSize.height);
+
     // NOTE: Set the opengl viewport to match the aspect ratio
-    Win32OpenGLAspectRatioUpdate(windowHandle, 16, 9);
+    Win32OpenGLAspectRatioUpdate(GLOBALWindow, 16, 9);
     LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
-    iv2 win = Win32GetWindowDimension(windowHandle);
-    LogInfo("Window dimmension %d %d", win.width, win.height);
-
-
-    // NOTE: Construct paths to exe and to dll
-    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
-    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
-    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
-    LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
-        pathToExeDirectory, mainDLLPath, tempDLLPath);
 
     // NOTE: Get monitor refresh rate
     f32 GLOBALMonitorRefreshRate = 60.f;
@@ -166,6 +163,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     win32_dll_code dllCode = {0};
 
+    // NOTE: Construct paths to exe and to dll
+    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
+    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
+    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
+    LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
+        pathToExeDirectory, mainDLLPath, tempDLLPath);
+
     // NOTE: Load the dll and call initialize function
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(os);
@@ -186,29 +190,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         // NOTE: Figure out how much sound to write and where / update the latency based on
         // potential fps changes
-        u32 samplesToWrite = 0;
-        if(audioData.initialized)
-        {
-            f32 currentFramesPerSecond = MillisecondsPerFrameToFramesPerSecond(os->targetMsPerFrame);
-            audioData.latencyFrameCount = (u32)(audioData.samplesPerSecond / currentFramesPerSecond * 
-                                                os->audioLatencyMultiplier);
-
-            UINT32 padding;
-            if(SUCCEEDED(audioData.audioClient->lpVtbl->GetCurrentPadding(audioData.audioClient, &padding)))
-            {
-                samplesToWrite = audioData.latencyFrameCount - padding;
-                if(samplesToWrite > audioData.latencyFrameCount)
-                {
-                    samplesToWrite = audioData.latencyFrameCount;
-                }
-            }
-
-            i32 *buffer = (i32 *)os->audioBuffer;
-            for(u32 i = 0; i < audioData.bufferFrameCount; i++)
-            {
-                buffer[i] = 0;
-            }
-        }
+        u32 samplesToWrite = Win32AudioStatusUpdate(&audioData, 
+                                                    MillisecondsPerFrameToFramesPerSecond(os->targetMsPerFrame),
+                                                    os->audioLatencyMultiplier);
 
         // NOTE: Update operating system status
         {
@@ -222,7 +206,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         if(audioData.initialized)
         {
-            Win32FillAudioBuffer(samplesToWrite, os->audioBuffer, &audioData);
+            Win32AudioBufferFill(samplesToWrite, os->audioBuffer, &audioData);
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
@@ -251,6 +235,8 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_WINDOWPOSCHANGING:
         case WM_SIZE:
         {
+            Win32WindowSizeUpdate(window);
+
             // NOTE: resize opengl viewport on window resize
             Win32OpenGLAspectRatioUpdate(window, 16, 9);
             break;
@@ -276,11 +262,18 @@ Quit()
     GLOBALApplicationIsRunning = !GLOBALApplicationIsRunning;
 }
 
-internal iv2 
-Win32GetWindowDimension(HWND window)
+internal void 
+Win32WindowSizeUpdate(HWND window)
 {
     RECT ClientRect;
     iv2 windowDimension;
+
+    GetWindowRect(window, &ClientRect);
+    windowDimension.width = ClientRect.right - ClientRect.left;
+    windowDimension.height = ClientRect.bottom - ClientRect.top;
+
+    GLOBALWindowSize = windowDimension;
+
     // get size of the window, without the border
     GetClientRect(window, &ClientRect);
     windowDimension.width = ClientRect.right - ClientRect.left;
@@ -288,8 +281,6 @@ Win32GetWindowDimension(HWND window)
 
     // NOTE: Update global window width and height
     GLOBALDrawAreaSize = windowDimension;
-
-    return windowDimension;
 }
 
 internal iv2
@@ -314,4 +305,101 @@ internal u64
 ProcessorCyclesGet()
 {
     return __rdtsc();
+}
+
+internal void
+WindowAlwaysOnTop()
+{
+    bool32 result = SetWindowPos(GLOBALWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowNotAlwaysOnTop()
+{
+    bool32 result = SetWindowPos(GLOBALWindow, HWND_NOTOPMOST, 
+                                 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowTransparency(u8 level)
+{
+    bool32 result = SetLayeredWindowAttributes(GLOBALWindow, 0, level, LWA_ALPHA);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowSetPosition(i32 x, i32 y)
+{
+    bool32 result = SetWindowPos(GLOBALWindow, 0, 
+                                 x, y, 500, 500, 
+                                 SWP_NOSIZE | SWP_NOOWNERZORDER);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowSetSize(i32 width, i32 height)
+{
+    bool32 result = SetWindowPos(GLOBALWindow, 0, 
+                                 0, 0, width, height, 
+                                 SWP_NOMOVE | SWP_NOOWNERZORDER);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowRefresh()
+{
+    bool32 result = SetWindowPos(GLOBALWindow, 0, 
+                                 0, 0, 0, 0, 
+                                 SWP_NOMOVE | SWP_NOOWNERZORDER | 
+                                 SWP_FRAMECHANGED | SWP_NOSIZE | 
+                                 SWP_SHOWWINDOW);
+    if(!result)
+    {
+        LogError("");
+        return;
+    }
+}
+
+internal void
+WindowDrawFrame(bool32 draw)
+{
+    if(draw)
+    {
+        if(!SetWindowLongA(GLOBALWindow, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE))
+        {
+            LogError("");
+        }
+        WindowRefresh();
+
+    }
+    else
+    {
+        if(!SetWindowLongA(GLOBALWindow, GWL_STYLE, WS_VISIBLE))
+        {
+            LogError("");
+        }
+        WindowRefresh();
+    }
 }

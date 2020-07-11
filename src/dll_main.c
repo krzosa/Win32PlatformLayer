@@ -27,8 +27,8 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount, i32 wavePeriod)
 void Initialize(operating_system_interface *operatingSystemInterface)
 {
     os = operatingSystemInterface;
-    LogSuccess("INIT Operating system attached");
-    OpenGLFunctionsLoad(os->OpenGLFunctionLoad);
+    OpenGLLoadProcedures(os->OpenGLFunctionLoad);
+
     OpenGLTriangleSetup();
 }
 void Update(operating_system_interface *operatingSystemInterface)
@@ -48,5 +48,5 @@ void Update(operating_system_interface *operatingSystemInterface)
 void HotReload(operating_system_interface *operatingSystemInterface)
 {
     os = operatingSystemInterface;
-    LogSuccess("HOT RELOAD Operating system attached");
+    OpenGLLoadProcedures(os->OpenGLFunctionLoad);
 }
