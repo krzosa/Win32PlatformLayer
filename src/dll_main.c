@@ -1,4 +1,5 @@
 #include "shared_language_layer.h"
+#include "shared_string.c"
 #include "shared_operating_system_interface.h"
 #include "operating_system_interface.c"
 #include <math.h>
@@ -39,7 +40,7 @@ void Update(operating_system_interface *operatingSystemInterface)
     i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
     if(IsKeyDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
-    // Log("%f \n", os->TimeGetData().frameMilliseconds);
+    // Log("%f \n", os->timeData.frameMilliseconds);
 
     AudioGenerateSineWave(os->audioBuffer, os->requestedSamples, wavePeriod);
 

@@ -1,8 +1,8 @@
 #pragma once
+#include <malloc.h>
 #include <memory.h>
 
 typedef char str8;
-typedef size_t str8_size;
 #define STR_ALLOC(size) malloc(size)
 
 
@@ -13,26 +13,26 @@ typedef size_t str8_size;
 
 typedef struct string_header
 {
-    str8_size length;
-    str8_size capacity;
+    size_t length;
+    size_t capacity;
 } string_header;
 
-inline static str8_size
+inline static size_t
 CharLength(char *text)
 {
-    str8_size stringSize = 0;
-    for(str8_size i = 0; text[i] != '\0'; i++)
+    size_t stringSize = 0;
+    for(size_t i = 0; text[i] != '\0'; i++)
         stringSize++;
     return stringSize;
 }
 
-inline static str8_size 
+inline static size_t 
 StringLength(str8 *string)
 {
     return ((string_header *)(string) - 1)->length;
 }
 
-inline static str8_size 
+inline static size_t 
 StringCapacity(str8 *string)
 {
     return ((string_header *)(string) - 1)->capacity;
@@ -45,7 +45,7 @@ StringGetHeader(str8 *string)
 }
 
 static str8 *
-StringAllocate(str8_size size)
+StringAllocate(size_t size)
 {
     string_header *newstring_header = 
         (string_header *)STR_ALLOC(sizeof(string_header) + sizeof(str8) * size + 1);
@@ -63,7 +63,7 @@ StringCreate(char *text)
 {
     if(text == 0) return 0;
 
-    str8_size charLength = CharLength(text);
+    size_t charLength = CharLength(text);
     str8 *newString = StringAllocate(charLength);
 
     memcpy(newString, text, charLength);
@@ -79,9 +79,9 @@ StringFree(str8 *string)
 }
 
 static str8 *
-StringCreateSubstring(char *text, str8_size length)
+StringCreateSubstring(char *text, size_t length)
 {
-    str8_size textSize = 0;
+    size_t textSize = 0;
     while(textSize != length && text[textSize] != '\0')
     {
         textSize++;
@@ -96,8 +96,8 @@ StringCreateSubstring(char *text, str8_size length)
 static str8 *
 StringConcatChar(str8 *string, char *text)
 {
-    str8_size stringLength = StringLength(string);
-    str8_size charLength = CharLength(text);
+    size_t stringLength = StringLength(string);
+    size_t charLength = CharLength(text);
     str8 *newString = StringAllocate(stringLength + charLength);
 
     memcpy(newString, string, stringLength);
@@ -109,8 +109,8 @@ StringConcatChar(str8 *string, char *text)
 static str8 *
 StringsConcat(str8 *string1, str8 *string2)
 {
-    str8_size string1Length = StringLength(string1);
-    str8_size string2Length = StringLength(string2);
+    size_t string1Length = StringLength(string1);
+    size_t string2Length = StringLength(string2);
 
     str8 *newString = StringAllocate(string1Length + string2Length);
 
@@ -167,7 +167,7 @@ CharIsLowerCase(char character)
 static void
 StringToLowerCase(str8 *string)
 {
-    for(str8_size i = 0; i != StringLength(string); i++)
+    for(size_t i = 0; i != StringLength(string); i++)
         if(CharIsUpperCase(string[i])) string[i] += 32;
 }
 
@@ -185,8 +185,8 @@ static bool32
 StringsMatch(str8 *a, str8 *b)
 {
     if(!(a && b)) return false;
-    str8_size aLength = StringLength(a);
-    str8_size bLength = StringLength(b);
+    size_t aLength = StringLength(a);
+    size_t bLength = StringLength(b);
     if(aLength != bLength) return false;
     
     return memcmp(a, b, aLength) == 0;
@@ -199,7 +199,7 @@ StringsMatchIgnoreCase(str8 *a, str8 *b)
     if(!(a&&b) || StringLength(a) != StringLength(b)) return false;
 
     char tempA, tempB;
-    for(str8_size i = 0; i != StringLength(a); i++)
+    for(size_t i = 0; i != StringLength(a); i++)
     {
         tempA = a[i]; tempB = b[i];
         if(CharIsUpperCase(a[i])) tempA += 32;
@@ -212,8 +212,8 @@ StringsMatchIgnoreCase(str8 *a, str8 *b)
 static bool32
 StringMatchChar(str8 *a, char *b)
 {
-    str8_size aLength = StringLength(a);
-    str8_size bLength = CharLength(b);
+    size_t aLength = StringLength(a);
+    size_t bLength = CharLength(b);
     if(aLength != bLength) return false;
 
     return memcmp(a, b, aLength) == 0;
@@ -225,7 +225,7 @@ CharsMatch(char *a, char *b)
     // return false if a or b is null
     if(!(a && b)) return false;
 
-    for(str8_size i = 0; a[i] && b[i]; i++)
+    for(size_t i = 0; a[i] && b[i]; i++)
     {
         if(a[i] != b[i]) return false;
     }
@@ -239,7 +239,7 @@ CharsMatchIgnoreCase(char *a, char *b)
     if(!(a && b)) return false;
 
     char tempA, tempB;
-    for(str8_size i = 0; a[i] && b[i]; i++)
+    for(size_t i = 0; a[i] && b[i]; i++)
     {
         tempA = a[i]; tempB = b[i];
         if(CharIsUpperCase(a[i])) tempA += 32;
@@ -254,11 +254,11 @@ StringContainsSubstring(str8 *string, str8 *substring)
 {
     if(StringLength(substring) > StringLength(string)) return false;
 
-    for(str8_size i = 0; i < StringLength(string);i++)
+    for(size_t i = 0; i < StringLength(string);i++)
     {
         if(string[i] == substring[0])
         {
-            for(str8_size j = 0;;)
+            for(size_t j = 0;;)
             {
                 if(substring[j] == '\0') return true;
                 else if(substring[j] == string[i+j]) j++;

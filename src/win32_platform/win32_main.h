@@ -7,7 +7,6 @@ iv2 DrawAreaSizeGet();
 iv2 Win32WindowDrawAreaGetSize();
 iv2 Win32WindowGetSize();
 
-time_data TimeGetData();
 void WindowSetSize(i32 width, i32 height);
 void WindowDrawAreaSetSize(i32 width, i32 height);
 void WindowSetPosition(i32 x, i32 y);

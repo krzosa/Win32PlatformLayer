@@ -261,15 +261,15 @@ Win32AudioStatusUpdate(win32_audio_data *audioData, f32 currentFramesPerSecond, 
                 samplesToWrite = audioData->latencyFrameCount;
             }
         }
-
-        // i32 *buffer = (i32 *)os->audioBuffer;
-        // for(u32 i = 0; i < audioData->bufferFrameCount; i++)
-        // {
-        //     buffer[i] = 0;
-        // }
     }
 
     return samplesToWrite;
+}
+
+internal void
+CleanAudioBuffer(void *audioBuffer, u32 audioBufferSize)
+{
+    memset(audioBuffer, 0, audioBufferSize);
 }
 
 internal void

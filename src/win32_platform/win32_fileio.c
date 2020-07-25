@@ -7,12 +7,40 @@ Win32FreeFileMemory(void *Memory)
     }
 }
 
+// returns -1 on error
+internal i64
+Win32FileGetSize(char *filename)
+{
+    LARGE_INTEGER size;
+
+    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0,
+                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    
+    if(fileHandle == INVALID_HANDLE_VALUE)
+    {
+        size.QuadPart = -1;
+        LogError("INVALID HANDLE VALUE");
+        return size.QuadPart;
+    }
+    bool32 result = GetFileSizeEx(fileHandle, &size);
+    if(!result)
+    {
+        size.QuadPart = -1;
+        LogError("GetFileSize failed");
+        return size.QuadPart;
+    }
+
+    CloseHandle(fileHandle);
+    return size.QuadPart;
+}
+
 internal file_data 
 Win32ReadEntireFile(char *filename)
 {
     file_data result = {0};
     
-    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, 
+                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if(fileHandle != INVALID_HANDLE_VALUE)
     {
         LARGE_INTEGER FileSize;

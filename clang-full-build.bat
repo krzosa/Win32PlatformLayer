@@ -1,5 +1,6 @@
 @echo off
 
+mkdir bin
 cd bin
 
 set EXPORTED_FUNCTIONS=/EXPORT:Update /EXPORT:Initialize /EXPORT:HotReload

@@ -1,4 +1,5 @@
 @echo off
+mkdir bin
 
 set EXE_NAME=/Fe: "app"
 set DLL_NAME=/Fe: "app_code"

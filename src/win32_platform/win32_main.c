@@ -1,9 +1,9 @@
 #include "../shared_language_layer.h"
+#include "../shared_string.c"
 #include "../shared_operating_system_interface.h"
 
 // CStandard Lib and Windows
 #include <windows.h>
-#include <math.h>
 #include <xinput.h>
 #include <intrin.h>
 #include <stdio.h>
@@ -29,7 +29,6 @@ global_variable HWND   GLOBALWindow;
 #define WINDOW_TITLE "PLACEHOLDER"
 
 // Custom
-#include "../shared_string.c"
 #include "win32_debug_console.c"
 #include "win32_timer.c"
 #include "win32_opengl.c"
@@ -188,8 +187,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
     // NOTE: Construct paths to exe and to dll
     str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
-    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code.dll");
-    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "\\app_code_temp.dll");
+    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "/app_code.dll");
+    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "/app_code_temp.dll");
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
         pathToExeDirectory, mainDLLPath, tempDLLPath);
 
@@ -200,6 +199,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Begin timming the frame
     u64 beginFrameCycles = ProcessorClockCycles();
     i64 beginFrame = Win32PerformanceCountGet();
+
+    str8 *filememe = StringConcatChar(pathToExeDirectory, "/memes.txt");
+    i64 fileSize = Win32FileGetSize(filememe);
+    LogInfo("FILESIZE: %lld", fileSize);
 
     GLOBALApplicationIsRunning = true;
     while(GLOBALApplicationIsRunning)
@@ -216,6 +219,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         u32 samplesToWrite = Win32AudioStatusUpdate(&audioData, 
                                                     os.targetFramesPerSecond,
                                                     os.audioLatencyMultiplier);
+        // TODO: should it maybe be clamped to samplesToWrite?
+        CleanAudioBuffer(os.audioBuffer, os.audioBufferSize);
 
         // NOTE: Update operating system status
         {

@@ -142,6 +142,8 @@ typedef struct operating_system_interface
     memory_storage pernamentStorage;
     memory_storage temporaryStorage;
 
+    str8 *pathToExecutable;
+
     void *audioBuffer; 
     u32 audioBufferSize;
     
