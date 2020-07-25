@@ -149,7 +149,10 @@ typedef struct operating_system_interface
     u32 samplesPerSecond;
     f32 audioLatencyMultiplier;
 
+    // 
     user_input userInput;
+    // NOTE: update time, frame time, app start time
+    time_data timeData;
 
     f32 targetFramesPerSecond;
 
@@ -160,13 +163,10 @@ typedef struct operating_system_interface
     f32       (*TimeGetMilliseconds)();
     i64       (*TimeGetCounts)();
     u64       (*TimeGetProcessorCycles)();
-    // NOTE: update time, frame time, app start time
-    time_data (*TimeGetData)();
 
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
-
     f32    (*MonitorGetRefreshRate)();
     
     iv2    (*WindowGetSize)();

@@ -14,9 +14,10 @@
 #include "../opengl_headers/wglext.h"
 #include "../opengl_headers/glext.h"
 
-global_variable time_data GLOBALTime;
-global_variable bool32 GLOBALSleepIsGranular;
 global_variable bool32 GLOBALApplicationIsRunning; // Loop status, the app closes if it equals 0
+global_variable bool32 GLOBALSleepIsGranular;
+global_variable i64    GLOBALCountsPerSecond;
+
 global_variable f32    GLOBALMonitorRefreshRate;
 global_variable bool32 GLOBALVSyncState;
 global_variable HWND   GLOBALWindow;
@@ -54,18 +55,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32ConsoleAttach();
 
     // NOTE: Init time data
-    {
-        // NOTE: Set windows scheduler to wake up every 1 millisecond so
-        //       so that the Sleep function will work properly for our purposes
-        GLOBALSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
-        GLOBALTime.countsPerSecond = Win32PerformanceFrequencyGet();
-        
-        // NOTE: Set timers to application start
-        GLOBALTime.startAppCycles = ProcessorClockCycles();
-        GLOBALTime.startAppCount = Win32PerformanceCountGet();
-        GLOBALTime.startAppMilliseconds = PerformanceCountToMilliseconds(
-                                            GLOBALTime.startAppCount);
-    }
+
+    // NOTE: Set windows scheduler to wake up every 1 millisecond so
+    //       so that the Sleep function will work properly for our purposes
+    GLOBALSleepIsGranular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+    GLOBALCountsPerSecond = Win32PerformanceFrequencyGet();
+    
+    // NOTE: Set timers to application start
+    f32 startAppCycles = ProcessorClockCycles();
+    f32 startAppCount = Win32PerformanceCountGet();
+    f32 startAppMilliseconds = PerformanceCountToMilliseconds(startAppCount);
 
     // NOTE: Load XInput(xbox controllers) dynamically 
     Win32XInputLoad();
@@ -155,6 +154,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.samplesPerSecond = audioData.samplesPerSecond;
         os.targetFramesPerSecond = GLOBALMonitorRefreshRate;
 
+        os.timeData.startAppCount = startAppCount;
+        os.timeData.startAppCycles = startAppCycles;
+        os.timeData.startAppMilliseconds = startAppMilliseconds;
+        os.timeData.countsPerSecond = GLOBALCountsPerSecond;
+
         os.Log                                 = &ConsoleLog;
         os.LogExtra                            = &ConsoleLogExtra;
         os.Quit                                = &Quit;
@@ -162,7 +166,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.TimeGetMilliseconds                 = &Win32MillisecondsGet;
         os.TimeGetCounts                       = &Win32PerformanceCountGet;
         os.TimeGetProcessorCycles              = &TimeGetProcessorCycles;
-        os.TimeGetData                         = &TimeGetData;
 
         os.VSyncSetState                       = &Win32OpenGLSetVSync;
         os.VSyncGetState                       = &VSyncGetState;
@@ -230,8 +233,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         }
 
         wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        EndFrameAndSleep(&GLOBALTime, (1 / os.targetFramesPerSecond * 1000), 
-                         &beginFrame, &beginFrameCycles);
+
+        f32 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
+        EndFrameAndSleep(&os.timeData, msPerFrame, &beginFrame, &beginFrameCycles);
     }
     
     return(1);
@@ -472,10 +476,4 @@ WindowDrawBorder(bool32 draw)
         WindowReloadAttributes();
         GLOBALIsBorderDrawn = 0;
     }
-}
-
-internal time_data
-TimeGetData()
-{
-    return GLOBALTime;
 }
