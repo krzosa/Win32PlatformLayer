@@ -1,7 +1,7 @@
 /* OpenGL Triangle example */
 
 #define ERROR_BUFFER_SIZE 1024
-#define glPrintErrors() {GLenum err; while(err = glGetError()){LogError("OPENG error code: %x", err);}}
+#define glPrintErrors() {GLenum err = glGetError(); while(err){LogError("OPENG error code: %x", err);}}
 
 const char *vertexShaderSource = 
     "#version 330 core\n"

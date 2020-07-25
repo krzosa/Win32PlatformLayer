@@ -45,6 +45,11 @@ global_variable HWND   GLOBALWindow;
  * lock the resizing?
  * delete or move to the dll the "keep aspect ratio" thing
  * option to turn off the locking framerate
+ * save to file 
+ * append to file
+ * list all files in a directory
+ * make folder
+ * does file exist
 */
 
 
