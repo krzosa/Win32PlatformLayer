@@ -29,7 +29,7 @@ typedef int32_t  bool32;
 #define LogInfo(text, ...)     ConsoleLogExtra("INFO:    ", text, __VA_ARGS__)
 #define LogSuccess(text, ...)  ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
 #define LogError(text, ...)    ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define Assert(expression)     if(!(expression)) 
+#define Assert(expression)     if(!(expression)) PrivateSetDebuggerBreakpoint("Assert") 
 #define Error(text)            PrivateSetDebuggerBreakpoint(text)
 #define dbg()                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 

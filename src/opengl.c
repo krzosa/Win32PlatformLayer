@@ -1,5 +1,7 @@
-// TODO: move maybe to dynamically allocated string, but probably I need a custom allocator first
+/* OpenGL Triangle example */
+
 #define ERROR_BUFFER_SIZE 1024
+#define glPrintErrors() {GLenum err; while(err = glGetError()){LogError("OPENG error code: %x", err);}}
 
 const char *vertexShaderSource = 
     "#version 330 core\n"
@@ -34,7 +36,7 @@ ShaderCreate(GLenum shaderType, const char *nullTerminatedShaderFile)
     }
 
     i32 status;
-    glGetShaderiv(shaderType, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
     if (!status)
     {
         LogError("%s shader compilation %s", strShaderType, log);
@@ -43,6 +45,7 @@ ShaderCreate(GLenum shaderType, const char *nullTerminatedShaderFile)
     {
         LogSuccess("%s shader compiled", strShaderType);
     }
+    glPrintErrors();
 
     return shader;
 }
@@ -69,6 +72,8 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
 
     for(u32 i = 0; i != shaderCount; i++)
         glDeleteShader(shaders[i]); 
+    
+    glPrintErrors();
 
     return shaderProgram;
 }
@@ -101,4 +106,6 @@ OpenGLTriangleSetup(void)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     glUseProgram(shaderProgram);
+
+    glPrintErrors();
 }

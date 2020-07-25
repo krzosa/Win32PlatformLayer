@@ -199,7 +199,7 @@ Win32AudioInitialize(i32 samplesPerSecond)
                             (audio.bufferFrameCount / audio.samplesPerSecond));
 
     LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
-    LogInfo("WASAPI Audio buffer duration: %lld", audio.bufferDuration);
+    LogInfo("WASAPI Audio buffer duration: %lld (10000000 is 1 second)", audio.bufferDuration);
 
     result = audio.audioClient->lpVtbl->Start(audio.audioClient);
     if(result != S_OK)
