@@ -31,6 +31,12 @@ void Initialize(operating_system_interface *operatingSystemInterface)
     OpenGLLoadProcedures(os->OpenGLLoadProcedures);
 
     OpenGLTriangleSetup();
+
+    str8 *filememe = StringConcatChar(os->pathToExecutable, "/memes.txt");
+    i64 fileSize = os->FileGetSize(filememe);
+    os->FileRead(filememe, os->temporaryStorage.memory, fileSize);
+    LogInfo("FILESIZE: %lld file cont %c", fileSize, ((char *)os->temporaryStorage.memory)[0]);
+
 }
 void Update(operating_system_interface *operatingSystemInterface)
 {

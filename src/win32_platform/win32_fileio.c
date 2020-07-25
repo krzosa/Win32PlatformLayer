@@ -1,12 +1,3 @@
-internal void
-Win32FreeFileMemory(void *Memory)
-{
-    if(Memory)
-    {
-        VirtualFree(Memory, 0, MEM_RELEASE);
-    }
-}
-
 // returns -1 on error
 internal i64
 Win32FileGetSize(char *filename)
@@ -34,53 +25,34 @@ Win32FileGetSize(char *filename)
     return size.QuadPart;
 }
 
-internal file_data 
-Win32ReadEntireFile(char *filename)
+// Fills the specified memory buffer with the file contents
+internal bool32
+Win32FileRead(char *filename, void *memory, i64 bytesToRead)
 {
-    file_data result = {0};
-    
-    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, 
+    HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0,
                                     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if(fileHandle != INVALID_HANDLE_VALUE)
-    {
-        LARGE_INTEGER FileSize;
-        if(GetFileSizeEx(fileHandle, &FileSize))
-        {
-            u32 fileSize32 = (u32)FileSize.QuadPart;
-            result.contents = VirtualAlloc(0, fileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-            if(result.contents)
-            {
-                DWORD BytesRead;
-                if(ReadFile(fileHandle, result.contents, fileSize32, &BytesRead, 0) && (fileSize32 == BytesRead))
-                {
-                    result.size = fileSize32;
-                    Log("ReadEntireFile: Success\n");
-                }
-                else
-                {                    
-                    Log("ReadEntireFile: ReadFile failed\n");
-                    Win32FreeFileMemory(result.contents);
-                    result.contents = 0;
-                }
-            }
-            else
-            {
-                Log("ReadEntireFile: NULL file contents\n");
-            }
-        }
-        else
-        {
-            Log("ReadEntireFile: Failed to get file size\n");
-        }
 
-        CloseHandle(fileHandle);
-    }
-    else
+    if(fileHandle == INVALID_HANDLE_VALUE)
     {
-        Log("ReadEntireFile: Invalid file handle name\n");
+        LogError("INVALID HANDLE VALUE");
+        return false;
     }
 
-    return(result);
+    DWORD bytesRead;
+    bool32 result = ReadFile(fileHandle, memory, bytesToRead, &bytesRead, 0);
+    if(!result)
+    {
+        LogError("ReadFile failed");
+        return false;
+    }
+    if(bytesRead != bytesToRead)
+    {
+        LogError("BytesRead and BytesToRead mismatch!");
+        return false;
+    }
+
+    LogSuccess("%s FILE LOADED", filename);
+    return true;
 }
 
 internal str8 *

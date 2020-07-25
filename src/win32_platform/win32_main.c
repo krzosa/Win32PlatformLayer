@@ -39,6 +39,7 @@ global_variable HWND   GLOBALWindow;
 
 /* TODO: 
  * memory stuff
+ * better string memory handling
  * fullscreen
  * better window resize handling
  * lock the resizing?
@@ -115,6 +116,17 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     Win32OpenGLAspectRatioUpdate(16, 9);
     LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     
+    win32_dll_code dllCode = {0};
+
+    // NOTE: Construct paths to exe and to dll
+    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
+    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "/app_code.dll");
+    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "/app_code_temp.dll");
+    LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
+        pathToExeDirectory, mainDLLPath, tempDLLPath);
+
+    // NOTE: Load the dll and call initialize function
+    dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
 
     // NOTE: Get monitor refresh rate
     f32 GLOBALMonitorRefreshRate = 60.f;
@@ -149,6 +161,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("OS Memory allocated");
 
+        os.pathToExecutable = pathToExeDirectory;
+
         os.audioLatencyMultiplier = 4.f;
         os.samplesPerSecond = audioData.samplesPerSecond;
         os.targetFramesPerSecond = GLOBALMonitorRefreshRate;
@@ -161,6 +175,9 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.Log                                 = &ConsoleLog;
         os.LogExtra                            = &ConsoleLogExtra;
         os.Quit                                = &Quit;
+
+        os.FileRead                            = &Win32FileRead;
+        os.FileGetSize                         = &Win32FileGetSize;
 
         os.TimeGetMilliseconds                 = &Win32MillisecondsGet;
         os.TimeGetCounts                       = &Win32PerformanceCountGet;
@@ -183,26 +200,11 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         LogSuccess("OS Functions Loaded");
     }
 
-    win32_dll_code dllCode = {0};
-
-    // NOTE: Construct paths to exe and to dll
-    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
-    str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "/app_code.dll");
-    str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "/app_code_temp.dll");
-    LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
-        pathToExeDirectory, mainDLLPath, tempDLLPath);
-
-    // NOTE: Load the dll and call initialize function
-    dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     dllCode.initialize(&os);
     
     // NOTE: Begin timming the frame
     u64 beginFrameCycles = ProcessorClockCycles();
     i64 beginFrame = Win32PerformanceCountGet();
-
-    str8 *filememe = StringConcatChar(pathToExeDirectory, "/memes.txt");
-    i64 fileSize = Win32FileGetSize(filememe);
-    LogInfo("FILESIZE: %lld", fileSize);
 
     GLOBALApplicationIsRunning = true;
     while(GLOBALApplicationIsRunning)

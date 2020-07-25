@@ -162,10 +162,12 @@ typedef struct operating_system_interface
     void   (*Log)(char *text, ...);
     void   (*LogExtra)(char *prepend, char *text, ...);
 
-    f32       (*TimeGetMilliseconds)();
-    i64       (*TimeGetCounts)();
-    u64       (*TimeGetProcessorCycles)();
+    f32    (*TimeGetMilliseconds)();
+    i64    (*TimeGetCounts)();
+    u64    (*TimeGetProcessorCycles)();
 
+    i64     (*FileGetSize)(char *filename);
+    bool32  (*FileRead)(char *filename, void *memory, i64 bytesToRead);
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
