@@ -108,6 +108,7 @@ OpenGLTriangleSetup(void)
     glPrintErrors();
 }
 
+#include <math.h>
 internal void
 AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
 {

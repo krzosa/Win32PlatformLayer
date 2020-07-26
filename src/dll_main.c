@@ -18,13 +18,6 @@ void Initialize(operating_system_interface *operatingSystemInterface)
     // NOTE: generic opengl triangle example
     OpenGLTriangleSetup();
 
-
-
-    // str8 *filememe = StringConcatChar(os->pathToExecutableDirectory, "/memes.txt");
-    // i64 fileSize = os->FileGetSize(filememe);
-    // fileSize = os->FileRead(filememe, os->temporaryStorage.memory, fileSize);
-    // LogInfo("FILESIZE: %lld file cont %c", fileSize, ((char *)os->temporaryStorage.memory)[0]);
-
 }
 void Update(operating_system_interface *operatingSystemInterface)
 {

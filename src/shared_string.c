@@ -1,6 +1,7 @@
 #pragma once
-#include <malloc.h>
 #include <memory.h>
+#include <malloc.h>
+
 
 typedef char str8;
 #define STR_ALLOC(size) malloc(size)
@@ -125,6 +126,8 @@ StringsConcat(str8 *string1, str8 *string2)
 //
 
 #if 0
+#include <stdio.h>
+#include <stdarg.h>
 // Formatting of text with variables to 'embed'
 // WARNING: String returned will expire after this function is called MAX_TEXTFORMAT_BUFFERS times
 char *TextFormat(char *text, ...)

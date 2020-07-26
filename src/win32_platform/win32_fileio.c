@@ -2,6 +2,8 @@
 internal i64
 Win32FileGetSize(char *filename)
 {
+    Assert(CharLength(filename) < 260); // MAX PATH
+
     LARGE_INTEGER size;
 
     HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0,
@@ -30,8 +32,12 @@ Win32FileGetSize(char *filename)
 internal i64
 Win32FileRead(char *filename, void *memory, i64 bytesToRead)
 {
+    Assert(CharLength(filename) < 260); // MAX PATH
+
+    // OPEN EXISTING flag doesnt create a file
+    // Creates a file if it doesnt exist
     HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0,
-                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+                                    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
@@ -59,10 +65,10 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
 internal str8 *
 Win32GetExecutableDirectory()
 {
-    char fileName[2048];
+    char fileName[1024];
 
     // if this parameter is NULL, GetModuleFileName retrieves the path of the executable file of the current process.
-    DWORD result = GetModuleFileNameA(0, fileName, MAX_PATH);
+    DWORD result = GetModuleFileNameA(0, fileName, 1024);
     if(!result)
     {
         LogError("GetModuleFileNameA");
