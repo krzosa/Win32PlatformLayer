@@ -26,7 +26,8 @@ Win32FileGetSize(char *filename)
 }
 
 // Fills the specified memory buffer with the file contents
-internal bool32
+// returns -1 on fail, else returns bytesRead
+internal i64
 Win32FileRead(char *filename, void *memory, i64 bytesToRead)
 {
     HANDLE fileHandle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0,
@@ -35,7 +36,7 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
         LogError("INVALID HANDLE VALUE");
-        return false;
+        return -1;
     }
 
     DWORD bytesRead;
@@ -43,27 +44,30 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
     if(!result)
     {
         LogError("ReadFile failed");
-        return false;
+        return -1;
     }
     if(bytesRead != bytesToRead)
     {
         LogError("BytesRead and BytesToRead mismatch!");
-        return false;
+        return -1;
     }
 
     LogSuccess("%s FILE LOADED", filename);
-    return true;
+    return (i64)bytesRead;
 }
 
 internal str8 *
-Win32ExecutableDirectoryPathGet()
+Win32GetExecutableDirectory()
 {
-    char fileName[MAX_PATH];
+    char fileName[2048];
+
+    // if this parameter is NULL, GetModuleFileName retrieves the path of the executable file of the current process.
     DWORD result = GetModuleFileNameA(0, fileName, MAX_PATH);
     if(!result)
     {
         LogError("GetModuleFileNameA");
     }
+    
     i32 i = result - 1;
     for(; i != 0; i--)
     {

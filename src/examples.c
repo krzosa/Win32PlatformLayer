@@ -1,5 +1,3 @@
-/* OpenGL Triangle example */
-
 #define ERROR_BUFFER_SIZE 1024
 #define glPrintErrors() {GLenum err = glGetError(); while(err){LogError("OPENG error code: %x", err);}}
 
@@ -108,4 +106,28 @@ OpenGLTriangleSetup(void)
     glUseProgram(shaderProgram);
 
     glPrintErrors();
+}
+
+internal void
+AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
+{
+    // NOTE: Sine wave controlled by W Key and right controller stick
+    i32 toneHz = 261 + (i32)(os->userInput.controller[0].rightStickX * 100);
+    if(IsKeyDown(KEY_W)) toneHz = 350;
+    i32 wavePeriod = (48000 / toneHz);
+
+
+    #define MATH_PI 3.14159265f
+    static f32 tSine;
+
+    i16 *sample = (i16 *)audioBuffer;
+    for(i32 i = 0; i != sampleCount; i++)
+    {
+        f32 sineValue = sinf(tSine);
+        i16 sampleValue = (i16)(sineValue * 3000);
+        *sample++ = sampleValue;
+        *sample++ = sampleValue;
+
+        tSine += 2 * MATH_PI * (f32)1.0f / (f32)wavePeriod;
+    }
 }

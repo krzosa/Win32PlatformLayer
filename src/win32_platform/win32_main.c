@@ -39,7 +39,7 @@ global_variable HWND   GLOBALWindow;
 
 /* TODO: 
  * memory stuff
- * better string memory handling
+ * string api that allows for custom memory allocator
  * fullscreen
  * better window resize handling
  * lock the resizing?
@@ -124,7 +124,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     win32_dll_code dllCode = {0};
 
     // NOTE: Construct paths to exe and to dll
-    str8 *pathToExeDirectory = Win32ExecutableDirectoryPathGet();
+    str8 *pathToExeDirectory = Win32GetExecutableDirectory();
     str8 *mainDLLPath = StringConcatChar(pathToExeDirectory, "/app_code.dll");
     str8 *tempDLLPath = StringConcatChar(pathToExeDirectory, "/app_code_temp.dll");
     LogInfo("Paths\n PathToExeDirectory: %s \n PathToDLL %s \n PathToTempDLL %s", 
@@ -166,7 +166,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("OS Memory allocated");
 
-        os.pathToExecutable = pathToExeDirectory;
+        os.pathToExecutableDirectory = pathToExeDirectory;
 
         os.audioLatencyMultiplier = 4.f;
         os.samplesPerSecond = audioData.samplesPerSecond;

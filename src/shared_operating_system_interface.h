@@ -142,20 +142,26 @@ typedef struct operating_system_interface
     memory_storage pernamentStorage;
     memory_storage temporaryStorage;
 
-    str8 *pathToExecutable;
+    str8 *pathToExecutableDirectory;
 
+    // NOTE: this buffer should be filled from the very beginning on every frame
+    // by the ammount specified in requestedSamples, one sample should be 16bits
+    // one frame (left right samples) should be 32 bits
+    // this buffer is cleared on the os side on every frame
     void *audioBuffer; 
     u32 audioBufferSize;
     
     u32 requestedSamples; // number of samples to fill requested from the os
     u32 samplesPerSecond;
-    f32 audioLatencyMultiplier;
+    // NOTE: // this value controls the audio latency, bigger number, bigger latency
+    f32 audioLatencyMultiplier; 
 
-    // 
+    // NOTE: user input info, accessed through IsKeyDown etc.
     user_input userInput;
     // NOTE: update time, frame time, app start time
     time_data timeData;
 
+    // NOTE: you can change fps by changing this value
     f32 targetFramesPerSecond;
 
     void   (*Quit)();
@@ -166,8 +172,8 @@ typedef struct operating_system_interface
     i64    (*TimeGetCounts)();
     u64    (*TimeGetProcessorCycles)();
 
-    i64     (*FileGetSize)(char *filename);
-    bool32  (*FileRead)(char *filename, void *memory, i64 bytesToRead);
+    i64    (*FileGetSize)(char *filename); 
+    i64    (*FileRead)(char *filename, void *memory, i64 bytesToRead); // returns bytes read or -1 when fail
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
