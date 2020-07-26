@@ -3,7 +3,7 @@
 mkdir bin
 cd bin
 
-set EXPORTED_FUNCTIONS=/EXPORT:Update /EXPORT:Initialize /EXPORT:HotReload
+set EXPORTED_FUNCTIONS=/EXPORT:Update /EXPORT:Initialize /EXPORT:HotReload /EXPORT:HotUnload
 
 clang -c ..\src\win32_platform\win32_main.c 
 link -nologo win32_main.o -OUT:"app.exe" user32.lib gdi32.lib opengl32.lib winmm.lib msvcrt.lib msvcprt.lib 

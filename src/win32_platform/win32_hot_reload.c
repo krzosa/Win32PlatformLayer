@@ -1,12 +1,14 @@
 // NOTE: prototypes for function pointers
 typedef void Initialize(operating_system_interface *memory); // called at the beginning of the app
 typedef void HotReload(operating_system_interface *memory); // called on hot reload
+typedef void HotUnload(operating_system_interface *memory); // called on hot reload
 typedef void Update(operating_system_interface *memory); // called on every frame
 
 // NOTE: empty functions meant to be replacements when
 // functions from the dll fail to load
 void InitializeStub(operating_system_interface *memory){}
 void HotReloadStub(operating_system_interface *memory){}
+void HotUnloadStub(operating_system_interface *memory){}
 void UpdateStub(operating_system_interface *memory){}
 
 typedef struct win32_dll_code
@@ -18,6 +20,7 @@ typedef struct win32_dll_code
     // NOTE: pointers to functions from the dll
     Initialize *initialize;
     HotReload *hotReload;
+    HotUnload *hotUnload;
     Update *update;
 } win32_dll_code;
 
@@ -60,10 +63,12 @@ Win32DLLCodeLoad(char *mainDllPath, char *tempDllPath)
     {
         result.initialize = (Initialize *)GetProcAddress(result.library, "Initialize");
         result.hotReload = (HotReload *)GetProcAddress(result.library, "HotReload");
+        result.hotUnload = (HotUnload *)GetProcAddress(result.library, "HotUnload");
         result.update = (Update *)GetProcAddress(result.library, "Update");
 
         result.isValid = (result.update != 0) &&
                          (result.hotReload != 0) && 
+                         (result.hotUnload != 0) && 
                          (result.initialize != 0);
     }
 
@@ -73,6 +78,7 @@ Win32DLLCodeLoad(char *mainDllPath, char *tempDllPath)
         result.update = UpdateStub;
         result.initialize = InitializeStub;
         result.hotReload = HotReloadStub;
+        result.hotUnload = HotUnloadStub;
         
         LogError("MainDLLCode Load");
     }
@@ -91,6 +97,7 @@ Win32DLLCodeUnload(win32_dll_code *dllCode)
         dllCode->library = 0;
         dllCode->initialize = InitializeStub;
         dllCode->hotReload = HotReloadStub;
+        dllCode->hotUnload = HotReloadStub;
         dllCode->update = UpdateStub;
         LogInfo("MainDLLCode Unload");
     }
@@ -105,7 +112,11 @@ Win32UpdateDLLCode(win32_dll_code *dllCode, char *mainDLLPath, char *tempDLLPath
     FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
     if(CompareFileTime(&newDLLWriteTime, &dllCode->lastDllWriteTime) != 0)
     {
+        dllCode->hotUnload(os);
+
         Win32DLLCodeUnload(dllCode);
+        Sleep(100);
+
         *dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
 
         // NOTE: Call HotReload function from the dll

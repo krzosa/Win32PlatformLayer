@@ -46,7 +46,7 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
     }
 
     DWORD bytesRead;
-    bool32 result = ReadFile(fileHandle, memory, bytesToRead, &bytesRead, 0);
+    bool32 result = ReadFile(fileHandle, memory, (DWORD)bytesToRead, &bytesRead, 0);
     if(!result)
     {
         LogError("ReadFile failed");

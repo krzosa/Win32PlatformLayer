@@ -67,8 +67,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     GLOBALCountsPerSecond = Win32PerformanceFrequencyGet();
     
     // NOTE: Set timers to application start
-    f32 startAppCycles = ProcessorClockCycles();
-    f32 startAppCount = Win32PerformanceCountGet();
+    u64 startAppCycles = ProcessorClockCycles();
+    i64 startAppCount = Win32PerformanceCountGet();
     f32 startAppMilliseconds = PerformanceCountToMilliseconds(startAppCount);
 
     // NOTE: Load XInput(xbox controllers) dynamically 

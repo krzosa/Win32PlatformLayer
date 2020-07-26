@@ -6,6 +6,7 @@
 #include "opengl.h"
 #include "examples.c"
 
+// Called on the start of the app
 void Initialize(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: dll has a global os pointer which simplifies the interface 
@@ -19,6 +20,8 @@ void Initialize(operating_system_interface *operatingSystemInterface)
     OpenGLTriangleSetup();
 
 }
+
+// Called on every frame
 void Update(operating_system_interface *operatingSystemInterface)
 {
     if(IsKeyDown(KEY_ESC)) os->Quit();
@@ -32,10 +35,18 @@ void Update(operating_system_interface *operatingSystemInterface)
         glDrawArrays(GL_TRIANGLES, 0, 3);
     }
 }
+
+// Called when you recomplile while the app is running
 void HotReload(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
     os = operatingSystemInterface;
     OpenGLLoadProcedures(os->OpenGLLoadProcedures);
+}
+
+// Called when you recomplile while the app is running
+void HotUnload(operating_system_interface *operatingSystemInterface)
+{
+    LogInfo("HotUnload");
 }
