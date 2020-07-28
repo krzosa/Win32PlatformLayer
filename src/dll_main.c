@@ -27,10 +27,6 @@ void Update(operating_system_interface *operatingSystemInterface)
     if(IsKeyDown(KEY_ESC)) os->Quit();
 
     AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
-    // str8 *meme = StringConcatChar(os->pathToExecutableDirectory, "/memes");
-    // files readFiles = os->DirectoryReadAllFiles(meme, os->pernamentStorage.memory, os->pernamentStorage.maxSize);
-    // StringFree(meme);
-
     // NOTE: Draw
     {
         glClearColor(0, 0.5, 0.5, 1.0);

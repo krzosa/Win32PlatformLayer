@@ -98,12 +98,9 @@ Win32DirectoryReadAllFiles(char *directory, void *memory, i64 bytesToRead)
             // FUNCTION: Copy file name 
             { 
                 size_t length = CharLength(findData.cFileName);
-                size_t i = 0;
-                for(; i < length; i++)
-                {
-                    result.files[result.fileCount].fileName[i] = findData.cFileName[i];
-                }
-                result.files[result.fileCount].fileName[i] = '\0';
+                memcpy(result.files[result.fileCount].fileName, findData.cFileName, length);
+                result.files[result.fileCount].fileName[length] = '\0';
+                result.files[result.fileCount].fileNameLength = length;
             }
 
             result.files[result.fileCount].fileSize = 

@@ -228,7 +228,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                                                     os.targetFramesPerSecond,
                                                     os.audioLatencyMultiplier);
         // TODO: should it maybe be clamped to samplesToWrite?
-        CleanAudioBuffer(os.audioBuffer, os.audioBufferSize);
+        // CleanAudioBuffer(os.audioBuffer, os.audioBufferSize);
 
         // NOTE: Update operating system status
         {

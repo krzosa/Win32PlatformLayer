@@ -88,5 +88,71 @@ IsButtonUp(controller_buttons BUTTON)
     return false;
 }
 
+internal f32
+GetAppStartTimeMilliseconds()
+{
+    return os->timeData.startAppMilliseconds;
+}
+
+internal i64 
+GetAppStartTimeCounts()
+{
+    return os->timeData.startAppCount;
+}
+
+internal i64 
+GetAppStartTimeCycles()
+{
+    return os->timeData.startAppCycles;
+}
+
+//
+// NOTE: Update == how long it took to process all the things in a frame without the 
+//                 end frame sleep
+
+internal f32
+GetUpdateTimeMilliseconds()
+{
+    return os->timeData.updateMilliseconds;
+}
+
+internal i64 
+GetUpdateTimeCounts()
+{
+    return os->timeData.updateCount;
+}
+
+internal i64 
+GetUpdateTimeCycles()
+{
+    return os->timeData.updateCycles;
+}
+
+// NOTE: Frame == entire length of a single frame
+
+internal f32
+GetFrameTimeMilliseconds()
+{
+    return os->timeData.updateMilliseconds;
+}
+
+internal i64 
+GetFrameTimeCounts()
+{
+    return os->timeData.updateCount;
+}
+
+internal i64 
+GetFrameTimeCycles()
+{
+    return os->timeData.updateCycles;
+}
+
+inline internal f32
+MillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
+{
+    return (1 / millisecondsPerFrame) * 1000;
+}
+
 #define ConsoleLog(text, ...) os->Log(text, __VA_ARGS__)
 #define ConsoleLogExtra(prepend, text, ...) os->LogExtra(prepend, text, __VA_ARGS__)

@@ -142,6 +142,7 @@ typedef struct file_contents
     i8 *file;
     i64 fileSize;
     char fileName[260];
+    i32 fileNameLength;
 } file_contents;
 
 typedef struct files
@@ -165,14 +166,15 @@ typedef struct operating_system_interface
     void *audioBuffer; 
     u32 audioBufferSize;
     
-    u32 requestedSamples; // number of samples to fill requested from the os
+    // NOTE: number of samples to fill requested from the os
+    u32 requestedSamples; 
     u32 samplesPerSecond;
     // NOTE: // this value controls the audio latency, bigger number, bigger latency
     f32 audioLatencyMultiplier; 
 
+    // Should be accessed through functions
     // NOTE: user input info, accessed through IsKeyDown etc.
     user_input userInput;
-
     // NOTE: update time, frame time, app start time
     time_data timeData;
 
