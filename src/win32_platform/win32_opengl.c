@@ -49,14 +49,14 @@ Win32OpenGLInit(HDC deviceContext)
         Log("FAILED to choose pixel format\n");
     
     if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
-        Win32LastErrorMessagePrint("FAILED: to set PixelFormat");
+        Win32LastErrorMessageLog("FAILED: to set PixelFormat");
 
     HGLRC dummyOpenglContext = wglCreateContext(deviceContext);
 
     if(!dummyOpenglContext)
-        Win32LastErrorMessagePrint("FAILED: to create dummy opengl context");
+        Win32LastErrorMessageLog("FAILED: to create dummy opengl context");
     if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
-        Win32LastErrorMessagePrint("FAILED: to make dummy opengl context current");
+        Win32LastErrorMessageLog("FAILED: to make dummy opengl context current");
 
     // NOTE: Load windows opengl functions
     wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLLoadProcedures("wglChoosePixelFormatARB");

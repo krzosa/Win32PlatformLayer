@@ -62,6 +62,76 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
     return (i64)bytesRead;
 }
 
+internal files
+Win32DirectoryReadAllFiles(char *directory, void *memory, i64 bytesToRead)
+{
+    files result = {0};
+    u64 totalSizeOfFiles = 0;
+    WIN32_FIND_DATAA findData;
+
+    str8 *query = StringConcatChar(directory, "/*");
+
+    LogInfo("Load all files in directory %s", directory);
+    HANDLE handle = FindFirstFileA(query, &findData);
+    if(handle == INVALID_HANDLE_VALUE)
+    {
+        LogError("INVALID HANDLE VALUE");
+    }
+    else
+    {
+        LogSuccess("FindFirstFileA %s %lld", findData.cFileName, findData.nFileSizeLow);
+    }
+
+    while(FindNextFileA(handle, &findData) != 0)
+    {
+        LogSuccess("FindNextFile %s %lld", findData.cFileName, findData.nFileSizeLow);
+        if(findData.nFileSizeLow == 0) continue; // skip empty files and ".."
+
+        result.files[result.fileCount].file = (i8 *)memory;
+        result.files[result.fileCount].file += totalSizeOfFiles;
+
+        if(totalSizeOfFiles + findData.nFileSizeLow < bytesToRead)
+        {
+            str8 *slash = StringConcatChar(directory, "/");
+            str8 *filePath = StringConcatChar(slash, findData.cFileName);
+
+            // FUNCTION: Copy file name 
+            { 
+                size_t length = CharLength(findData.cFileName);
+                size_t i = 0;
+                for(; i < length; i++)
+                {
+                    result.files[result.fileCount].fileName[i] = findData.cFileName[i];
+                }
+                result.files[result.fileCount].fileName[i] = '\0';
+            }
+
+            result.files[result.fileCount].fileSize = 
+                Win32FileRead(filePath, result.files[result.fileCount].file, findData.nFileSizeLow);
+            
+            totalSizeOfFiles += result.files[result.fileCount].fileSize;
+            result.fileCount++;
+
+            StringFree(slash);
+            StringFree(filePath);
+        }
+        else
+        {
+            LogError("Failed to load some of the files because passed in bytesToRead is too small for all the files to fit");
+            break;
+        }
+    }
+
+    DWORD message = GetLastError();
+    if(message != ERROR_NO_MORE_FILES) LogError("FindNextFile %lu", message);
+
+    FindClose(handle);
+    StringFree(query);
+
+    result.memoryFilled = totalSizeOfFiles;
+    return result;
+}
+
 internal str8 *
 Win32GetExecutableDirectory()
 {

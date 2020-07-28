@@ -66,7 +66,7 @@ Win32ConsoleAttach(void)
 }
 
 internal void
-Win32LastErrorMessagePrint(char *text)
+Win32LastErrorMessageLog(char *text)
 {
     DWORD dLastError = GetLastError();
     LPSTR strErrorMessage = NULL;

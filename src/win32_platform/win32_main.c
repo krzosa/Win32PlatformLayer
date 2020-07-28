@@ -183,6 +183,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 
         os.FileRead                            = &Win32FileRead;
         os.FileGetSize                         = &Win32FileGetSize;
+        os.DirectoryReadAllFiles               = &Win32DirectoryReadAllFiles;
 
         os.TimeGetMilliseconds                 = &Win32MillisecondsGet;
         os.TimeGetCounts                       = &Win32PerformanceCountGet;

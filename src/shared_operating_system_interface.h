@@ -137,6 +137,20 @@ typedef struct time_data
     f32 frameMilliseconds;
 } time_data;
 
+typedef struct file_contents
+{
+    i8 *file;
+    i64 fileSize;
+    char fileName[260];
+} file_contents;
+
+typedef struct files
+{
+    file_contents files[255];
+    i32 fileCount;
+    u64 memoryFilled;
+} files;
+
 typedef struct operating_system_interface
 {
     memory_storage pernamentStorage;
@@ -158,6 +172,7 @@ typedef struct operating_system_interface
 
     // NOTE: user input info, accessed through IsKeyDown etc.
     user_input userInput;
+
     // NOTE: update time, frame time, app start time
     time_data timeData;
 
@@ -174,6 +189,7 @@ typedef struct operating_system_interface
 
     i64    (*FileGetSize)(char *filename); 
     i64    (*FileRead)(char *filename, void *memory, i64 bytesToRead); // returns bytes read or -1 when fail
+    files  (*DirectoryReadAllFiles)(char *directory, void *memory, i64 bytesToRead);
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
