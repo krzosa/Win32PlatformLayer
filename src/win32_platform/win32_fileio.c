@@ -1,8 +1,8 @@
-// returns -1 on error
-internal i64
+// returns 0 on error
+internal u64
 Win32FileGetSize(char *filename)
 {
-    Assert(CharLength(filename) < 260); // MAX PATH
+    Assert(CharLength(filename) < MAX_PATH); // MAX PATH
 
     LARGE_INTEGER size;
 
@@ -11,15 +11,15 @@ Win32FileGetSize(char *filename)
     
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
-        size.QuadPart = -1;
-        LogError("INVALID HANDLE VALUE");
+        size.QuadPart = 0;
+        LogError("INVALID HANDLE VALUE %s", filename);
         return size.QuadPart;
     }
     bool32 result = GetFileSizeEx(fileHandle, &size);
     if(!result)
     {
-        size.QuadPart = -1;
-        LogError("GetFileSize failed");
+        size.QuadPart = 0;
+        LogError("GetFileSize failed %s", filename);
         return size.QuadPart;
     }
 
@@ -28,11 +28,11 @@ Win32FileGetSize(char *filename)
 }
 
 // Fills the specified memory buffer with the file contents
-// returns -1 on fail, else returns bytesRead
-internal i64
-Win32FileRead(char *filename, void *memory, i64 bytesToRead)
+// returns 0 on fail, else returns bytesRead
+internal u64
+Win32FileRead(char *filename, void *memory, u64 bytesToRead)
 {
-    Assert(CharLength(filename) < 260); // MAX PATH
+    Assert(CharLength(filename) < MAX_PATH); // MAX PATH
 
     // OPEN EXISTING flag doesnt create a file
     // Creates a file if it doesnt exist
@@ -42,40 +42,41 @@ Win32FileRead(char *filename, void *memory, i64 bytesToRead)
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
         LogError("INVALID HANDLE VALUE");
-        return -1;
+        return 0;
     }
 
     DWORD bytesRead;
     bool32 result = ReadFile(fileHandle, memory, (DWORD)bytesToRead, &bytesRead, 0);
     if(!result)
     {
-        LogError("ReadFile failed");
-        return -1;
+        LogError("ReadFile failed %s", filename);
+        return 0;
     }
     if(bytesRead != bytesToRead)
     {
-        LogError("BytesRead and BytesToRead mismatch!");
-        return -1;
+        LogError("BytesRead and BytesToRead mismatch %s", filename);
+        return 0;
     }
 
     LogSuccess("%s FILE LOADED", filename);
-    return (i64)bytesRead;
+    return bytesRead;
 }
 
 internal files
-Win32DirectoryReadAllFiles(char *directory, void *memory, i64 bytesToRead)
+Win32DirectoryReadAllFiles(char *directory, void *memory, u64 bytesToRead)
 {
     files result = {0};
     u64 totalSizeOfFiles = 0;
     WIN32_FIND_DATAA findData;
 
     str8 *query = StringConcatChar(directory, "/*");
+    Assert(StringLength(query) < MAX_PATH);
 
     LogInfo("Load all files in directory %s", directory);
     HANDLE handle = FindFirstFileA(query, &findData);
     if(handle == INVALID_HANDLE_VALUE)
     {
-        LogError("INVALID HANDLE VALUE");
+        LogError("INVALID HANDLE VALUE %s", directory);
     }
     else
     {
@@ -100,7 +101,7 @@ Win32DirectoryReadAllFiles(char *directory, void *memory, i64 bytesToRead)
                 size_t length = CharLength(findData.cFileName);
                 memcpy(result.files[result.fileCount].fileName, findData.cFileName, length);
                 result.files[result.fileCount].fileName[length] = '\0';
-                result.files[result.fileCount].fileNameLength = length;
+                result.files[result.fileCount].fileNameLength = (u32)length;
             }
 
             result.files[result.fileCount].fileSize = 

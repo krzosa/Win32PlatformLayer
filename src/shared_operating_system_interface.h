@@ -140,15 +140,15 @@ typedef struct time_data
 typedef struct file_contents
 {
     i8 *file;
-    i64 fileSize;
+    u64 fileSize;
     char fileName[260];
-    i32 fileNameLength;
+    u32 fileNameLength;
 } file_contents;
 
 typedef struct files
 {
     file_contents files[255];
-    i32 fileCount;
+    u32 fileCount;
     u64 memoryFilled;
 } files;
 
@@ -190,8 +190,9 @@ typedef struct operating_system_interface
     u64    (*TimeGetProcessorCycles)();
 
     i64    (*FileGetSize)(char *filename); 
-    i64    (*FileRead)(char *filename, void *memory, i64 bytesToRead); // returns bytes read or -1 when fail
-    files  (*DirectoryReadAllFiles)(char *directory, void *memory, i64 bytesToRead);
+    // NOTE: returns bytesRead
+    u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead);
+    files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
