@@ -1,7 +1,7 @@
 // SETTINGS 
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
-#define RENDERER_START RENDERER_SOFTWARE
+#define RENDERER_START RENDERER_OPENGL
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
 // CW_USEDEFAULT == doesnt matter
@@ -469,6 +469,8 @@ ControllerRightStick()
     return (v2){os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
 }
 
+// TODO(KKrzosa): Make it so that we dont have to zero the mousewhell status
+// NOTE(KKrzosa): MouseWheel status is zeroed after the retrival
 internal i32
 MouseWheelStatus()
 {
@@ -865,28 +867,6 @@ Win32ConsoleAttach(void)
     if(!GLOBALConsoleHandle) OutputDebugStringA("Failed to get console handle\n");
 }
 
-// TODO(KKrzosa): delete this in code replace with regular
-internal void
-Win32LastErrorMessageLog(char *text)
-{
-    DWORD dLastError = GetLastError();
-    LPSTR strErrorMessage = NULL;
-    
-    FormatMessageA(
-                   FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | 
-                   FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-                   NULL,
-                   dLastError,
-                   0,
-                   strErrorMessage,
-                   0,
-                   NULL);
-    
-    Log("%s: %s\n", text, strErrorMessage);
-    
-    LocalFree(strErrorMessage);
-}
-
 //
 // TIME
 //
@@ -1061,14 +1041,12 @@ Win32OpenGLInit(HDC deviceContext)
         Log("FAILED to choose pixel format\n");
     
     if(!SetPixelFormat(deviceContext, pixelFormatIndex, &pixelFormat))
-        Win32LastErrorMessageLog("FAILED: to set PixelFormat");
+        LogError("FAILED: to set PixelFormat");
     
     HGLRC dummyOpenglContext = wglCreateContext(deviceContext);
     
-    if(!dummyOpenglContext)
-        Win32LastErrorMessageLog("FAILED: to create dummy opengl context");
-    if(!wglMakeCurrent(deviceContext, dummyOpenglContext))
-        Win32LastErrorMessageLog("FAILED: to make dummy opengl context current");
+    if(!dummyOpenglContext) LogError("FAILED: to create dummy opengl context");
+    if(!wglMakeCurrent(deviceContext, dummyOpenglContext)) LogError("FAILED: to make dummy opengl context current");
     
     // NOTE: Load windows opengl functions
     wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)Win32OpenGLLoadProcedures("wglChoosePixelFormatARB");

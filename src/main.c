@@ -37,7 +37,7 @@ void Update(operating_system_interface *operatingSystemInterface)
     }
     else if(os->currentRenderer == RENDERER_SOFTWARE)
     {
-        RenderWeirdGradient(&os->graphicsBuffer, 100, 100);
+        RenderWeirdGradient(&os->graphicsBuffer, MousePositionX(), MousePositionY());
     }
 }
 
