@@ -132,3 +132,28 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
         tSine += 2 * MATH_PI * (f32)1.0f / (f32)wavePeriod;
     }
 }
+
+internal void
+RenderWeirdGradient(graphics_buffer *Buffer, int BlueOffset, int GreenOffset)
+{
+    // TODO(casey): Let's see what the optimizer does
+    
+    u8*Row = (u8 *)Buffer->memory;    
+    for(int Y = 0;
+        Y < Buffer->size.y;
+        ++Y)
+    {
+        u32*Pixel = (u32 *)Row;
+        for(int X = 0;
+            X < Buffer->size.x;
+            ++X)
+        {
+            u8 Blue = (u8)(X + BlueOffset);
+            u8 Green = (u8)(Y + GreenOffset);
+            
+            *Pixel++ = ((Green << 16) | Blue);
+        }
+        
+        Row += Buffer->pitch;
+    }
+}

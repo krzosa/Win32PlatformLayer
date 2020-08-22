@@ -1,12 +1,12 @@
 // SETTINGS 
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
-#define RENDERER_START RENDERER_OPENGL
-
+#define RENDERER_START RENDERER_SOFTWARE
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
-#define DEFAULT_WINDOW_POS_X CW_USEDEFAULT
-#define DEFAULT_WINDOW_POS_Y CW_USEDEFAULT
+// CW_USEDEFAULT == doesnt matter
+#define DEFAULT_WINDOW_POS_X 0
+#define DEFAULT_WINDOW_POS_Y 0
 #define WINDOW_TITLE "PLACEHOLDER"
 // 0(invisible) - 255(fully-visible)
 #define WINDOW_TRANSPARENCY 255
@@ -187,6 +187,7 @@ typedef struct user_input_mouse
 {
     i32 mousePosX;
     i32 mousePosY;
+    i32 mouseWheel;
     
     bool8 left;
     bool8 right;
@@ -196,6 +197,8 @@ typedef struct user_input_mouse
 typedef struct user_input
 {
     user_input_controller controller[4];
+    i32 selectedController;
+    
     user_input_keyboard keyboard;
     user_input_mouse mouse;
 } user_input;
@@ -246,6 +249,14 @@ typedef enum enum_renderer
     RENDERER_SOFTWARE,
 } enum_renderer;
 
+typedef struct graphics_buffer
+{
+    // NOTE(casey): Pixels are alwasy 32-bits wide, memory Order BB GG RR XX
+    u8 *memory;
+    iv2 size;
+    i32 pitch;
+} graphics_buffer;
+
 typedef struct operating_system_interface
 {
     memory_storage pernamentStorage;
@@ -275,6 +286,9 @@ typedef struct operating_system_interface
     // NOTE: you can change fps by changing this value
     f32 targetFramesPerSecond;
     enum_renderer currentRenderer;
+    
+    // NOTE(KKrzosa): For software rendering
+    graphics_buffer graphicsBuffer;
     
     void   (*Quit)();
     void   (*Log)(char *text, ...);
@@ -321,6 +335,9 @@ GetOS()
     return PrivateOSPointer;
 }
 
+
+
+
 internal bool32
 IsKeyPressedOnce(keyboard_keys KEY)
 {
@@ -339,7 +356,6 @@ internal bool32
 IsKeyUnpressedOnce(keyboard_keys KEY)
 {
     operating_system_interface *os = GetOS();
-    
     if(os->userInput.keyboard.previousKeyState[KEY] == 1 &&
        os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -353,7 +369,6 @@ internal bool32
 IsKeyDown(keyboard_keys KEY)
 {
     operating_system_interface *os = GetOS();
-    
     if(os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
         return true;
@@ -373,15 +388,23 @@ IsKeyUp(keyboard_keys KEY)
     return false;
 }
 
+internal void
+SelectActiveController(i32 index)
+{
+    operating_system_interface *os = GetOS();
+    os->userInput.selectedController = index;
+}
+
 internal bool32
 IsButtonPressedOnce(controller_buttons BUTTON)
 {
     operating_system_interface *os = GetOS();
     
-    if(os->userInput.controller[0].previousButtonState[BUTTON] == 0 &&
-       os->userInput.controller[0].currentButtonState[BUTTON] == 1)
+    i32 c = os->userInput.selectedController;
+    if(os->userInput.controller[c].previousButtonState[BUTTON] == 0 &&
+       os->userInput.controller[c].currentButtonState[BUTTON] == 1)
     {
-        os->userInput.controller[0].previousButtonState[BUTTON] = 1;
+        os->userInput.controller[c].previousButtonState[BUTTON] = 1;
         return true;
     }
     return false;
@@ -392,10 +415,11 @@ IsButtonUnpressedOnce(controller_buttons BUTTON)
 {
     operating_system_interface *os = GetOS();
     
-    if(os->userInput.controller[0].previousButtonState[BUTTON] == 1 &&
-       os->userInput.controller[0].currentButtonState[BUTTON] == 0)
+    i32 c = os->userInput.selectedController;
+    if(os->userInput.controller[c].previousButtonState[BUTTON] == 1 &&
+       os->userInput.controller[c].currentButtonState[BUTTON] == 0)
     {
-        os->userInput.controller[0].previousButtonState[BUTTON] = 0;
+        os->userInput.controller[c].previousButtonState[BUTTON] = 0;
         return true;
     }
     return false;
@@ -406,7 +430,8 @@ IsButtonDown(controller_buttons BUTTON)
 {
     operating_system_interface *os = GetOS();
     
-    if(os->userInput.controller[0].currentButtonState[BUTTON] == 1)
+    i32 c = os->userInput.selectedController;
+    if(os->userInput.controller[c].currentButtonState[BUTTON] == 1)
     {
         return true;
     }
@@ -418,29 +443,81 @@ IsButtonUp(controller_buttons BUTTON)
 {
     operating_system_interface *os = GetOS();
     
-    if(os->userInput.controller[0].currentButtonState[BUTTON] == 0)
+    i32 c = os->userInput.selectedController;
+    if(os->userInput.controller[c].currentButtonState[BUTTON] == 0)
     {
         return true;
     }
     return false;
 }
 
+internal v2
+ControllerLeftStick()
+{
+    operating_system_interface *os = GetOS();
+    
+    i32 c = os->userInput.selectedController;
+    return (v2){os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
+}
+
+internal v2
+ControllerRightStick()
+{
+    operating_system_interface *os = GetOS();
+    
+    i32 c = os->userInput.selectedController;
+    return (v2){os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
+}
+
+internal i32
+MouseWheelStatus()
+{
+    operating_system_interface *os = GetOS();
+    i32 result = os->userInput.mouse.mouseWheel;
+    os->userInput.mouse.mouseWheel = 0;
+    return result;
+}
+
+internal i32
+MousePositionX()
+{
+    operating_system_interface *os = GetOS();
+    return os->userInput.mouse.mousePosX;
+}
+
+internal i32
+MousePositionY()
+{
+    operating_system_interface *os = GetOS();
+    return os->userInput.mouse.mousePosY;
+}
+
+internal iv2
+MousePosition()
+{
+    operating_system_interface *os = GetOS();
+    return (iv2){os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
+}
+
 internal f32
-GetAppStartTimeMilliseconds()
+AppStartTimeMilliseconds()
 {
-    return GetOS()->timeData.startAppMilliseconds;
+    operating_system_interface *os = GetOS();
+    return os->timeData.startAppMilliseconds;
 }
 
 internal i64 
-GetAppStartTimeCounts()
+AppStartTimeCounts()
 {
-    return GetOS()->timeData.startAppCount;
+    operating_system_interface *os = GetOS();
+    return os->timeData.startAppCount;
 }
 
 internal i64 
-GetAppStartTimeCycles()
+AppStartTimeCycles()
 {
-    return GetOS()->timeData.startAppCycles;
+    operating_system_interface *os = GetOS();
+    return os->timeData.startAppCycles;
 }
 
 //
@@ -448,41 +525,47 @@ GetAppStartTimeCycles()
 //                 end frame sleep
 
 internal f32
-GetUpdateTimeMilliseconds()
+UpdateTimeMilliseconds()
 {
-    return GetOS()->timeData.updateMilliseconds;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateMilliseconds;
 }
 
 internal i64 
-GetUpdateTimeCounts()
+UpdateTimeCounts()
 {
-    return GetOS()->timeData.updateCount;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateCount;
 }
 
 internal i64 
-GetUpdateTimeCycles()
+UpdateTimeCycles()
 {
-    return GetOS()->timeData.updateCycles;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateCycles;
 }
 
 // NOTE: Frame == entire length of a single frame
 
 internal f32
-GetFrameTimeMilliseconds()
+FrameTimeMilliseconds()
 {
-    return GetOS()->timeData.updateMilliseconds;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateMilliseconds;
 }
 
 internal i64 
-GetFrameTimeCounts()
+FrameTimeCounts()
 {
-    return GetOS()->timeData.updateCount;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateCount;
 }
 
 internal i64 
-GetFrameTimeCycles()
+FrameTimeCycles()
 {
-    return GetOS()->timeData.updateCycles;
+    operating_system_interface *os = GetOS();
+    return os->timeData.updateCycles;
 }
 
 inline internal f32
@@ -490,6 +573,7 @@ MillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
 {
     return (1 / millisecondsPerFrame) * 1000;
 }
+
 
 #define ConsoleLog(text, ...) GetOS()->Log(text, __VA_ARGS__)
 #define ConsoleLogExtra(prepend, text, ...) GetOS()->LogExtra(prepend, text, __VA_ARGS__)
@@ -557,6 +641,18 @@ OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
 // NOTE: These global variables are used in functions
 // that are passed to the application
 
+typedef struct win32_offscreen_buffer
+{
+    // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
+    BITMAPINFO info;
+    void *memory;
+    int width;
+    int height;
+    int pitch;
+    int bytesPerPixel;
+} win32_offscreen_buffer;
+
+
 // Loop status, the app closes if it equals 0
 global_variable bool32 GLOBALApplicationIsRunning; 
 global_variable bool32 GLOBALSleepIsGranular;
@@ -566,6 +662,7 @@ global_variable f32    GLOBALMonitorRefreshRate;
 global_variable bool32 GLOBALVSyncState;
 
 global_variable enum_renderer GLOBALRenderer;
+global_variable win32_offscreen_buffer GLOBALGraphicsBuffer;
 
 global_variable HWND   GLOBALWindow;
 global_variable HANDLE GLOBALConsoleHandle;
@@ -1059,6 +1156,65 @@ Win32OpenGLSetVSync(bool32 state)
     return result;
 }
 
+internal void
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int width, int height)
+{
+    // TODO(casey): Bulletproof this.
+    // Maybe don't free first, free after, then free first if that fails.
+    
+    if(Buffer->memory)
+    {
+        VirtualFree(Buffer->memory, 0, MEM_RELEASE);
+    }
+    
+    Buffer->width = width;
+    Buffer->height = height;
+    
+    int bytesPerPixel = 4;
+    Buffer->bytesPerPixel = bytesPerPixel;
+    
+    // NOTE(casey): When the biHeight field is negative, this is the clue to
+    // Windows to treat this bitmap as top-down, not bottom-up, meaning that
+    // the first three bytes of the image are the color for the top left pixel
+    // in the bitmap, not the bottom left!
+    Buffer->info.bmiHeader.biSize = sizeof(Buffer->info.bmiHeader);
+    Buffer->info.bmiHeader.biWidth = Buffer->width;
+    Buffer->info.bmiHeader.biHeight = -Buffer->height;
+    Buffer->info.bmiHeader.biPlanes = 1;
+    Buffer->info.bmiHeader.biBitCount = 32;
+    Buffer->info.bmiHeader.biCompression = BI_RGB;
+    
+    // NOTE(casey): Thank you to Chris Hecker of Spy Party fame
+    // for clarifying the deal with StretchDIBits and BitBlt!
+    // No more DC for us.
+    int BitmapMemorySize = (Buffer->width*Buffer->height)*bytesPerPixel;
+    Buffer->memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    Buffer->pitch = width*bytesPerPixel;
+    
+    // TODO(casey): Probably clear this to black
+}
+
+internal void
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
+{
+    // TODO(casey): Aspect ratio correction
+    // TODO(casey): Play with stretch modes
+    StretchDIBits(DeviceContext,
+                  /*
+                  X, Y, Width, Height,
+                  X, Y, Width, Height,
+                  */
+                  0, 0, WindowWidth, WindowHeight,
+                  0, 0, Buffer->width, Buffer->height,
+                  Buffer->memory,
+                  &Buffer->info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+
+//
+// FILEIO
+//
 
 // returns 0 on error
 internal u64
@@ -1088,10 +1244,6 @@ Win32FileGetSize(char *filename)
     CloseHandle(fileHandle);
     return size.QuadPart;
 }
-
-//
-// FILEIO
-//
 
 // Fills the specified memory buffer with the file contents
 // returns 0 on fail, else returns bytesRead
@@ -1351,6 +1503,12 @@ Win32InputUpdate(user_input *userInput)
                 mouse->mousePosX = GET_X_LPARAM(message.lParam); 
                 mouse->mousePosY = GET_Y_LPARAM(message.lParam);
                 break;
+            }
+            case WM_MOUSEWHEEL:
+            {
+                if((i32)VKCode > 0) mouse->mouseWheel = 1;
+                else mouse->mouseWheel = -1;
+                
             }
             case WM_LBUTTONUP:
             case WM_LBUTTONDOWN:
@@ -1880,6 +2038,20 @@ Win32WasapiCleanup(win32_audio_data *audio)
     }
 }
 
+internal iv2
+Win32WindowGetSize()
+{
+    RECT ClientRect;
+    iv2 windowSize;
+    
+    // NOTE: get size of the window, without the border
+    GetWindowRect(GLOBALWindow, &ClientRect);
+    windowSize.width = ClientRect.right - ClientRect.left;
+    windowSize.height = ClientRect.bottom - ClientRect.top;
+    
+    return windowSize;
+}
+
 LRESULT CALLBACK 
 Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -1910,6 +2082,24 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Assert(0);
         }
+        
+        case WM_PAINT:
+        {
+            if(GLOBALRenderer == RENDERER_SOFTWARE)
+            {
+                PAINTSTRUCT paint;
+                HDC DeviceContext = BeginPaint(window, &paint);
+                iv2 windowSize = Win32WindowDrawAreaGetSize();
+                Win32DisplayBufferInWindow(&GLOBALGraphicsBuffer, DeviceContext,
+                                           windowSize.x, windowSize.y);
+                EndPaint(window, &paint);
+            }
+            else
+            {
+                result = DefWindowProc(window, message, wParam, lParam);
+            }
+        } break;
+        
         default:
         {
             result = DefWindowProc(window, message, wParam, lParam);
@@ -1924,20 +2114,6 @@ internal void
 Quit()
 {
     GLOBALApplicationIsRunning = !GLOBALApplicationIsRunning;
-}
-
-internal iv2
-Win32WindowGetSize()
-{
-    RECT ClientRect;
-    iv2 windowSize;
-    
-    // NOTE: get size of the window, without the border
-    GetWindowRect(GLOBALWindow, &ClientRect);
-    windowSize.width = ClientRect.right - ClientRect.left;
-    windowSize.height = ClientRect.bottom - ClientRect.top;
-    
-    return windowSize;
 }
 
 internal f32
@@ -2106,6 +2282,21 @@ WindowDrawBorder(bool32 draw)
     }
 }
 
+internal void
+ScreenDraw(HDC deviceContext)
+{
+    if(GLOBALRenderer == RENDERER_SOFTWARE)
+    {
+        iv2 windowSize = Win32WindowDrawAreaGetSize();
+        Win32DisplayBufferInWindow(&GLOBALGraphicsBuffer, deviceContext,
+                                   windowSize.x, windowSize.y);
+    }
+    else if(GLOBALRenderer == RENDERER_OPENGL)
+    {
+        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
+    }
+}
+
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
@@ -2167,17 +2358,20 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Window size %d %d", windowSize.width, windowSize.height);
     LogInfo("Window draw area size %d %d", drawAreaSize.width, drawAreaSize.height);
     
+    // NOTE(KKrzosa): SETUP RENDERER
     if(GLOBALRenderer == RENDERER_OPENGL)
     {
         // NOTE: Setup openGL context, choose pixel format, load wgl functions
         //       function for setting vsync is loaded here
         HGLRC openglContext = Win32OpenGLInit(deviceContext);
         // NOTE: Set the opengl viewport to match the aspect ratio
-        Win32OpenGLAspectRatioUpdate(16, 9);
+        //Win32OpenGLAspectRatioUpdate(16, 9);
         LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
     }
-    
-    win32_dll_code dllCode = {0};
+    else if(GLOBALRenderer == RENDERER_SOFTWARE)
+    {
+        Win32ResizeDIBSection(&GLOBALGraphicsBuffer, drawAreaSize.x, drawAreaSize.y);
+    }
     
     // NOTE: Construct paths to exe and to dll
     str8 *pathToExeDirectory = Win32GetExecutableDirectory();
@@ -2187,6 +2381,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             pathToExeDirectory, mainDLLPath, tempDLLPath);
     
     // NOTE: Load the dll and call initialize function
+    win32_dll_code dllCode = {0};
     dllCode = Win32DLLCodeLoad(mainDLLPath, tempDLLPath);
     
     // NOTE: Get monitor refresh rate
@@ -2266,6 +2461,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     dllCode.initialize(&os);
     
+    
     // NOTE: Begin timming the frame
     u64 beginFrameCycles = ProcessorClockCycles();
     i64 beginFrame = Win32PerformanceCountGet();
@@ -2274,7 +2470,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     while(GLOBALApplicationIsRunning)
     {
         Win32UpdateDLLCode(&dllCode, mainDLLPath, tempDLLPath, &os);
-        GLOBALRenderer = os.currentRenderer;
         
         // NOTE: Process input, keyboard and mouse
         Win32InputUpdate(&os.userInput);
@@ -2294,6 +2489,13 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             os.requestedSamples = samplesToWrite;
             os.samplesPerSecond = audioData.samplesPerSecond;
             
+            if(os.currentRenderer == RENDERER_SOFTWARE)
+            {
+                os.graphicsBuffer.memory = GLOBALGraphicsBuffer.memory;
+                os.graphicsBuffer.size.x = GLOBALGraphicsBuffer.width;
+                os.graphicsBuffer.size.y = GLOBALGraphicsBuffer.height;
+                os.graphicsBuffer.pitch = GLOBALGraphicsBuffer.pitch;
+            }
             // NOTE: Call Update function from the dll, bit "and" operator here
             //       because we dont want update to override appstatus
             dllCode.update(&os);
@@ -2304,10 +2506,10 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             Win32AudioBufferFill(samplesToWrite, os.audioBuffer, &audioData);
         }
         
-        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
-        
         f32 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
         EndFrameAndSleep(&os.timeData, msPerFrame, &beginFrame, &beginFrameCycles);
+        
+        ScreenDraw(deviceContext);
     }
     
     return(1);

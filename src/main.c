@@ -26,13 +26,18 @@ void Update(operating_system_interface *operatingSystemInterface)
     operating_system_interface *os = GetOS();
     if(IsKeyDown(KEY_ESC)) os->Quit();
     
-    AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
+    //AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
+    
     // NOTE: Draw
     if(os->currentRenderer == RENDERER_OPENGL)
     {
         glClearColor(0, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
         glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    else if(os->currentRenderer == RENDERER_SOFTWARE)
+    {
+        RenderWeirdGradient(&os->graphicsBuffer, 100, 100);
     }
 }
 
