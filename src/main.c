@@ -7,23 +7,28 @@ void Initialize(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: dll has a global os pointer which simplifies the interface 
     // because we dont have to pass the os pointer around to everything
-    os = operatingSystemInterface;
-
-    // NOTE: from opengl_procedures.include
-    OpenGLLoadProcedures(os->OpenGLLoadProcedures);
-
-    // NOTE: generic opengl triangle example
-    OpenGLTriangleSetup();
-
+    AttachOS(operatingSystemInterface);
+    
+    if(operatingSystemInterface->currentRenderer == RENDERER_OPENGL)
+    {
+        // NOTE: from opengl_procedures.include
+        OpenGLLoadProcedures(GetOS()->OpenGLLoadProcedures);
+        
+        // NOTE: generic opengl triangle example
+        OpenGLTriangleSetup();
+    }
+    
 }
 
 // Called on every frame
 void Update(operating_system_interface *operatingSystemInterface)
 {
+    operating_system_interface *os = GetOS();
     if(IsKeyDown(KEY_ESC)) os->Quit();
-
+    
     AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
     // NOTE: Draw
+    if(os->currentRenderer == RENDERER_OPENGL)
     {
         glClearColor(0, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -36,8 +41,10 @@ void HotReload(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
-    os = operatingSystemInterface;
-    OpenGLLoadProcedures(os->OpenGLLoadProcedures);
+    AttachOS(operatingSystemInterface);
+    
+    if(operatingSystemInterface->currentRenderer == RENDERER_OPENGL)
+        OpenGLLoadProcedures(GetOS()->OpenGLLoadProcedures);
 }
 
 // Called when you recomplile while the app is running

@@ -1,4 +1,19 @@
+// SETTINGS 
+
+// RENDERER_OPENGL || RENDERER_SOFTWARE
+#define RENDERER_START RENDERER_OPENGL
+
+#define WINDOW_WIDTH 1280
+#define WINDOW_HEIGHT 720
+#define DEFAULT_WINDOW_POS_X CW_USEDEFAULT
+#define DEFAULT_WINDOW_POS_Y CW_USEDEFAULT
+#define WINDOW_TITLE "PLACEHOLDER"
+// 0(invisible) - 255(fully-visible)
+#define WINDOW_TRANSPARENCY 255
+
+
 #include <stdint.h>
+#include <assert.h>
 
 typedef char     str8;
 typedef int8_t   i8;
@@ -225,6 +240,12 @@ typedef struct files
     u64 memoryFilled;
 } files;
 
+typedef enum enum_renderer
+{
+    RENDERER_OPENGL,
+    RENDERER_SOFTWARE,
+} enum_renderer;
+
 typedef struct operating_system_interface
 {
     memory_storage pernamentStorage;
@@ -253,7 +274,7 @@ typedef struct operating_system_interface
     
     // NOTE: you can change fps by changing this value
     f32 targetFramesPerSecond;
-    
+    enum_renderer currentRenderer;
     
     void   (*Quit)();
     void   (*Log)(char *text, ...);
@@ -284,11 +305,27 @@ typedef struct operating_system_interface
 } operating_system_interface;
 
 #if defined(OS_INTERFACE_IMPLEMENTATION)
-global_variable operating_system_interface *os = 0;
+global_variable operating_system_interface *PrivateOSPointer = 0;
+
+internal void
+AttachOS(operating_system_interface *os)
+{
+    assert(os != 0);
+    PrivateOSPointer = os;
+}
+
+internal operating_system_interface *
+GetOS()
+{
+    assert(PrivateOSPointer != 0);
+    return PrivateOSPointer;
+}
 
 internal bool32
 IsKeyPressedOnce(keyboard_keys KEY)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.keyboard.previousKeyState[KEY] == 0 &&
        os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
@@ -301,6 +338,8 @@ IsKeyPressedOnce(keyboard_keys KEY)
 internal bool32
 IsKeyUnpressedOnce(keyboard_keys KEY)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.keyboard.previousKeyState[KEY] == 1 &&
        os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -313,6 +352,8 @@ IsKeyUnpressedOnce(keyboard_keys KEY)
 internal bool32
 IsKeyDown(keyboard_keys KEY)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
         return true;
@@ -323,6 +364,8 @@ IsKeyDown(keyboard_keys KEY)
 internal bool32
 IsKeyUp(keyboard_keys KEY)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
         return true;
@@ -333,6 +376,8 @@ IsKeyUp(keyboard_keys KEY)
 internal bool32
 IsButtonPressedOnce(controller_buttons BUTTON)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.controller[0].previousButtonState[BUTTON] == 0 &&
        os->userInput.controller[0].currentButtonState[BUTTON] == 1)
     {
@@ -345,6 +390,8 @@ IsButtonPressedOnce(controller_buttons BUTTON)
 internal bool32
 IsButtonUnpressedOnce(controller_buttons BUTTON)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.controller[0].previousButtonState[BUTTON] == 1 &&
        os->userInput.controller[0].currentButtonState[BUTTON] == 0)
     {
@@ -357,6 +404,8 @@ IsButtonUnpressedOnce(controller_buttons BUTTON)
 internal bool32
 IsButtonDown(controller_buttons BUTTON)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.controller[0].currentButtonState[BUTTON] == 1)
     {
         return true;
@@ -367,6 +416,8 @@ IsButtonDown(controller_buttons BUTTON)
 internal bool32
 IsButtonUp(controller_buttons BUTTON)
 {
+    operating_system_interface *os = GetOS();
+    
     if(os->userInput.controller[0].currentButtonState[BUTTON] == 0)
     {
         return true;
@@ -377,19 +428,19 @@ IsButtonUp(controller_buttons BUTTON)
 internal f32
 GetAppStartTimeMilliseconds()
 {
-    return os->timeData.startAppMilliseconds;
+    return GetOS()->timeData.startAppMilliseconds;
 }
 
 internal i64 
 GetAppStartTimeCounts()
 {
-    return os->timeData.startAppCount;
+    return GetOS()->timeData.startAppCount;
 }
 
 internal i64 
 GetAppStartTimeCycles()
 {
-    return os->timeData.startAppCycles;
+    return GetOS()->timeData.startAppCycles;
 }
 
 //
@@ -399,19 +450,19 @@ GetAppStartTimeCycles()
 internal f32
 GetUpdateTimeMilliseconds()
 {
-    return os->timeData.updateMilliseconds;
+    return GetOS()->timeData.updateMilliseconds;
 }
 
 internal i64 
 GetUpdateTimeCounts()
 {
-    return os->timeData.updateCount;
+    return GetOS()->timeData.updateCount;
 }
 
 internal i64 
 GetUpdateTimeCycles()
 {
-    return os->timeData.updateCycles;
+    return GetOS()->timeData.updateCycles;
 }
 
 // NOTE: Frame == entire length of a single frame
@@ -419,19 +470,19 @@ GetUpdateTimeCycles()
 internal f32
 GetFrameTimeMilliseconds()
 {
-    return os->timeData.updateMilliseconds;
+    return GetOS()->timeData.updateMilliseconds;
 }
 
 internal i64 
 GetFrameTimeCounts()
 {
-    return os->timeData.updateCount;
+    return GetOS()->timeData.updateCount;
 }
 
 internal i64 
 GetFrameTimeCycles()
 {
-    return os->timeData.updateCycles;
+    return GetOS()->timeData.updateCycles;
 }
 
 inline internal f32
@@ -440,8 +491,8 @@ MillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
     return (1 / millisecondsPerFrame) * 1000;
 }
 
-#define ConsoleLog(text, ...) os->Log(text, __VA_ARGS__)
-#define ConsoleLogExtra(prepend, text, ...) os->LogExtra(prepend, text, __VA_ARGS__)
+#define ConsoleLog(text, ...) GetOS()->Log(text, __VA_ARGS__)
+#define ConsoleLogExtra(prepend, text, ...) GetOS()->LogExtra(prepend, text, __VA_ARGS__)
 
 //
 // ------------------------- LOADING OPENGL FUNCTIONS ------------------------- \\
@@ -514,14 +565,10 @@ global_variable i64    GLOBALCountsPerSecond;
 global_variable f32    GLOBALMonitorRefreshRate;
 global_variable bool32 GLOBALVSyncState;
 
+global_variable enum_renderer GLOBALRenderer;
+
 global_variable HWND   GLOBALWindow;
 global_variable HANDLE GLOBALConsoleHandle;
-
-#define DEFAULT_WINDOW_WIDTH 1280
-#define DEFAULT_WINDOW_HEIGHT 720
-#define DEFAULT_WINDOW_POS_X CW_USEDEFAULT
-#define DEFAULT_WINDOW_POS_Y CW_USEDEFAULT
-#define WINDOW_TITLE "PLACEHOLDER"
 
 /* TODO: 
  * memory stuff
@@ -721,6 +768,7 @@ Win32ConsoleAttach(void)
     if(!GLOBALConsoleHandle) OutputDebugStringA("Failed to get console handle\n");
 }
 
+// TODO(KKrzosa): delete this in code replace with regular
 internal void
 Win32LastErrorMessageLog(char *text)
 {
@@ -1702,8 +1750,7 @@ Win32AudioInitialize(i32 samplesPerSecond)
                                                    audio.audioClient, AUDCLNT_SHAREMODE_SHARED, 
                                                    AUDCLNT_STREAMFLAGS_RATEADJUST | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | 
                                                    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, 
-                                                   requestedBufferDuration, 0, &waveFormat, 0
-                                                   );
+                                                   requestedBufferDuration, 0, &waveFormat, 0);
     
     if(result != S_OK)
     {
@@ -1852,7 +1899,10 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_SIZE:
         {
             // NOTE: resize opengl viewport on window resize
-            Win32OpenGLAspectRatioUpdate(16, 9);
+            if(GLOBALRenderer == RENDERER_OPENGL)
+            {
+                Win32OpenGLAspectRatioUpdate(16, 9);
+            }
             break;
         }
         case WM_KEYUP:
@@ -2061,6 +2111,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
 {
     // NOTE: Attach to the console that invoked the app
     Win32ConsoleAttach();
+    GLOBALRenderer = RENDERER_START;
     
     // NOTE: Init time data
     
@@ -2103,26 +2154,28 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     if(!GLOBALWindow) {LogError("Create Window"); return 0;}
     
     // NOTE: 0 - 255 (not transparent at all)
-    WindowSetTransparency(255);
+    WindowSetTransparency(WINDOW_TRANSPARENCY);
     
     // NOTE: Set the draw area size to be equal to specified window size
-    WindowDrawAreaSetSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+    WindowDrawAreaSetSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     
     // NOTE: Window context setup
     HDC deviceContext = GetDC(GLOBALWindow);
-    
-    // NOTE: Setup openGL context, choose pixel format, load wgl functions
-    //       function for setting vsync is loaded here
-    HGLRC openglContext = Win32OpenGLInit(deviceContext);
     
     iv2 windowSize = Win32WindowGetSize();
     iv2 drawAreaSize = Win32WindowDrawAreaGetSize();
     LogInfo("Window size %d %d", windowSize.width, windowSize.height);
     LogInfo("Window draw area size %d %d", drawAreaSize.width, drawAreaSize.height);
     
-    // NOTE: Set the opengl viewport to match the aspect ratio
-    Win32OpenGLAspectRatioUpdate(16, 9);
-    LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
+    if(GLOBALRenderer == RENDERER_OPENGL)
+    {
+        // NOTE: Setup openGL context, choose pixel format, load wgl functions
+        //       function for setting vsync is loaded here
+        HGLRC openglContext = Win32OpenGLInit(deviceContext);
+        // NOTE: Set the opengl viewport to match the aspect ratio
+        Win32OpenGLAspectRatioUpdate(16, 9);
+        LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
+    }
     
     win32_dll_code dllCode = {0};
     
@@ -2180,6 +2233,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.timeData.startAppMilliseconds = startAppMilliseconds;
         os.timeData.countsPerSecond = GLOBALCountsPerSecond;
         
+        os.currentRenderer = GLOBALRenderer;
+        
         os.Log                                 = &ConsoleLog;
         os.LogExtra                            = &ConsoleLogExtra;
         os.Quit                                = &Quit;
@@ -2219,6 +2274,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     while(GLOBALApplicationIsRunning)
     {
         Win32UpdateDLLCode(&dllCode, mainDLLPath, tempDLLPath, &os);
+        GLOBALRenderer = os.currentRenderer;
         
         // NOTE: Process input, keyboard and mouse
         Win32InputUpdate(&os.userInput);
