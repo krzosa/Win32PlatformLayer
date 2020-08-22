@@ -1,8 +1,5 @@
-#include "shared_language_layer.h"
-#include "shared_operating_system_interface.h"
-#include "operating_system_interface.c"
-
-#include "opengl.h"
+#define OS_INTERFACE_IMPLEMENTATION
+#include "win32_platform_executable.c"
 #include "examples.c"
 
 // Called on the start of the app
