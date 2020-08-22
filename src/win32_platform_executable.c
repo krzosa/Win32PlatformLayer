@@ -1,16 +1,23 @@
-// SETTINGS 
+// ------------------------- SETTINGS ------------------------- \\
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
-#define RENDERER_START RENDERER_OPENGL
+#define RENDERER_START RENDERER_SOFTWARE
+
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
+
 // CW_USEDEFAULT == doesnt matter
 #define DEFAULT_WINDOW_POS_X 0
 #define DEFAULT_WINDOW_POS_Y 0
+
 #define WINDOW_TITLE "PLACEHOLDER"
+
 // 0(invisible) - 255(fully-visible)
 #define WINDOW_TRANSPARENCY 255
 
+// ------------------------- SETTINGS ------------------------- \\
+
+// ------------------------- GENERAL ------------------------- \\
 
 #include <stdint.h>
 #include <assert.h>
@@ -32,7 +39,9 @@ typedef int32_t  bool32;
 
 #define global_variable static
 // Function internal to the obj, file
-#define internal static  
+#define internal static 
+// WARNING(KKrzosa): Only for .CPP
+#define external extern "C"
 
 #define true 1
 #define false 0
@@ -85,6 +94,7 @@ typedef union iv2
     };
 } iv2;
 
+// ------------------------- OS_INTERFACE_HEADER ------------------------- \\
 
 typedef struct memory_storage
 {
@@ -318,7 +328,18 @@ typedef struct operating_system_interface
     void  *(*OpenGLLoadProcedures)(char *name);
 } operating_system_interface;
 
+// ------------------------- OS_INTERFACE_HEADER ------------------------- \\
+
+// ------------------------- OS_INTERFACE ------------------------- \\
+
 #if defined(OS_INTERFACE_IMPLEMENTATION)
+
+#if _MSC_VER
+#define SilentSetDebuggerBreakpoint() {__debugbreak();}
+#else
+#define SilentSetDebuggerBreakpoint() { *(volatile int *)0 = 0;}
+#endif
+
 global_variable operating_system_interface *PrivateOSPointer = 0;
 
 internal void
@@ -334,9 +355,6 @@ GetOS()
     assert(PrivateOSPointer != 0);
     return PrivateOSPointer;
 }
-
-
-
 
 internal bool32
 IsKeyPressedOnce(keyboard_keys KEY)
@@ -457,7 +475,9 @@ ControllerLeftStick()
     operating_system_interface *os = GetOS();
     
     i32 c = os->userInput.selectedController;
-    return (v2){os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
+    v2 result = {os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
+    
+    return result;
 }
 
 internal v2
@@ -466,7 +486,9 @@ ControllerRightStick()
     operating_system_interface *os = GetOS();
     
     i32 c = os->userInput.selectedController;
-    return (v2){os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
+    v2 result = {os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
+    
+    return result;
 }
 
 // TODO(KKrzosa): Make it so that we dont have to zero the mousewhell status
@@ -498,7 +520,8 @@ internal iv2
 MousePosition()
 {
     operating_system_interface *os = GetOS();
-    return (iv2){os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
+    iv2 result = {os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
+    return result;
 }
 
 internal f32
@@ -580,9 +603,9 @@ MillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
 #define ConsoleLog(text, ...) GetOS()->Log(text, __VA_ARGS__)
 #define ConsoleLogExtra(prepend, text, ...) GetOS()->LogExtra(prepend, text, __VA_ARGS__)
 
-//
+// ------------------------- OS_INTERFACE ------------------------- \\
+
 // ------------------------- LOADING OPENGL FUNCTIONS ------------------------- \\
-//
 
 #if _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -618,6 +641,10 @@ OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
     LogSuccess("OpenGL functions loaded");
 }
 #endif
+
+// ------------------------- LOADING OPENGL FUNCTIONS ------------------------- \\
+
+// ------------------------- ------------------------- \\
 
 #if _MSC_VER
 #define PrivateSetDebuggerBreakpoint(text) {LogError(text); __debugbreak();}

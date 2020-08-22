@@ -1,9 +1,9 @@
 #define OS_INTERFACE_IMPLEMENTATION
 #include "win32_platform_executable.c"
-#include "examples.c"
+#include "examples.cpp"
 
 // Called on the start of the app
-void Initialize(operating_system_interface *operatingSystemInterface)
+external void Initialize(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: dll has a global os pointer which simplifies the interface 
     // because we dont have to pass the os pointer around to everything
@@ -21,7 +21,7 @@ void Initialize(operating_system_interface *operatingSystemInterface)
 }
 
 // Called on every frame
-void Update(operating_system_interface *operatingSystemInterface)
+external void Update(operating_system_interface *operatingSystemInterface)
 {
     operating_system_interface *os = GetOS();
     if(IsKeyDown(KEY_ESC)) os->Quit();
@@ -42,7 +42,7 @@ void Update(operating_system_interface *operatingSystemInterface)
 }
 
 // Called when you recomplile while the app is running
-void HotReload(operating_system_interface *operatingSystemInterface)
+external void HotReload(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
@@ -53,7 +53,7 @@ void HotReload(operating_system_interface *operatingSystemInterface)
 }
 
 // Called when you recomplile while the app is running
-void HotUnload(operating_system_interface *operatingSystemInterface)
+external void HotUnload(operating_system_interface *operatingSystemInterface)
 {
     LogInfo("HotUnload");
 }

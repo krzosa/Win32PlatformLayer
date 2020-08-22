@@ -29,7 +29,7 @@ command_list = {
             { "./build.sh", .os = "mac"   }, }, },
  { .name = "run",
    .out = "*run*", .footer_panel = true, .save_dirty_files = false,
-   .cmd = { { "bin\\app.exe", .os = "win"   },
+   .cmd = { { "run.bat", .os = "win"   },
             { "o/b" , .os = "linux" },
             { "o/b" , .os = "mac"   }, }, },
 };

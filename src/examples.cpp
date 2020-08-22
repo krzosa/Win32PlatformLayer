@@ -134,16 +134,14 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
 }
 
 internal void
-RenderWeirdGradient(graphics_buffer *buffer, int blueOffset, int greenOffset)
+RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY)
 {
-    // TODO(casey): Let's see what the optimizer does
-    
-    u8*Row = (u8 *)buffer->memory;    
+    u8 *row = (u8 *)buffer->memory;    
     for(int Y = 0;
         Y < buffer->size.y;
         ++Y)
     {
-        u32*Pixel = (u32 *)Row;
+        u32*Pixel = (u32 *)row;
         for(int X = 0;
             X < buffer->size.x;
             ++X)
@@ -154,6 +152,6 @@ RenderWeirdGradient(graphics_buffer *buffer, int blueOffset, int greenOffset)
             *Pixel++ = ((Green << 16) | Blue);
         }
         
-        Row += buffer->pitch;
+        row += buffer->pitch;
     }
 }
