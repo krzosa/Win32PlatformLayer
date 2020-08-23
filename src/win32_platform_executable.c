@@ -264,7 +264,9 @@ typedef struct graphics_buffer
     // NOTE(casey): Pixels are alwasy 32-bits wide, memory Order BB GG RR XX
     u8 *memory;
     iv2 size;
-    i32 pitch;
+    i32 bytesPerPixel;
+    // how many bytes to get to the next row of the graphics buffer
+    i32 strideInBytes;
 } graphics_buffer;
 
 typedef struct operating_system_interface
@@ -1008,7 +1010,7 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
     time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
     time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
     
-    LogInfo("%f frame %f update", time->frameMilliseconds, time->updateMilliseconds);
+    //LogInfo("%f frame %f update", time->frameMilliseconds, time->updateMilliseconds);
     *prevFrameCycles = ProcessorClockCycles();
     *prevFrame = Win32PerformanceCountGet();
 }
@@ -2499,7 +2501,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                 os.graphicsBuffer.memory = GLOBALGraphicsBuffer.memory;
                 os.graphicsBuffer.size.x = GLOBALGraphicsBuffer.width;
                 os.graphicsBuffer.size.y = GLOBALGraphicsBuffer.height;
-                os.graphicsBuffer.pitch = GLOBALGraphicsBuffer.pitch;
+                os.graphicsBuffer.bytesPerPixel = GLOBALGraphicsBuffer.bytesPerPixel;
+                os.graphicsBuffer.strideInBytes = GLOBALGraphicsBuffer.pitch;
             }
             // NOTE: Call Update function from the dll, bit "and" operator here
             //       because we dont want update to override appstatus

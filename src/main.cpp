@@ -1,5 +1,6 @@
 #define OS_INTERFACE_IMPLEMENTATION
 #include "win32_platform_executable.c"
+#include "math_library.h"
 #include "examples.cpp"
 
 // Called on the start of the app
@@ -37,7 +38,9 @@ external void Update(operating_system_interface *operatingSystemInterface)
     }
     else if(os->currentRenderer == RENDERER_SOFTWARE)
     {
-        RenderWeirdGradient(&os->graphicsBuffer, MousePositionX(), MousePositionY());
+        RenderRectangle(&os->graphicsBuffer, 0, 0, (f32)os->graphicsBuffer.size.x,
+                        (f32)os->graphicsBuffer.size.y, {0.f, 0.f, 0.f, 0.f});
+        RenderRectangle(&os->graphicsBuffer, 0, 0, 100, 100, {1.0f, 0, 0, 1.0f});
     }
 }
 

@@ -133,25 +133,69 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
     }
 }
 
-internal void
-RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY)
+internal i32
+RoundF32ToI32(f32 val)
 {
-    u8 *row = (u8 *)buffer->memory;    
-    for(int Y = 0;
-        Y < buffer->size.y;
-        ++Y)
+    i32 result = (i32)(val + 0.5f);
+    
+    return result;
+}
+
+internal u32
+RoundF32ToU32(f32 val)
+{
+    u32 result = (u32)(val + 0.5f);
+    
+    return result;
+}
+
+internal i32
+Clamp(i32 min, i32 val, i32 max)
+{
+    if(val > max) return max;
+    if(val < min) return min;
+    return val;
+}
+
+internal u32
+ColorToU32(v4 color)
+{
+    u8 alpha = RoundF32ToU32(color.a * 255);
+    u8 red =   RoundF32ToU32(color.r * 255);
+    u8 green = RoundF32ToU32(color.g * 255);
+    u8 blue =  RoundF32ToU32(color.b * 255);
+    
+    u32 result = (alpha << 24 | red << 16 | green << 8 | blue << 0);
+    
+    return result;
+}
+
+internal void
+RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY, v4 color)
+{
+    i32 x0 = RoundF32ToI32(minX);
+    i32 x1 = RoundF32ToI32(maxX);
+    i32 y0 = RoundF32ToI32(minY);
+    i32 y1 = RoundF32ToI32(maxY);
+    
+    x0 = Clamp(0, x0, buffer->size.x);
+    x1 = Clamp(0, x1, buffer->size.x);
+    y0 = Clamp(0, y0, buffer->size.y);
+    y1 = Clamp(0, y1, buffer->size.y);
+    
+    u8 *row = (u8 *)buffer->memory;
+    i32 stride = buffer->size.x * buffer->bytesPerPixel;
+    row = row + (y0 * stride) + (x0 * buffer->bytesPerPixel);
+    
+    for(i32 y = y0; y < y1; ++y)
     {
-        u32*Pixel = (u32 *)row;
-        for(int X = 0;
-            X < buffer->size.x;
-            ++X)
+        u32 *pixel = (u32 *)row;
+        
+        for(i32 x = x0; x < x1; ++x)
         {
-            u8 Blue = (u8)(X + blueOffset);
-            u8 Green = (u8)(Y + greenOffset);
-            
-            *Pixel++ = ((Green << 16) | Blue);
+            pixel[x] = ColorToU32(color);
         }
         
-        row += buffer->pitch;
+        row += stride;
     }
 }
