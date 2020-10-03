@@ -1,22 +1,26 @@
 #define OS_INTERFACE_IMPLEMENTATION
 #include "win32_platform_executable.c"
-#include "math_library.h"
-#include "examples.cpp"
+#include "supplementary/examples.cpp"
+
 
 // Called on the start of the app
 external void Initialize(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: dll has a global os pointer which simplifies the interface 
     // because we dont have to pass the os pointer around to everything
-    AttachOS(operatingSystemInterface);
+    OSAttach(operatingSystemInterface);
     
     if(operatingSystemInterface->currentRenderer == RENDERER_OPENGL)
     {
         // NOTE: from opengl_procedures.include
-        OpenGLLoadProcedures(GetOS()->OpenGLLoadProcedures);
+        OpenGLLoadProcedures(OSGet()->OpenGLLoadProcedures);
         
         // NOTE: generic opengl triangle example
         OpenGLTriangleSetup();
+    }
+    else if(operatingSystemInterface->currentRenderer == RENDERER_SOFTWARE) 
+    {
+        operatingSystemInterface->targetFramesPerSecond = 30;
     }
     
 }
@@ -24,10 +28,11 @@ external void Initialize(operating_system_interface *operatingSystemInterface)
 // Called on every frame
 external void Update(operating_system_interface *operatingSystemInterface)
 {
-    operating_system_interface *os = GetOS();
-    if(IsKeyDown(KEY_ESC)) os->Quit();
+    operating_system_interface *os = OSGet();
     
-    //AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
+    if(KeyCheckIfDown(KEY_ESC)) os->Quit();
+    
+    // AudioGenerateSineWave(os->audioBuffer, os->requestedSamples);
     
     // NOTE: Draw
     if(os->currentRenderer == RENDERER_OPENGL)
@@ -38,9 +43,7 @@ external void Update(operating_system_interface *operatingSystemInterface)
     }
     else if(os->currentRenderer == RENDERER_SOFTWARE)
     {
-        RenderRectangle(&os->graphicsBuffer, 0, 0, (f32)os->graphicsBuffer.size.x,
-                        (f32)os->graphicsBuffer.size.y, {0.f, 0.f, 0.f, 0.f});
-        RenderRectangle(&os->graphicsBuffer, 0, 0, 100, 100, {1.0f, 0, 0, 1.0f});
+        DrawRectangle(100, 100, 400, 400, {200, 200, 0, 255});
     }
 }
 
@@ -49,10 +52,10 @@ external void HotReload(operating_system_interface *operatingSystemInterface)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
-    AttachOS(operatingSystemInterface);
+    OSAttach(operatingSystemInterface);
     
     if(operatingSystemInterface->currentRenderer == RENDERER_OPENGL)
-        OpenGLLoadProcedures(GetOS()->OpenGLLoadProcedures);
+        OpenGLLoadProcedures(OSGet()->OpenGLLoadProcedures);
 }
 
 // Called when you recomplile while the app is running

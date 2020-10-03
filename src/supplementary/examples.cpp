@@ -113,8 +113,8 @@ internal void
 AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
 {
     // NOTE: Sine wave controlled by W Key and right controller stick
-    i32 toneHz = 261 + (i32)(GetOS()->userInput.controller[0].rightStickX * 100);
-    if(IsKeyDown(KEY_W)) toneHz = 350;
+    i32 toneHz = 261 + (i32)(OSGet()->userInput.controller[0].rightStickX * 100);
+    if(KeyCheckIfDown(KEY_W)) toneHz = 350;
     i32 wavePeriod = (48000 / toneHz);
     
     
@@ -133,46 +133,14 @@ AudioGenerateSineWave(void *audioBuffer, i32 sampleCount)
     }
 }
 
-internal i32
-RoundF32ToI32(f32 val)
-{
-    i32 result = (i32)(val + 0.5f);
-    
-    return result;
-}
+// NOTE(KKrzosa): Software renderer
 
-internal u32
-RoundF32ToU32(f32 val)
-{
-    u32 result = (u32)(val + 0.5f);
-    
-    return result;
-}
-
-internal i32
-Clamp(i32 min, i32 val, i32 max)
-{
-    if(val > max) return max;
-    if(val < min) return min;
-    return val;
-}
-
-internal u32
-ColorToU32(v4 color)
-{
-    u8 alpha = RoundF32ToU32(color.a * 255);
-    u8 red =   RoundF32ToU32(color.r * 255);
-    u8 green = RoundF32ToU32(color.g * 255);
-    u8 blue =  RoundF32ToU32(color.b * 255);
-    
-    u32 result = (alpha << 24 | red << 16 | green << 8 | blue << 0);
-    
-    return result;
-}
-
+#include "math_library.h"
 internal void
-RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY, v4 color)
+DrawRectangle(f32 minX, f32 minY, f32 maxX, f32 maxY, v4 color)
 {
+    graphics_buffer *buffer = GraphicsBufferGet();
+    
     i32 x0 = RoundF32ToI32(minX);
     i32 x1 = RoundF32ToI32(maxX);
     i32 y0 = RoundF32ToI32(minY);
@@ -183,9 +151,9 @@ RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY,
     y0 = Clamp(0, y0, buffer->size.y);
     y1 = Clamp(0, y1, buffer->size.y);
     
+    
     u8 *row = (u8 *)buffer->memory;
-    i32 stride = buffer->size.x * buffer->bytesPerPixel;
-    row = row + (y0 * stride) + (x0 * buffer->bytesPerPixel);
+    row = row + (y0 * buffer->strideInBytes) + (x0 * buffer->bytesPerPixel);
     
     for(i32 y = y0; y < y1; ++y)
     {
@@ -193,9 +161,9 @@ RenderRectangle(graphics_buffer *buffer, f32 minX, f32 minY, f32 maxX, f32 maxY,
         
         for(i32 x = x0; x < x1; ++x)
         {
-            pixel[x] = ColorToU32(color);
+            *pixel++ = ColorToARGB(color);
         }
         
-        row += stride;
+        row += buffer->strideInBytes;
     }
 }

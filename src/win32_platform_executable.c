@@ -1,10 +1,11 @@
 // ------------------------- SETTINGS ------------------------- \\
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
-#define RENDERER_START RENDERER_SOFTWARE
+#define RENDERER_START RENDERER_OPENGL
 
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+// 1 for origin in bottom left corner ( y is rising upwards )(like in math)
+#define WINDOW_WIDTH 900
+#define WINDOW_HEIGHT 500
 
 // CW_USEDEFAULT == doesnt matter
 #define DEFAULT_WINDOW_POS_X 0
@@ -14,13 +15,16 @@
 
 // 0(invisible) - 255(fully-visible)
 #define WINDOW_TRANSPARENCY 255
+// 0 for origin in top left corner ( y is rising downwards )(like a 2d array)
+#define RENDERER_SOFTWARE_ORIGIN 1
 
+#define DEBUG_BUILD 1
+#define LOG_FPS 1
 // ------------------------- SETTINGS ------------------------- \\
 
 // ------------------------- GENERAL ------------------------- \\
 
 #include <stdint.h>
-#include <assert.h>
 
 typedef char     str8;
 typedef int8_t   i8;
@@ -37,7 +41,10 @@ typedef int8_t   bool8;
 typedef int16_t  bool16;
 typedef int32_t  bool32;
 
-#define global_variable static
+#define global static
+// Variable that persists it's value even if it goes out of scope
+// so pretty much a locally spaced global variable
+#define local_persisit static
 // Function internal to the obj, file
 #define internal static 
 // WARNING(KKrzosa): Only for .CPP
@@ -51,6 +58,9 @@ typedef int32_t  bool32;
 #define Gigabytes(value) (Megabytes(value)*1024LL)
 #define Terabytes(value) (Gigabytes(value)*1024LL)
 
+
+#if DEBUG_BUILD
+
 #define Log(text, ...)         ConsoleLog(text, __VA_ARGS__)
 #define LogInfo(text, ...)     ConsoleLogExtra("INFO:    ", text, __VA_ARGS__)
 #define LogSuccess(text, ...)  ConsoleLogExtra("SUCCESS: ", text, __VA_ARGS__)
@@ -59,7 +69,25 @@ ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA
 
 #define Assert(expression)     if(!(expression)) PrivateSetDebuggerBreakpoint("Assert") 
 #define Error(text)            PrivateSetDebuggerBreakpoint(text)
-#define dbg()                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
+#define dbg                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
+
+#include <assert.h>
+
+#else
+
+#define Log(text, ...)        
+#define LogInfo(text, ...)    
+#define LogSuccess(text, ...)  
+#define LogError(text, ...)
+
+#define Assert(expression)     
+#define Error(text)            
+#define dbg                  
+
+#define assert(expression)
+
+#endif
+
 
 typedef union v2
 {
@@ -78,6 +106,13 @@ typedef union v2
         f32 width;
         f32 height;
     };
+    struct
+    {
+        f32 w;
+        f32 h;
+    };
+    
+    f32 e[2];
 } v2;
 
 typedef union iv2
@@ -92,6 +127,23 @@ typedef union iv2
         i32 width;
         i32 height;
     };
+    struct
+    {
+        i32 w;
+        i32 h;
+    };
+    struct
+    {
+        i32 column;
+        i32 row;
+    };
+    struct
+    {
+        i32 c;
+        i32 r;
+    };
+    
+    i32 e[2];
 } iv2;
 
 // ------------------------- OS_INTERFACE_HEADER ------------------------- \\
@@ -290,7 +342,7 @@ typedef struct operating_system_interface
     f32 audioLatencyMultiplier; 
     
     // Should be accessed through functions
-    // NOTE: user input info, accessed through IsKeyDown etc.
+    // NOTE: user input info, accessed through KeyCheckIfDown etc.
     user_input userInput;
     // NOTE: update time, frame time, app start time
     time_data timeData;
@@ -310,7 +362,7 @@ typedef struct operating_system_interface
     i64    (*TimeGetCounts)();
     u64    (*TimeGetProcessorCycles)();
     
-    i64    (*FileGetSize)(char *filename); 
+    u64    (*FileGetSize)(char *filename); 
     // NOTE: returns bytesRead
     u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead);
     files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
@@ -336,32 +388,50 @@ typedef struct operating_system_interface
 
 #if defined(OS_INTERFACE_IMPLEMENTATION)
 
-#if _MSC_VER
-#define SilentSetDebuggerBreakpoint() {__debugbreak();}
-#else
-#define SilentSetDebuggerBreakpoint() { *(volatile int *)0 = 0;}
-#endif
-
-global_variable operating_system_interface *PrivateOSPointer = 0;
+global operating_system_interface *PrivateOSPointer = 0;
 
 internal void
-AttachOS(operating_system_interface *os)
+OSAttach(operating_system_interface *os)
 {
     assert(os != 0);
     PrivateOSPointer = os;
 }
 
 internal operating_system_interface *
-GetOS()
+OSGet()
 {
     assert(PrivateOSPointer != 0);
     return PrivateOSPointer;
 }
 
-internal bool32
-IsKeyPressedOnce(keyboard_keys KEY)
+internal graphics_buffer *
+GraphicsBufferGet()
 {
-    operating_system_interface *os = GetOS();
+    graphics_buffer *result = &OSGet()->graphicsBuffer;
+    
+    return result;
+}
+
+internal memory_storage *
+PernamentStorageGet()
+{
+    memory_storage *result = &OSGet()->pernamentStorage;
+    
+    return result;
+}
+
+internal memory_storage *
+TemporaryStorageGet()
+{
+    memory_storage *result = &OSGet()->temporaryStorage;
+    
+    return result;
+}
+
+internal bool32
+KeyCheckIfDownOnce(keyboard_keys KEY)
+{
+    operating_system_interface *os = OSGet();
     
     if(os->userInput.keyboard.previousKeyState[KEY] == 0 &&
        os->userInput.keyboard.currentKeyState[KEY] == 1)
@@ -373,9 +443,9 @@ IsKeyPressedOnce(keyboard_keys KEY)
 }
 
 internal bool32
-IsKeyUnpressedOnce(keyboard_keys KEY)
+KeyCheckIfUpOnce(keyboard_keys KEY)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     if(os->userInput.keyboard.previousKeyState[KEY] == 1 &&
        os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -386,9 +456,9 @@ IsKeyUnpressedOnce(keyboard_keys KEY)
 }
 
 internal bool32
-IsKeyDown(keyboard_keys KEY)
+KeyCheckIfDown(keyboard_keys KEY)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     if(os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
         return true;
@@ -397,9 +467,9 @@ IsKeyDown(keyboard_keys KEY)
 }
 
 internal bool32
-IsKeyUp(keyboard_keys KEY)
+KeyCheckIfUp(keyboard_keys KEY)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     if(os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -409,16 +479,16 @@ IsKeyUp(keyboard_keys KEY)
 }
 
 internal void
-SelectActiveController(i32 index)
+ControllerSelectActive(i32 index)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     os->userInput.selectedController = index;
 }
 
 internal bool32
-IsButtonPressedOnce(controller_buttons BUTTON)
+ControllerCheckIfButtonDownOnce(controller_buttons BUTTON)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 0 &&
@@ -431,9 +501,9 @@ IsButtonPressedOnce(controller_buttons BUTTON)
 }
 
 internal bool32
-IsButtonUnpressedOnce(controller_buttons BUTTON)
+ControllerCheckIfButtonUpOnce(controller_buttons BUTTON)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 1 &&
@@ -446,9 +516,9 @@ IsButtonUnpressedOnce(controller_buttons BUTTON)
 }
 
 internal bool32
-IsButtonDown(controller_buttons BUTTON)
+ControllerCheckIfButtonDown(controller_buttons BUTTON)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 1)
@@ -459,9 +529,9 @@ IsButtonDown(controller_buttons BUTTON)
 }
 
 internal bool32
-IsButtonUp(controller_buttons BUTTON)
+ControllerCheckIfButtonUp(controller_buttons BUTTON)
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 0)
@@ -472,9 +542,9 @@ IsButtonUp(controller_buttons BUTTON)
 }
 
 internal v2
-ControllerLeftStick()
+ControllerGetLeftStick()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
@@ -483,9 +553,9 @@ ControllerLeftStick()
 }
 
 internal v2
-ControllerRightStick()
+ControllerGetRightStick()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
@@ -496,54 +566,54 @@ ControllerRightStick()
 // TODO(KKrzosa): Make it so that we dont have to zero the mousewhell status
 // NOTE(KKrzosa): MouseWheel status is zeroed after the retrival
 internal i32
-MouseWheelStatus()
+MouseGetWheel()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     i32 result = os->userInput.mouse.mouseWheel;
     os->userInput.mouse.mouseWheel = 0;
     return result;
 }
 
 internal i32
-MousePositionX()
+MouseGetPositionX()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->userInput.mouse.mousePosX;
 }
 
 internal i32
-MousePositionY()
+MouseGetPositionY()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->userInput.mouse.mousePosY;
 }
 
 internal iv2
-MousePosition()
+MouseGetPosition()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     iv2 result = {os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
     return result;
 }
 
 internal f32
-AppStartTimeMilliseconds()
+TimeAppStartMilliseconds()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.startAppMilliseconds;
 }
 
 internal i64 
-AppStartTimeCounts()
+TimeAppStartCounts()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.startAppCount;
 }
 
 internal i64 
-AppStartTimeCycles()
+TimeAppStartCycles()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.startAppCycles;
 }
 
@@ -552,58 +622,59 @@ AppStartTimeCycles()
 //                 end frame sleep
 
 internal f32
-UpdateTimeMilliseconds()
+TimeUpdateMilliseconds()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
-UpdateTimeCounts()
+TimeUpdateCounts()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateCount;
 }
 
 internal i64 
-UpdateTimeCycles()
+TimeUpdateCycles()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateCycles;
 }
 
 // NOTE: Frame == entire length of a single frame
 
+
 internal f32
-FrameTimeMilliseconds()
+TimeFrameMilliseconds()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
-FrameTimeCounts()
+TimeFrameCounts()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateCount;
 }
 
 internal i64 
-FrameTimeCycles()
+TimeFrameCycles()
 {
-    operating_system_interface *os = GetOS();
+    operating_system_interface *os = OSGet();
     return os->timeData.updateCycles;
 }
 
 inline internal f32
-MillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
+TimeMillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
 {
     return (1 / millisecondsPerFrame) * 1000;
 }
 
 
-#define ConsoleLog(text, ...) GetOS()->Log(text, __VA_ARGS__)
-#define ConsoleLogExtra(prepend, text, ...) GetOS()->LogExtra(prepend, text, __VA_ARGS__)
+#define ConsoleLog(text, ...) OSGet()->Log(text, __VA_ARGS__)
+#define ConsoleLogExtra(prepend, text, ...) OSGet()->LogExtra(prepend, text, __VA_ARGS__)
 
 // ------------------------- OS_INTERFACE ------------------------- \\
 
@@ -633,7 +704,7 @@ internal void
 OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
 {
     // NOTE: Expands to, for example gl.UseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLLoadProcedures("glUseProgram");
-#define GLLoad(name, type) gl##name = (PFNGL##type##PROC)OpenGLLoadProcedures("gl" #name);
+#define GLLoad(name, type) gl##name = (PFNGL##type##PROC)OpenGLLoadProcedures((char *)"gl" #name);
     
     // NOTE: Load main OpenGL functions using a macro
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLLoadProcedures("glUseProgram");
@@ -685,22 +756,20 @@ typedef struct win32_offscreen_buffer
 
 
 // Loop status, the app closes if it equals 0
-global_variable bool32 GLOBALApplicationIsRunning; 
-global_variable bool32 GLOBALSleepIsGranular;
-global_variable i64    GLOBALCountsPerSecond;
+global bool32 GLOBALApplicationIsRunning; 
+global bool32 GLOBALSleepIsGranular;
+global i64    GLOBALCountsPerSecond;
 
-global_variable f32    GLOBALMonitorRefreshRate;
-global_variable bool32 GLOBALVSyncState;
+global f32    GLOBALMonitorRefreshRate;
+global bool32 GLOBALVSyncState;
 
-global_variable enum_renderer GLOBALRenderer;
-global_variable win32_offscreen_buffer GLOBALGraphicsBuffer;
+global enum_renderer GLOBALRenderer;
+global win32_offscreen_buffer GLOBALGraphicsBuffer;
 
-global_variable HWND   GLOBALWindow;
-global_variable HANDLE GLOBALConsoleHandle;
+global HWND   GLOBALWindow;
+global HANDLE GLOBALConsoleHandle;
 
 /* TODO: 
- * memory stuff
- * string api that allows for custom memory allocator
  * fullscreen
  * better window resize handling
  * lock the resizing?
@@ -1003,14 +1072,16 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
     }
     else
     {
-        LogInfo("Missed framerate!");
+        //LogInfo("Missed framerate!");
     }
     
     time->frameCount = Win32PerformanceCountGet() - *prevFrame;
     time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
     time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
     
-    //LogInfo("%f frame %f update", time->frameMilliseconds, time->updateMilliseconds);
+#if LOG_FPS
+    LogInfo("%f frame %f update", time->frameMilliseconds, time->updateMilliseconds);
+#endif
     *prevFrameCycles = ProcessorClockCycles();
     *prevFrame = Win32PerformanceCountGet();
 }
@@ -1039,7 +1110,7 @@ Win32OpenGLLoadProcedures(char *name)
     return p;
 }
 
-// Pass 1 to enable vsync
+// TODO(KKrzosa): return error if failed and switch to software renderer
 internal HGLRC
 Win32OpenGLInit(HDC deviceContext)
 {
@@ -1148,7 +1219,7 @@ Win32OpenGLAspectRatioUpdate(i32 ratioWidth, i32 ratioHeight)
 }
 
 // NOTE: Vsync is an openGL extension so it can fail
-//       @returns true if success 
+//       @return true if success 
 internal bool32
 Win32OpenGLSetVSync(bool32 state)
 {
@@ -1186,7 +1257,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int width, int height)
     // in the bitmap, not the bottom left!
     Buffer->info.bmiHeader.biSize = sizeof(Buffer->info.bmiHeader);
     Buffer->info.bmiHeader.biWidth = Buffer->width;
-    Buffer->info.bmiHeader.biHeight = -Buffer->height;
+    if(RENDERER_SOFTWARE_ORIGIN) Buffer->info.bmiHeader.biHeight = Buffer->height;
+    else Buffer->info.bmiHeader.biHeight = -Buffer->height;
     Buffer->info.bmiHeader.biPlanes = 1;
     Buffer->info.bmiHeader.biBitCount = 32;
     Buffer->info.bmiHeader.biCompression = BI_RGB;
@@ -2345,8 +2417,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
                                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                    DEFAULT_WINDOW_POS_X, 
                                    DEFAULT_WINDOW_POS_Y, 
-                                   CW_USEDEFAULT, 
-                                   CW_USEDEFAULT, 
+                                   WINDOW_WIDTH, 
+                                   WINDOW_HEIGHT, 
                                    0, 0, instance, 0);
     
     if(!GLOBALWindow) {LogError("Create Window"); return 0;}

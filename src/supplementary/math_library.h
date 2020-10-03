@@ -8,6 +8,101 @@
 // multiply by radians to get degrees
 #define RAD2DEG (180.0f/PI)
 
+#if defined(KRZ_MATH_STANDALONE)
+
+// Vector 2 { x, y }
+typedef union v2
+{
+    struct
+    {
+        f32 x;
+        f32 y;
+    };
+    struct 
+    {
+        f32 u;
+        f32 v;
+    };
+    struct
+    {
+        f32 width;
+        f32 height;
+    };
+    struct
+    {
+        f32 w;
+        f32 h;
+    };
+    
+    f32 e[2];
+} v2;
+
+// Integer Vector2 
+typedef union iv2
+{
+    struct
+    {
+        i32 x;
+        i32 y;
+    };
+    struct
+    {
+        i32 width;
+        i32 height;
+    };
+    struct
+    {
+        i32 w;
+        i32 h;
+    };
+    struct
+    {
+        i32 column;
+        i32 row;
+    };
+    struct
+    {
+        i32 c;
+        i32 r;
+    };
+    
+    i32 e[2];
+} iv2;
+
+
+#endif
+// Unsigned Integer Vector2 
+typedef union uv2
+{
+    struct
+    {
+        u32 x;
+        u32 y;
+    };
+    struct
+    {
+        u32 width;
+        u32 height;
+    };
+    struct
+    {
+        u32 w;
+        u32 h;
+    };
+    struct
+    {
+        u32 column;
+        u32 row;
+    };
+    struct
+    {
+        u32 c;
+        u32 r;
+    };
+    
+    u32 e[2];
+} uv2;
+
 // Vector 3 
 typedef union v3
 {
@@ -26,13 +121,15 @@ typedef union v3
     struct
     {
         v2 xy;
-        f32 z;
+        f32 z_unused;
     };
     struct
     {
-        f32 x;
+        f32 x_unused;
         v2 yz;
     };
+    
+    f32 e[3];
 } v3;
 
 
@@ -48,8 +145,8 @@ typedef union v4
     };
     struct
     {
-        f32 x;
-        f32 y;
+        f32 x_unused;
+        f32 y_unused;
         f32 width;
         f32 height;
     };
@@ -62,14 +159,26 @@ typedef union v4
     };
     struct
     {
-        v3 xyz;
-        f32 w;
+        v2 xy_unused1;
+        v2 widthHeight;
     };
     struct
     {
-        v2 xy;
+        v2 xy_unused2;
+        v2 wh;
+    };
+    struct
+    {
+        v3 xyz;
+        f32 w_unused3;
+    };
+    struct
+    {
+        v2 xy_unused4;
         v2 zw;
-    } ;
+    };
+    
+    f32 e[4];
 } v4;
 
 // Matrix 4x4
@@ -79,8 +188,179 @@ typedef struct m4x4
     f32 e[4][4];
 } m4x4;
 
+inline f32
+Round(f32 value)
+{
+    f32 result = roundf(value);
+    return result;
+}
 
-inline v2
+inline f32
+Floor(f32 value)
+{
+    f32 result = floorf(value);
+    return result;
+}
+
+inline i32
+RoundF32ToI32(f32 val)
+{
+    i32 result = (i32)Round(val);
+    
+    return result;
+}
+
+inline iv2
+RoundV2ToIv2(v2 a)
+{
+    iv2 result;
+    
+    result.x = RoundF32ToI32(a.x);
+    result.y = RoundF32ToI32(a.y);
+    
+    return result;
+}
+
+// WARNING(KKrzosa): Rounding works differently for minus values
+// because we are using a type conversion here
+inline u32
+RoundF32ToU32(f32 val)
+{
+    u32 result = (u32)(val + 0.5f);
+    
+    return result;
+}
+
+// WARNING(KKrzosa): Rounding works differently for minus values
+// because we are using a type conversion here
+inline i32
+TruncateF32ToI32(f32 val)
+{
+    i32 result = (i32)(val);
+    
+    return result;
+}
+
+// WARNING(KKrzosa): Rounding works differently for minus values
+// because we are using a type conversion here
+inline iv2
+TruncateV2ToIv2(v2 a)
+{
+    iv2 result;
+    
+    result.x = TruncateF32ToI32(a.x);
+    result.y = TruncateF32ToI32(a.y);
+    
+    return result;
+}
+
+// WARNING(KKrzosa): Rounding works differently for minus values
+// because we are using a type conversion here
+inline u32
+TruncateF32ToU32(f32 val)
+{
+    u32 result = (u32)(val);
+    
+    return result;
+}
+
+
+inline i32
+FloorF32ToI32(f32 value)
+{
+    i32 result = (i32)Floor(value);
+    return result;
+}
+
+internal bool 
+CollisionCheck(v4 rec1, v4 rec2)
+{
+    bool result = false;
+    
+    if ((rec1.x < (rec2.x + rec2.width) && (rec1.x + rec1.width) > rec2.x) &&
+        (rec1.y < (rec2.y + rec2.height) && (rec1.y + rec1.height) > rec2.y)) result = true;
+    
+    return result;
+}
+
+internal bool 
+CollisionCheck(v2 point, v4 rec)
+{
+    bool result = false;
+    
+    if ((point.x >= rec.x) && (point.x <= (rec.x + rec.width)) && (point.y >= rec.y) && (point.y <= (rec.y + rec.height))) result = true;
+    
+    return result;
+}
+
+inline u32
+ColorToARGB(v4 color)
+{
+    u8 alpha = RoundF32ToU32(color.a * 255);
+    u8 red =   RoundF32ToU32(color.r * 255);
+    u8 green = RoundF32ToU32(color.g * 255);
+    u8 blue =  RoundF32ToU32(color.b * 255);
+    
+    u32 result = (alpha << 24 | red << 16 | green << 8 | blue << 0);
+    
+    return result;
+}
+
+internal i32
+Clamp(i32 min, i32 val, i32 max)
+{
+    if(val > max) return max;
+    if(val < min) return min;
+    else          return val;
+}
+
+internal u32
+Clamp(u32 min, u32 val, u32 max)
+{
+    if(val > max) return max;
+    if(val < min) return min;
+    else          return val;
+}
+
+internal f32
+Clamp(f32 min, f32 val, f32 max)
+{
+    if(val > max) return max;
+    if(val < min) return min;
+    else          return val;
+}
+
+// #define Min(a, b) (a) > (b) ? (b) : (a)
+// #define Max(a, b) (a) > (b) ? (a) : (b)
+internal i32
+Min(i32 a, i32 b)
+{
+    if(a > b) return b;
+    else      return a;
+}
+
+internal i32
+Max(i32 a, i32 b)
+{
+    if(a > b) return a;
+    else      return b;
+}
+
+internal f32
+Min(f32 a, f32 b)
+{
+    if(a > b) return b;
+    else      return a;
+}
+
+internal f32
+Max(f32 a, f32 b)
+{
+    if(a > b) return a;
+    else      return b;
+}
+
+v2
 operator+(v2 a, v2 b)
 {
     v2 result;
@@ -91,7 +371,7 @@ operator+(v2 a, v2 b)
     return result;
 }
 
-inline v2
+v2
 operator-(v2 a, v2 b)
 {
     v2 result;
@@ -102,25 +382,54 @@ operator-(v2 a, v2 b)
     return result;
 }
 
-inline v2
-operator*(v2 a, v2 b)
+v2 &
+operator+=(v2 &a, v2 b)
 {
-    v2 result = {a.x * b.x, a.y * b.y};
+    a.x = a.x + b.x;
+    a.y = a.y + b.y;
     
-    return result;
+    return a;
 }
 
-inline v2
-operator/(v2 a, v2 b)
+v2 &
+operator-=(v2 &a, v2 b)
 {
-    v2 result = {a.x / b.x, a.y / b.y};
+    a.x = a.x - b.x;
+    a.y = a.y - b.y;
     
-    return result;
+    return a;
+}
+
+v2 &
+operator*=(v2 &a, v2 b)
+{
+    a.x = a.x * b.x;
+    a.y = a.y * b.y;
+    
+    return a;
+}
+
+v2 &
+operator*=(v2 &a, f32 b)
+{
+    a.x = a.x * b;
+    a.y = a.y * b;
+    
+    return a;
+}
+
+v2 &
+operator/=(v2 &a, v2 b)
+{
+    a.x = a.x / b.x;
+    a.y = a.y / b.y;
+    
+    return a;
 }
 
 // scalar
 
-inline v2
+v2
 operator*(v2 a, f32 b)
 {
     v2 result = {a.x * b, a.y * b};
@@ -128,7 +437,15 @@ operator*(v2 a, f32 b)
     return result;
 }
 
-inline v2
+v2
+operator*(f32 b, v2 a)
+{
+    v2 result = {a.x * b, a.y * b};
+    
+    return result;
+}
+
+v2
 operator/(v2 a, f32 b)
 {
     v2 result = {a.x / b, a.y / b};
@@ -156,11 +473,158 @@ Print(v2 a)
     Log("[ %f %f %f ]\n", a.x, a.y);
 }
 
+v2
+operator-(v2 a, iv2 b)
+{
+    v2 result;
+    
+    result.x = a.x - (f32)b.x;
+    result.y = a.y - (f32)b.y;
+    
+    return result;
+}
+
+//
+// Int Vector 2
+//
+
+
+iv2
+operator+(iv2 a, iv2 b)
+{
+    iv2 result;
+    
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    
+    return result;
+}
+
+iv2
+operator-(iv2 a, iv2 b)
+{
+    iv2 result;
+    
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    
+    return result;
+}
+
+iv2
+operator*(iv2 a, iv2 b)
+{
+    iv2 result;
+    
+    result.x = a.x * b.x;
+    result.y = a.y * b.y;
+    
+    return result;
+}
+
+iv2
+operator/(iv2 a, iv2 b)
+{
+    iv2 result;
+    
+    result.x = a.x / b.x;
+    result.y = a.y / b.y;
+    
+    return result;
+}
+
+iv2
+operator*(iv2 a, i32 b)
+{
+    iv2 result;
+    
+    result.x = a.x * b;
+    result.y = a.y * b;
+    
+    return result;
+}
+iv2
+operator/(iv2 a, i32 b)
+{
+    iv2 result;
+    
+    result.x = a.x / b;
+    result.y = a.y / b;
+    
+    return result;
+}
+iv2
+operator+(iv2 a, i32 b)
+{
+    iv2 result;
+    
+    result.x = a.x + b;
+    result.y = a.y + b;
+    
+    return result;
+}
+iv2
+operator-(iv2 a, i32 b)
+{
+    iv2 result;
+    
+    result.x = a.x - b;
+    result.y = a.y - b;
+    
+    return result;
+}
+
+iv2 &
+operator+=(iv2 &a, iv2 b)
+{
+    a.x = a.x + b.x;
+    a.y = a.y + b.y;
+    
+    return a;
+}
+
+bool32
+operator!=(iv2 a, i32 b)
+{
+    bool32 result = true;
+    
+    if(a.x == b) result = false;
+    if(a.y == b) result = false;
+    
+    
+    return result;
+}
+
+bool32
+operator!=(iv2 a, iv2 b)
+{
+    bool32 result = false;
+    
+    if(a.x != b.x) result = true;
+    if(a.y != b.y) result = true;
+    
+    
+    return result;
+}
+
+bool32
+operator==(iv2 a, i32 b)
+{
+    bool32 result = true;
+    
+    if(a.x != b) result = false;
+    if(a.y != b) result = false;
+    
+    
+    return result;
+}
+
+
 //
 // Vector3
 //
 
-inline v3
+v3
 operator+(v3 a, v3 b)
 {
     v3 result;
@@ -172,7 +636,7 @@ operator+(v3 a, v3 b)
     return result;
 }
 
-inline v3
+v3
 operator-(v3 a, v3 b)
 {
     v3 result;
@@ -184,7 +648,7 @@ operator-(v3 a, v3 b)
     return result;
 }
 
-inline v3
+v3
 operator*(v3 a, v3 b)
 {
     v3 result = {a.x * b.x, a.y * b.y, a.z * b.z};
@@ -192,7 +656,7 @@ operator*(v3 a, v3 b)
     return result;
 }
 
-inline v3
+v3
 operator/(v3 a, v3 b)
 {
     v3 result = {a.x / b.x, a.y / b.y, a.z / b.z};
@@ -200,7 +664,7 @@ operator/(v3 a, v3 b)
     return result;
 }
 
-inline v3
+v3
 operator-(v3 result)
 {
     result.x = -result.x;
@@ -209,7 +673,7 @@ operator-(v3 result)
     
     return result;
 }
-inline v2
+v2
 operator-(v2 result)
 {
     result.x = -result.x;
@@ -217,7 +681,7 @@ operator-(v2 result)
     
     return result;
 }
-inline v4
+v4
 operator-(v4 result)
 {
     result.x = -result.x;
@@ -230,7 +694,7 @@ operator-(v4 result)
 
 // scalar
 
-inline v3
+v3
 operator*(v3 a, f32 b)
 {
     v3 result = {a.x * b, a.y * b, a.z * b};
@@ -238,7 +702,7 @@ operator*(v3 a, f32 b)
     return result;
 }
 
-inline v3
+v3
 operator/(v3 a, f32 b)
 {
     v3 result = {a.x / b, a.y / b, a.z / b};
@@ -263,13 +727,13 @@ Cross(v3 a, v3 b)
     return result;
 }
 
-inline void 
+void 
 Print(v3 a)
 {
     Log("[ %f %f %f ]\n", a.x, a.y, a.z);
 }
 
-inline void 
+void 
 Print(v4 a)
 {
     Log("[ %f %f %f %f ]\n", a.x, a.y, a.z, a.w);
@@ -279,7 +743,7 @@ Print(v4 a)
 // MATRIX 4x4
 //
 
-inline v4
+v4
 operator*(m4x4 a, v4 b)
 {
     // [row][column]
@@ -293,7 +757,7 @@ operator*(m4x4 a, v4 b)
     return result;
 }
 
-inline m4x4
+m4x4
 operator*(m4x4 a, m4x4 b)
 {
     // [row][column]
@@ -310,7 +774,7 @@ operator*(m4x4 a, m4x4 b)
     return result;
 }
 
-inline m4x4
+m4x4
 operator*=(m4x4 &result, m4x4 a)
 {
     result = result * a;
@@ -492,7 +956,7 @@ Scale(m4x4 matrix, v3 vector)
     return result;
 }
 
-inline void
+void
 Print(m4x4 matrix)
 {
     for(i32 y = 0; y < 4; y++)
