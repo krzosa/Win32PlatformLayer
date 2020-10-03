@@ -11,12 +11,17 @@ There is still alot of features that I would like to see here like file io, memo
 * Input (Keyboard, mouse, xbox controller) interface
 * Locked framerate / high precision timers 
 * String library
-* etc.
+
+## How to build 
+
+Prerequisite: https://visualstudio.microsoft.com/pl/downloads/ (preferably VS Studio 2019 Community)(utility scripts wont work for VS newer than 2019)
+
+
 
 ## Resources:
 
 * https://hero.handmade.network/episode/code - Mostly inspired by Casey's videos (1-25 + OpenGL + lots of random episodes) Superb series on programming in general, I learned a ton.
-* https://github.com/ryanfleury/app_template - I stole general structure of the project from here because I really liked it, also helped me a ton with setting up WASAPI in C, "include trick" -> opengl_procedures.include.
+* https://github.com/ryanfleury/app_template - helped me a ton with setting up WASAPI in C, "include trick" -> opengl_procedures.include.
 * https://gist.github.com/mmozeiko/38c64bb65855d783645c#file-win32_handmade-cpp-L879 - Help with WASAPI 
 * https://hero.handmade.network/forums/code-discussion/t/102-day_19_-_audio_latency - Help with WASAPI
 
