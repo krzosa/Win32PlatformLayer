@@ -16,7 +16,8 @@ There is still alot of features that I would like to see here like file io, memo
 
 Prerequisite: https://visualstudio.microsoft.com/pl/downloads/ (preferably VS Studio 2019 Community)(utility scripts wont work for VS newer than 2019)
 
-
+1. Open terminal and run the utilities/upgrade_cmd64.bat 
+2. From the same terminal run msvc-full-build.bat
 
 ## Resources:
 
