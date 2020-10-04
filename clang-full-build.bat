@@ -1,5 +1,7 @@
 @echo off
 
+call utilities\\upgrade_cmd64
+
 mkdir bin
 cd bin
 

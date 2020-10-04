@@ -1,6 +1,6 @@
 @echo off
 mkdir bin
-call utils\\upgrade_cmd64
+call utilities\\upgrade_cmd64
 
 set EXE_NAME=-Fe: "app"
 set DLL_NAME=-Fe: "app_code"

@@ -267,27 +267,18 @@ typedef struct user_input
 
 typedef struct time_data
 {
-    // READ ONLY
-    // NOTE: count is a very granular unit of time
-    // countsPerSecond says how many counts there are per second
-    // I would advice to only use counts for debugging 
-    i64 countsPerSecond;
-    
     // TimeStamp taken at the program start
     // Cycles as in processor clock cycles
     u64 startAppCycles;
-    u64 startAppCount;
-    f32 startAppMilliseconds;
+    f64 startAppMilliseconds;
     
     // Length of the update, without the sleep 
     u64 updateCycles;
-    i64 updateCount;
-    f32 updateMilliseconds;
+    f64 updateMilliseconds;
     
     // Length of the update, with sleep
     u64 frameCycles;
-    i64 frameCount;
-    f32 frameMilliseconds;
+    f64 frameMilliseconds;
 } time_data;
 
 typedef struct file_contents
@@ -348,7 +339,7 @@ typedef struct operating_system_interface
     time_data timeData;
     
     // NOTE: you can change fps by changing this value
-    f32 targetFramesPerSecond;
+    f64 targetFramesPerSecond;
     enum_renderer currentRenderer;
     
     // NOTE(KKrzosa): For software rendering
@@ -358,8 +349,7 @@ typedef struct operating_system_interface
     void   (*Log)(char *text, ...);
     void   (*LogExtra)(char *prepend, char *text, ...);
     
-    f32    (*TimeGetMilliseconds)();
-    i64    (*TimeGetCounts)();
+    f64    (*TimeGetMilliseconds)();
     u64    (*TimeGetProcessorCycles)();
     
     u64    (*FileGetSize)(char *filename); 
@@ -596,18 +586,11 @@ MouseGetPosition()
     return result;
 }
 
-internal f32
+internal f64
 TimeAppStartMilliseconds()
 {
     operating_system_interface *os = OSGet();
     return os->timeData.startAppMilliseconds;
-}
-
-internal i64 
-TimeAppStartCounts()
-{
-    operating_system_interface *os = OSGet();
-    return os->timeData.startAppCount;
 }
 
 internal i64 
@@ -621,18 +604,11 @@ TimeAppStartCycles()
 // NOTE: Update == how long it took to process all the things in a frame without the 
 //                 end frame sleep
 
-internal f32
+internal f64
 TimeUpdateMilliseconds()
 {
     operating_system_interface *os = OSGet();
     return os->timeData.updateMilliseconds;
-}
-
-internal i64 
-TimeUpdateCounts()
-{
-    operating_system_interface *os = OSGet();
-    return os->timeData.updateCount;
 }
 
 internal i64 
@@ -645,18 +621,11 @@ TimeUpdateCycles()
 // NOTE: Frame == entire length of a single frame
 
 
-internal f32
+internal f64
 TimeFrameMilliseconds()
 {
     operating_system_interface *os = OSGet();
     return os->timeData.updateMilliseconds;
-}
-
-internal i64 
-TimeFrameCounts()
-{
-    operating_system_interface *os = OSGet();
-    return os->timeData.updateCount;
 }
 
 internal i64 
@@ -666,8 +635,8 @@ TimeFrameCycles()
     return os->timeData.updateCycles;
 }
 
-inline internal f32
-TimeMillisecondsToFramesPerSecond(f32 millisecondsPerFrame)
+inline internal f64
+TimeMillisecondsToFramesPerSecond(f64 millisecondsPerFrame)
 {
     return (1 / millisecondsPerFrame) * 1000;
 }
@@ -979,20 +948,20 @@ Win32PerformanceCountGet()
     return count.QuadPart;
 }
 
-inline internal f32
+inline internal f64
 Win32SecondsGet()
 {
     LARGE_INTEGER count;
     QueryPerformanceCounter(&count);
-    return ((f32)count.QuadPart / (f32)GLOBALCountsPerSecond);
+    return ((f64)count.QuadPart / (f64)GLOBALCountsPerSecond);
 }
 
-inline internal f32
+inline internal f64
 Win32MillisecondsGet()
 {
     LARGE_INTEGER count;
     QueryPerformanceCounter(&count);
-    return ((f32)(count.QuadPart * 1000) / (f32)GLOBALCountsPerSecond);
+    return ((f64)(count.QuadPart * 1000) / (f64)GLOBALCountsPerSecond);
 }
 
 // NOTE: Frequency = the number of counts per second
@@ -1004,42 +973,42 @@ Win32PerformanceFrequencyGet()
     return countsPerSecondResult.QuadPart;
 }
 
-inline internal f32
+inline internal f64
 PerformanceCountToMilliseconds(i64 count)
 {
-    f32 result = (f32)(count * 1000.0f) / (f32)GLOBALCountsPerSecond;
+    f64 result = (f64)(count * 1000.0f) / (f64)GLOBALCountsPerSecond;
     return result;
 }
 
-inline internal f32
+inline internal f64
 PerformanceCountToSeconds(i64 count)
 {
-    f32 result = (f32)count / (f32)GLOBALCountsPerSecond;
+    f64 result = (f64)count / (f64)GLOBALCountsPerSecond;
     return result;
 }
 
-inline internal f32
+inline internal f64
 PerformanceCountToFramesPerSecond(i64 count)
 {
-    f32 result = 1 / ((f32)count / (f32)GLOBALCountsPerSecond);
+    f64 result = 1 / ((f64)count / (f64)GLOBALCountsPerSecond);
     return result;
 }
 
-inline internal f32
-MillisecondsPerFrameToFramesPerSecond(f32 millisecondsPerFrame)
+inline internal f64
+MillisecondsPerFrameToFramesPerSecond(f64 millisecondsPerFrame)
 {
     return (1 / millisecondsPerFrame) * 1000;
 }
 
 internal void
-EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *prevFrameCycles)
+EndFrameAndSleep(time_data *time, f64 targetMsPerFrame, i64 *prevFrame, u64 *prevFrameCycles)
 {
     //
     // NOTE: Time the frame and sleep to hit target framerate
     //
-    time->updateCount = Win32PerformanceCountGet() - *prevFrame;
+    i64 updateCount = Win32PerformanceCountGet() - *prevFrame;
     time->updateCycles = ProcessorClockCycles() - *prevFrameCycles;
-    time->updateMilliseconds = PerformanceCountToMilliseconds(time->updateCount);
+    time->updateMilliseconds = PerformanceCountToMilliseconds(updateCount);
     
     time->frameMilliseconds = time->updateMilliseconds;
     if(time->frameMilliseconds < targetMsPerFrame)
@@ -1047,8 +1016,8 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
         if(GLOBALSleepIsGranular)
         {
             // TODO: Test on varied frame rate
-            f32 sleepOffset = targetMsPerFrame / 8.f;
-            f32 timeToSleep = (targetMsPerFrame - time->frameMilliseconds) - sleepOffset;
+            f64 sleepOffset = targetMsPerFrame / 8.f;
+            f64 timeToSleep = (targetMsPerFrame - time->frameMilliseconds) - sleepOffset;
             if(timeToSleep > 0)
             {
                 Sleep((DWORD)timeToSleep);
@@ -1056,8 +1025,8 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
         }
         
         // NOTE: report if slept too much
-        time->frameCount = Win32PerformanceCountGet() - *prevFrame;
-        time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
+        i64 frameCount = Win32PerformanceCountGet() - *prevFrame;
+        time->frameMilliseconds = PerformanceCountToMilliseconds(frameCount);
         if(time->frameMilliseconds > targetMsPerFrame) 
         {
             LogInfo("Slept too much!");
@@ -1066,8 +1035,8 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
         // NOTE: stall if we didnt hit the final ms per frame
         while(time->frameMilliseconds < targetMsPerFrame)
         {
-            time->frameCount = Win32PerformanceCountGet() - *prevFrame;
-            time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
+            frameCount = Win32PerformanceCountGet() - *prevFrame;
+            time->frameMilliseconds = PerformanceCountToMilliseconds(frameCount);
         }
     }
     else
@@ -1075,8 +1044,8 @@ EndFrameAndSleep(time_data *time, f32 targetMsPerFrame, i64 *prevFrame, u64 *pre
         //LogInfo("Missed framerate!");
     }
     
-    time->frameCount = Win32PerformanceCountGet() - *prevFrame;
-    time->frameMilliseconds = PerformanceCountToMilliseconds(time->frameCount);
+    i64 frameCount = Win32PerformanceCountGet() - *prevFrame;
+    time->frameMilliseconds = PerformanceCountToMilliseconds(frameCount);
     time->frameCycles = ProcessorClockCycles() - *prevFrameCycles;
     
 #if LOG_FPS
@@ -2075,7 +2044,7 @@ Win32AudioBufferFill(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
 }
 
 internal u32
-Win32AudioStatusUpdate(win32_audio_data *audioData, f32 currentFramesPerSecond, f32 latencyMultiplier)
+Win32AudioStatusUpdate(win32_audio_data *audioData, f64 currentFramesPerSecond, f32 latencyMultiplier)
 {
     u32 samplesToWrite = 0;
     if(audioData->initialized)
@@ -2393,7 +2362,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     // NOTE: Set timers to application start
     u64 startAppCycles = ProcessorClockCycles();
     i64 startAppCount = Win32PerformanceCountGet();
-    f32 startAppMilliseconds = PerformanceCountToMilliseconds(startAppCount);
+    f64 startAppMilliseconds = PerformanceCountToMilliseconds(startAppCount);
     
     // NOTE: Load XInput(xbox controllers) dynamically 
     Win32XInputLoad();
@@ -2502,10 +2471,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.samplesPerSecond = audioData.samplesPerSecond;
         os.targetFramesPerSecond = GLOBALMonitorRefreshRate;
         
-        os.timeData.startAppCount = startAppCount;
         os.timeData.startAppCycles = startAppCycles;
         os.timeData.startAppMilliseconds = startAppMilliseconds;
-        os.timeData.countsPerSecond = GLOBALCountsPerSecond;
         
         os.currentRenderer = GLOBALRenderer;
         
@@ -2518,7 +2485,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.DirectoryReadAllFiles               = &Win32DirectoryReadAllFiles;
         
         os.TimeGetMilliseconds                 = &Win32MillisecondsGet;
-        os.TimeGetCounts                       = &Win32PerformanceCountGet;
         os.TimeGetProcessorCycles              = &TimeGetProcessorCycles;
         
         os.VSyncSetState                       = &Win32OpenGLSetVSync;
@@ -2586,7 +2552,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             Win32AudioBufferFill(samplesToWrite, os.audioBuffer, &audioData);
         }
         
-        f32 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
+        f64 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
         EndFrameAndSleep(&os.timeData, msPerFrame, &beginFrame, &beginFrameCycles);
         
         ScreenDraw(deviceContext);

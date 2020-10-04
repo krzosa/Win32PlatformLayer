@@ -16,8 +16,13 @@ There is still alot of features that I would like to see here like file io, memo
 
 Prerequisite: https://visualstudio.microsoft.com/pl/downloads/ (preferably VS Studio 2019 Community)(utility scripts wont work for VS newer than 2019)
 
-1. Open terminal and run the utilities/upgrade_cmd64.bat 
-2. From the same terminal run msvc-full-build.bat
+1. Run the msvc-full-build.bat
+
+## Troubleshooting
+
+If upgrade_cmd64.bat has problems finding "vcvarsall.bat" then you need to manualy seek the said script. It should be located in the Visual Studio folder, try using the search folders functionality of windows, vcvarsall upgrades the cmd so that cmd can find microsoft c compiler. Run the "vcvarsall.bat" in your terminal x64 before calling the build script.
+
+Easier method: find a "Developer Command prompt" or "Native Tools x64 Command prompt" in the start menu > Visual Studio, Run the said prompt and call the build script from that prompt
 
 ## Resources:
 
