@@ -1,5 +1,5 @@
-#define PernamentPush(size) StoragePush(&os->pernamentStorage, size)
-#define TemporaryPush(size) StoragePush(&os->temporaryStorage, size)
+#define PernamentPushStruct(struct, os) (struct *)StoragePush(&os->pernamentStorage, sizeof(struct))
+#define TemporaryPushStruct(struct, os) (struct *)StoragePush(&os->temporaryStorage, sizeof(struct))
 
 internal void *
 StoragePush(memory_storage *storage, u64 size)

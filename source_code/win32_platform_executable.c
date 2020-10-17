@@ -69,7 +69,7 @@ ConsoleLogExtra("ERROR %s %s %d: ", text, __FILE__, __FUNCTION__, __LINE__, __VA
 
 #define Assert(expression)     if(!(expression)) PrivateSetDebuggerBreakpoint("Assert") 
 #define Error(text)            PrivateSetDebuggerBreakpoint(text)
-#define dbg                  PrivateSetDebuggerBreakpoint("BREAKPOINT") 
+#define dbg                    PrivateSetDebuggerBreakpoint("BREAKPOINT") 
 
 #include <assert.h>
 
@@ -378,6 +378,8 @@ typedef struct operating_system_interface
 
 #if defined(OS_INTERFACE_IMPLEMENTATION)
 
+void OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name));
+
 global operating_system_interface *PrivateOSPointer = 0;
 
 internal void
@@ -385,6 +387,16 @@ OSAttach(operating_system_interface *os)
 {
     assert(os != 0);
     PrivateOSPointer = os;
+
+    if(os->currentRenderer == RENDERER_OPENGL)
+    {
+        // NOTE: from opengl_procedures.include
+        OpenGLLoadProcedures(os->OpenGLLoadProcedures);
+    }
+    else if(os->currentRenderer == RENDERER_SOFTWARE) 
+    {
+        os->targetFramesPerSecond = 30;
+    }
 }
 
 internal operating_system_interface *
