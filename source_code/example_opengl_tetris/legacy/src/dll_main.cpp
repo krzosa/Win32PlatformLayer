@@ -16,8 +16,8 @@ extern "C" void HotReload(operating_system_interface *operatingSystemInterface)
     // then the bug is caused because of some hot reload meme
     // like the fact that all pointers get purged and stuff
 
-    StorageReset(&os->pernamentStorage);
 
+    StorageReset(&os->pernamentStorage);
     gl = PernamentPushStruct(opengl_context, os);
     OpenGLContextInitialize(gl);
 }
@@ -67,7 +67,7 @@ extern "C" void Update(operating_system_interface *operatingSystemInterface)
     m4x4 viewProjectionMatrix = projectionMatrix * cameraMatrix;
     gl->basicShader.Uniform("viewProjectionMatrix", viewProjectionMatrix);
     
-    BeginDrawing();
+    DrawBegin();
     {
         PushQuad(gl, QuadTextured({100, 300}, {400, 400}, 1));
         PushQuad(gl, QuadTextured({300, 300}, {100, 400}, 2));
@@ -75,7 +75,7 @@ extern "C" void Update(operating_system_interface *operatingSystemInterface)
         PushQuad(gl, QuadColored({500, 100}, {400, 400}, {0,0.7f,0.5f,1.f}));
         PushQuad(gl, QuadColored({2000, 2000}, {400, 400}, {0,0.7f,0.5f,1.f}));
     }
-    EndDrawing();
+    DrawEnd();
 }
 
 

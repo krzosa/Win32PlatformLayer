@@ -17,7 +17,8 @@ external void Initialize(operating_system_interface *os)
     // NOTE: generic opengl triangle example
     // OpenGLTriangleSetup();
     StorageReset(&os->pernamentStorage);
-    gl = PernamentPushStruct(opengl_renderer, os);
+    opengl_renderer *gl = PernamentPushStruct(opengl_renderer, os);
+    OpenGLRendererAttach(gl)
     OpenGLRendererInitialize(gl);
 }
 
@@ -57,7 +58,7 @@ external void Update(operating_system_interface *os)
     m4x4 viewProjectionMatrix = projectionMatrix * cameraMatrix;
     ShaderUniform(gl->basicShader, "viewProjectionMatrix", viewProjectionMatrix);
     
-    BeginDrawing();
+    DrawBegin();
     {
         PushQuad(gl, QuadTextured({100, 300}, {400, 400}, 1));
         PushQuad(gl, QuadTextured({300, 300}, {100, 400}, 2));
@@ -65,7 +66,7 @@ external void Update(operating_system_interface *os)
         PushQuad(gl, QuadColored({500, 100}, {400, 400}, {0,0.7f,0.5f,1.f}));
         PushQuad(gl, QuadColored({2000, 2000}, {400, 400}, {0,0.7f,0.5f,1.f}));
     }
-    EndDrawing();
+    DrawEnd();
 }
 
 // Called when you recomplile while the app is running
@@ -74,7 +75,8 @@ external void HotReload(operating_system_interface *os)
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
     OSAttach(os);
-    gl = PernamentPushStruct(opengl_renderer, os);
+    opengl_renderer *gl = PernamentPushStruct(opengl_renderer, os);
+    OpenGLRendererAttach(gl)
     OpenGLRendererInitialize(gl);
 }
 

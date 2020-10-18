@@ -96,7 +96,26 @@ struct opengl_renderer
 
     camera2d camera;
 };
-global opengl_renderer *gl;
+
+// GLOBAL POINTER
+// Shouldn't be accessed directly because it can lead to
+// weird crashes when the pointer is null and you don't realize
+// Get and Attach functions add Assertions to check for null pointers
+global opengl_renderer *privateOpenGLRenderer;
+
+internal void
+OpenGLRendererAttach(opengl_renderer *gl)
+{
+    Assert(gl != 0);
+    privateOpenGLRenderer = gl;
+}
+
+internal opengl_renderer *
+OpenGLRendererGet()
+{
+    Assert(privateOpenGLRenderer != 0);
+    return privateOpenGLRenderer;
+}
 
 internal i32
 ShaderGetUniformLocation(shader_program shader, char *uniformName)
@@ -442,8 +461,11 @@ QuadColored(v2 position, v2 size, v4 color)
 }
 
 internal void
-OpenGLRendererInitialize(opengl_renderer *renderer)
+OpenGLRendererInitialize()
 {
+    opengl_renderer *renderer = PernamentPushStruct(opengl_renderer, os);
+    OpenGLRendererAttach(renderer)
+
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &renderer->deviceTextureUnitCount);
     glGenBuffers(1, &renderer->vertexBufferIndex);
     glGenBuffers(1, &renderer->elementBufferIndex);
@@ -507,8 +529,10 @@ OpenGLRendererInitialize(opengl_renderer *renderer)
 }
 
 internal void
-OpenGLRendererDestroy(opengl_renderer *renderer)
+OpenGLRendererDestroy()
 {
+    opengl_renderer *renderer = OpenGLRendererGet();
+
     // BUFFERS
     glDeleteBuffers(1, &renderer->vertexBufferIndex);
     glDeleteBuffers(1, &renderer->elementBufferIndex);
@@ -526,11 +550,13 @@ OpenGLRendererDestroy(opengl_renderer *renderer)
 }
 
 internal void
-PushQuad(opengl_renderer *opengl, vertex_rectangle quad)
+PushQuad(vertex_rectangle quad)
 {
-    if(opengl->currentQuadCount < maxQuadCount)
+    renderer_renderer *renderer = OpenGLRendererGet();
+
+    if(renderer->currentQuadCount < maxQuadCount)
     {
-        opengl->quadArray[opengl->currentQuadCount++] = quad;
+        renderer->quadArray[renderer->currentQuadCount++] = quad;
     }
     else
     {
@@ -539,7 +565,7 @@ PushQuad(opengl_renderer *opengl, vertex_rectangle quad)
 }
 
 internal void
-BeginDrawing()
+DrawBegin()
 {
     glClearColor(0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -547,9 +573,15 @@ BeginDrawing()
 }
 
 internal void
-EndDrawing()
+DrawEnd()
 {
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex_rectangle) * gl->currentQuadCount, gl->quadArray);
     glDrawElements(GL_TRIANGLES, 6 * gl->currentQuadCount, GL_UNSIGNED_INT, 0);
     GLPrintErrors();
+}
+
+internal void
+DrawRectangle()
+{
+
 }
