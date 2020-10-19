@@ -164,6 +164,11 @@ typedef union v4
     };
     struct
     {
+        v2 xy;
+        v2 zw;
+    };
+    struct
+    {
         v2 xy_unused2;
         v2 wh;
     };

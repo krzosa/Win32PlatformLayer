@@ -19,7 +19,7 @@
 #define RENDERER_SOFTWARE_ORIGIN 1
 
 #define DEBUG_BUILD 1
-#define LOG_FPS 1
+#define LOG_FPS 0
 // ------------------------- SETTINGS ------------------------- \\
 
 // ------------------------- GENERAL ------------------------- \\
@@ -387,7 +387,7 @@ OSAttach(operating_system_interface *os)
 {
     assert(os != 0);
     PrivateOSPointer = os;
-
+    
     if(os->currentRenderer == RENDERER_OPENGL)
     {
         // NOTE: from opengl_procedures.include

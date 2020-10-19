@@ -12,9 +12,11 @@ bin
 *.o
 
 handmade/
+backup
 run.bat
 compileTime
 aa
+run.bat
 b.bat
 r.bat
 br.bat

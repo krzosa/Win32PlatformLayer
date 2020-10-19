@@ -6,6 +6,10 @@
 #include "stb_image.h"
 #include "opengl_renderer.cpp"
 
+struct game_state
+{
+    
+};
 
 // Called on the start of the app
 external void Initialize(operating_system_interface *os)
@@ -13,24 +17,30 @@ external void Initialize(operating_system_interface *os)
     // NOTE: dll has a global os pointer which simplifies the interface 
     // because we dont have to pass the os pointer around to everything
     OSAttach(os);
-
+    
     // NOTE: generic opengl triangle example
     // OpenGLTriangleSetup();
     StorageReset(&os->pernamentStorage);
-    opengl_renderer *gl = PernamentPushStruct(opengl_renderer, os);
-    OpenGLRendererAttach(gl)
+    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
+                                            opengl_renderer);
+    
     OpenGLRendererInitialize(gl);
+    OpenGLRendererAttach(gl);
 }
 
 // Called on every frame
 external void Update(operating_system_interface *os)
 {
     if(KeyCheckIfDown(KEY_ESC)) os->Quit();
+    StorageReset(&os->pernamentStorage);
+    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
+                                            opengl_renderer);
+    
     
     StorageReset(&os->temporaryStorage);
     if(KeyCheckIfDownOnce(KEY_F1))
     {
-        os->WindowSetTransparency(70);
+        os->WindowSetTransparency(40);
         os->WindowAlwaysOnTop();
     }
     if(KeyCheckIfDownOnce(KEY_F2))
@@ -39,32 +49,12 @@ external void Update(operating_system_interface *os)
         os->WindowNotAlwaysOnTop();
     }
     
-    static f32 offsetX;
-    static f32 offsetY;
-    f32 offsetValue = 10.f;
-    if(KeyCheckIfDown(KEY_D)) offsetX += offsetValue;
-    if(KeyCheckIfDown(KEY_A)) offsetX -= offsetValue;
-    if(KeyCheckIfDown(KEY_S)) offsetY -= offsetValue;
-    if(KeyCheckIfDown(KEY_W)) offsetY += offsetValue;
-    
-    
-    gl->camera.zoom += (f32)(MouseGetWheel() / 8.f);
-    gl->camera.position.x = offsetX;
-    gl->camera.position.y = offsetY;
-    
-    m4x4 cameraMatrix = CameraMatrix(gl->camera);
     m4x4 projectionMatrix = OrtographicProjectionMatrix(0, 1280, 0, 720, 0, 500);
-    
-    m4x4 viewProjectionMatrix = projectionMatrix * cameraMatrix;
-    ShaderUniform(gl->basicShader, "viewProjectionMatrix", viewProjectionMatrix);
+    ShaderUniform(gl->basicShader, "viewProjectionMatrix", projectionMatrix);
     
     DrawBegin();
     {
-        PushQuad(gl, QuadTextured({100, 300}, {400, 400}, 1));
-        PushQuad(gl, QuadTextured({300, 300}, {100, 400}, 2));
-        PushQuad(gl, QuadTextured({500, 500}, {100, 400}, 2));
-        PushQuad(gl, QuadColored({500, 100}, {400, 400}, {0,0.7f,0.5f,1.f}));
-        PushQuad(gl, QuadColored({2000, 2000}, {400, 400}, {0,0.7f,0.5f,1.f}));
+        DrawRectangle({200, 200, 300, 300}, {0,0.7f,0.5f,1.f});
     }
     DrawEnd();
 }
@@ -75,8 +65,11 @@ external void HotReload(operating_system_interface *os)
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
     OSAttach(os);
-    opengl_renderer *gl = PernamentPushStruct(opengl_renderer, os);
-    OpenGLRendererAttach(gl)
+    
+    StorageReset(&os->pernamentStorage);
+    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
+                                            opengl_renderer);
+    OpenGLRendererAttach(gl);
     OpenGLRendererInitialize(gl);
 }
 
@@ -84,5 +77,5 @@ external void HotReload(operating_system_interface *os)
 external void HotUnload(operating_system_interface *os)
 {
     LogInfo("HotUnload");
-    OpenGLRendererDestroy(gl);
+    OpenGLRendererDestroy();
 }
