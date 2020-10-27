@@ -1,5 +1,6 @@
-#define PernamentPushStruct(struct, os) (struct *)StoragePush(&os->pernamentStorage, sizeof(struct))
-#define TemporaryPushStruct(struct, os) (struct *)StoragePush(&os->temporaryStorage, sizeof(struct))
+#define StoragePushStruct(storage, struct) \
+(struct *)StoragePush(storage, sizeof(struct))
+
 
 internal void *
 StoragePush(memory_storage *storage, u64 size)
@@ -13,15 +14,15 @@ StoragePush(memory_storage *storage, u64 size)
         Assert(0);
     }
     u8 *result = (u8 *)storage->memory;
-
+    
     result += storage->allocatedSize;
     storage->allocatedSize += size;
-
+    
     if(storage->allocatedSize > storage->highestAllocatedSize)
     {
         storage->highestAllocatedSize = storage->allocatedSize;
     }
-
+    
     return (void *)result;
 }
 
@@ -30,7 +31,7 @@ StoragePushZero(memory_storage *storage, u64 size)
 {
     void *result = StoragePush(storage, size);
     memset(result, 0, size);
-
+    
     return result;
 }
 
@@ -65,5 +66,5 @@ internal void
 StoragePrint(memory_storage *storage)
 {
     LogInfo("MaxSize: %llu AllocatedSize: %llu, highestAllocatedSize: %llu",
-        storage->maxSize, storage->allocatedSize, storage->highestAllocatedSize);
+            storage->maxSize, storage->allocatedSize, storage->highestAllocatedSize);
 }

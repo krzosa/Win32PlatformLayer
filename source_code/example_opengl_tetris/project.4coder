@@ -30,7 +30,7 @@ command_list = {
             { "./build.sh", .os = "mac"   }, }, },
  { .name = "run",
    .out = "*run*", .footer_panel = false, .save_dirty_files = false,
-   .cmd = { { ".\\bin", .os = "win"   },
+   .cmd = { { ".\\bin\app.exe", .os = "win"   },
             { "./bin" , .os = "linux" },
             { "./bin" , .os = "mac"   }, }, },
 };
