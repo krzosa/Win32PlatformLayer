@@ -678,7 +678,49 @@ TimeMillisecondsToFramesPerSecond(f64 millisecondsPerFrame)
 //       expands to, for example PFNGLBUFFERDATAPROC glBufferData;
 #define GLLoad(name, type) static PFNGL##type##PROC gl##name;
 // NOTE: Load OpenGL function prototypes from file
-#include "opengl_procedures.include"
+//
+// NOTE: fancy macro work, this include is included in 2 different places
+//       one declares the function, the second one loads
+//       the functions dynamically
+// tldr: just place a name of gl function here (without gl) and it should load
+// format: GLLoad(small, BIG)
+//
+
+GLLoad(BindBuffer, BINDBUFFER)
+GLLoad(GenBuffers, GENBUFFERS)
+GLLoad(BufferData, BUFFERDATA)
+GLLoad(BufferSubData, BUFFERSUBDATA)
+GLLoad(DrawRangeElements, DRAWRANGEELEMENTS)
+GLLoad(DrawElementsInstanced, DRAWELEMENTSINSTANCED)
+GLLoad(BindVertexArray, BINDVERTEXARRAY)
+GLLoad(DeleteBuffers, DELETEBUFFERS)
+GLLoad(DeleteVertexArrays, DELETEVERTEXARRAYS)
+GLLoad(DeleteProgram, DELETEPROGRAM)
+GLLoad(GetUniformLocation, GETUNIFORMLOCATION)
+GLLoad(Uniform4f, UNIFORM4F)
+GLLoad(Uniform1f, UNIFORM1F)
+GLLoad(GenerateMipmap, GENERATEMIPMAP)
+GLLoad(ActiveTexture, ACTIVETEXTURE)
+GLLoad(Uniform1i, UNIFORM1I)
+GLLoad(Uniform1iv, UNIFORM1IV)
+GLLoad(UniformMatrix4fv, UNIFORMMATRIX4FV)
+GLLoad(CreateShader, CREATESHADER)
+GLLoad(CompileShader, COMPILESHADER)
+GLLoad(ShaderSource, SHADERSOURCE)
+GLLoad(AttachShader, ATTACHSHADER)
+GLLoad(DeleteShader, DELETESHADER)
+GLLoad(CreateProgram, CREATEPROGRAM)
+GLLoad(LinkProgram, LINKPROGRAM)
+GLLoad(UseProgram, USEPROGRAM)
+GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
+GLLoad(GetShaderiv, GETSHADERIV)
+GLLoad(GetProgramiv, GETPROGRAMIV)
+GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
+GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
+GLLoad(GenVertexArrays, GENVERTEXARRAYS)
+
 #undef GLLoad // undefine GLLoad macro
 
 internal void
@@ -689,7 +731,50 @@ OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
     
     // NOTE: Load main OpenGL functions using a macro
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLLoadProcedures("glUseProgram");
-#include "opengl_procedures.include" // include OpenGL functions to load
+//
+// NOTE: fancy macro work, this include is included in 2 different places
+//       one declares the function, the second one loads
+//       the functions dynamically
+// tldr: just place a name of gl function here (without gl) and it should load
+// format: GLLoad(small, BIG)
+//
+
+GLLoad(BindBuffer, BINDBUFFER)
+GLLoad(GenBuffers, GENBUFFERS)
+GLLoad(BufferData, BUFFERDATA)
+GLLoad(BufferSubData, BUFFERSUBDATA)
+GLLoad(DrawRangeElements, DRAWRANGEELEMENTS)
+GLLoad(DrawElementsInstanced, DRAWELEMENTSINSTANCED)
+GLLoad(BindVertexArray, BINDVERTEXARRAY)
+GLLoad(DeleteBuffers, DELETEBUFFERS)
+GLLoad(DeleteVertexArrays, DELETEVERTEXARRAYS)
+GLLoad(DeleteProgram, DELETEPROGRAM)
+GLLoad(GetUniformLocation, GETUNIFORMLOCATION)
+GLLoad(Uniform4f, UNIFORM4F)
+GLLoad(Uniform1f, UNIFORM1F)
+GLLoad(GenerateMipmap, GENERATEMIPMAP)
+GLLoad(ActiveTexture, ACTIVETEXTURE)
+GLLoad(Uniform1i, UNIFORM1I)
+GLLoad(Uniform1iv, UNIFORM1IV)
+GLLoad(UniformMatrix4fv, UNIFORMMATRIX4FV)
+GLLoad(CreateShader, CREATESHADER)
+GLLoad(CompileShader, COMPILESHADER)
+GLLoad(ShaderSource, SHADERSOURCE)
+GLLoad(AttachShader, ATTACHSHADER)
+GLLoad(DeleteShader, DELETESHADER)
+GLLoad(CreateProgram, CREATEPROGRAM)
+GLLoad(LinkProgram, LINKPROGRAM)
+GLLoad(UseProgram, USEPROGRAM)
+GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
+GLLoad(GetShaderiv, GETSHADERIV)
+GLLoad(GetProgramiv, GETPROGRAMIV)
+GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
+GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
+GLLoad(GenVertexArrays, GENVERTEXARRAYS)
+
+
 #undef GLLoad // undefine GLLoad macro 
     
     LogSuccess("OpenGL functions loaded");
