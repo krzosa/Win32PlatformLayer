@@ -1,7 +1,7 @@
 #define OS_INTERFACE_IMPLEMENTATION
 #include "win32_platform_executable.c"
-#include "supplementary/math_library.h"
-#include "supplementary/memory_storage_library.cpp"
+#include "math_library.h"
+#include "memory_storage.c"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "opengl_renderer.cpp"
@@ -18,11 +18,12 @@ external void Initialize(operating_system_interface *os)
     // because we dont have to pass the os pointer around to everything
     OSAttach(os);
     
-    // NOTE: generic opengl triangle example
-    // OpenGLTriangleSetup();
-    StorageReset(&os->pernamentStorage);
-    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
-                                            opengl_renderer);
+    memory_storage *storage = (memory_storage *)os->memory;
+    storage->memory = (u8 *)(storage + 1);
+    storage->maxSize = os->memorySize;
+
+    StorageReset(storage);
+    opengl_renderer *gl = StoragePushStruct(storage, opengl_renderer);
     
     OpenGLRendererInitialize(gl);
     OpenGLRendererAttach(gl);
@@ -32,12 +33,14 @@ external void Initialize(operating_system_interface *os)
 external void Update(operating_system_interface *os)
 {
     if(KeyCheckIfDown(KEY_ESC)) os->Quit();
-    StorageReset(&os->pernamentStorage);
-    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
+    memory_storage *storage = (memory_storage *)os->memory;
+    storage->maxSize = os->memorySize;
+
+    StorageReset(storage);
+    opengl_renderer *gl = StoragePushStruct(storage, 
                                             opengl_renderer);
     
     
-    StorageReset(&os->temporaryStorage);
     if(KeyCheckIfDownOnce(KEY_F1))
     {
         os->WindowSetTransparency(40);
@@ -66,9 +69,11 @@ external void HotReload(operating_system_interface *os)
     // when we reload so the global variables get invalidated
     OSAttach(os);
     
-    StorageReset(&os->pernamentStorage);
-    opengl_renderer *gl = StoragePushStruct(&os->pernamentStorage, 
-                                            opengl_renderer);
+    memory_storage *storage = (memory_storage *)os->memory;
+    storage->maxSize = os->memorySize;
+
+    StorageReset(storage);
+    opengl_renderer *gl = StoragePushStruct(storage, opengl_renderer);
     OpenGLRendererAttach(gl);
     OpenGLRendererInitialize(gl);
 }

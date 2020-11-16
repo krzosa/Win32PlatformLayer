@@ -1,7 +1,62 @@
-// ------------------------- SETTINGS ------------------------- \\
+/*  
+TODO : 
+    Better Mouse click event handling
+
+
+HOW TO USE
+
+////////////////////////////////////////////
+   CREATE DLL ENTRYPOINT
+main.c /////////////////////////////////////
+
+#define OS_INTERFACE_IMPLEMENTATION
+#include "win32_platform_executable.c"
+
+// Called on the start of the app
+void Initialize(operating_system_interface *os)
+{
+    LogInfo("Initialize");
+}
+
+// Called on every frame
+void Update(operating_system_interface *os)
+{
+    glClearColor(0, 0.5, 0.5, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+// Called when you recomplile while the app is running
+void HotReload(operating_system_interface *os)
+{
+    LogInfo("HotReload");
+}
+
+// Called when you recomplile while the app is running
+void HotUnload(operating_system_interface *os)
+{
+    LogInfo("HotUnload");
+}
+
+////////////////////////////////////////////
+   COMPILE LIKE THIS
+build.bat /////////////////////////////////////
+
+set EXPORTED_FUNCTIONS=-EXPORT:UPDATE -EXPORT:INIT -EXPORT:RELOAD -EXPORT:UNLOAD
+
+cl main.cpp -Fe: "app" -LD -link opengl32.lib %EXPORTED_FUNCTIONS%
+cl win32_platform_executable.c -Fe: "app_code" -DWIN32_EXE user32.lib gdi32.lib opengl32.lib winmm.lib
+
+Where: -LD tells compiler to create dll
+       -Fe tells filename
+       -Export exports a function
+
+*/
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
 #define RENDERER_START RENDERER_OPENGL
+// 0 for origin in top left corner ( y is rising downwards )(like a 2d array)
+#define RENDERER_SOFTWARE_ORIGIN 1
 
 // 1 for origin in bottom left corner ( y is rising upwards )(like in math)
 #define WINDOW_WIDTH 900
@@ -15,14 +70,9 @@
 
 // 0(invisible) - 255(fully-visible)
 #define WINDOW_TRANSPARENCY 255
-// 0 for origin in top left corner ( y is rising downwards )(like a 2d array)
-#define RENDERER_SOFTWARE_ORIGIN 1
 
 #define DEBUG_BUILD 1
 #define LOG_FPS 0
-// ------------------------- SETTINGS ------------------------- \\
-
-// ------------------------- GENERAL ------------------------- \\
 
 #include <stdint.h>
 
@@ -147,14 +197,6 @@ typedef union iv2
 } iv2;
 
 // ------------------------- OS_INTERFACE_HEADER ------------------------- \\
-
-typedef struct memory_storage
-{
-    void *memory;
-    u64 maxSize;
-    u64 allocatedSize;
-    u64 highestAllocatedSize;
-} memory_storage;
 
 typedef struct file_data
 {
@@ -314,8 +356,8 @@ typedef struct graphics_buffer
 
 typedef struct operating_system_interface
 {
-    memory_storage pernamentStorage;
-    memory_storage temporaryStorage;
+    u8 *memory;
+    u64 memorySize;
     
     str8 *pathToExecutableDirectory;
     
@@ -323,7 +365,7 @@ typedef struct operating_system_interface
     // by the ammount specified in requestedSamples, one sample should be 16bits
     // one frame (left right samples) should be 32 bits
     // this buffer is cleared on the os side on every frame
-    void *audioBuffer; 
+    u8 *audioBuffer; 
     u32 audioBufferSize;
     
     // NOTE: number of samples to fill requested from the os
@@ -377,8 +419,12 @@ typedef struct operating_system_interface
 // ------------------------- OS_INTERFACE ------------------------- \\
 
 #if defined(OS_INTERFACE_IMPLEMENTATION)
-
 void OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name));
+void Initialize(operating_system_interface *os);
+void Update(operating_system_interface *os);
+void HotReload(operating_system_interface *os);
+void HotUnload(operating_system_interface *os);
+bool32 KeyCheckIfDown(keyboard_keys KEY);
 
 global operating_system_interface *PrivateOSPointer = 0;
 
@@ -387,16 +433,38 @@ OSAttach(operating_system_interface *os)
 {
     assert(os != 0);
     PrivateOSPointer = os;
-    
-    if(os->currentRenderer == RENDERER_OPENGL)
-    {
-        // NOTE: from opengl_procedures.include
-        OpenGLLoadProcedures(os->OpenGLLoadProcedures);
-    }
-    else if(os->currentRenderer == RENDERER_SOFTWARE) 
-    {
-        os->targetFramesPerSecond = 30;
-    }
+    OpenGLLoadProcedures(os->OpenGLLoadProcedures);
+}
+
+external void 
+INIT(operating_system_interface *os)
+{
+    // NOTE: dll has a global os pointer which simplifies the interface 
+    // because we dont have to pass the os pointer around to everything
+    OSAttach(os);
+    Initialize(os);
+}
+
+external void 
+UPDATE(operating_system_interface *os)
+{
+    if(KeyCheckIfDown(KEY_ESC)) os->Quit();
+    Update(os);
+}
+
+external void 
+RELOAD(operating_system_interface *os)
+{
+    // NOTE: we need to call those on every reload because dll loses all memory
+    // when we reload so the global variables get invalidated
+    OSAttach(os);
+    HotReload(os);
+}
+
+external void 
+UNLOAD(operating_system_interface *os)
+{
+    HotUnload(os);
 }
 
 internal operating_system_interface *
@@ -410,22 +478,6 @@ internal graphics_buffer *
 GraphicsBufferGet()
 {
     graphics_buffer *result = &OSGet()->graphicsBuffer;
-    
-    return result;
-}
-
-internal memory_storage *
-PernamentStorageGet()
-{
-    memory_storage *result = &OSGet()->pernamentStorage;
-    
-    return result;
-}
-
-internal memory_storage *
-TemporaryStorageGet()
-{
-    memory_storage *result = &OSGet()->temporaryStorage;
     
     return result;
 }
@@ -731,50 +783,50 @@ OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
     
     // NOTE: Load main OpenGL functions using a macro
     // Expands to glUseProgram = (PFNGLUSEPROGRAMPROC)Win32OpenGLLoadProcedures("glUseProgram");
-//
-// NOTE: fancy macro work, this include is included in 2 different places
-//       one declares the function, the second one loads
-//       the functions dynamically
-// tldr: just place a name of gl function here (without gl) and it should load
-// format: GLLoad(small, BIG)
-//
-
-GLLoad(BindBuffer, BINDBUFFER)
-GLLoad(GenBuffers, GENBUFFERS)
-GLLoad(BufferData, BUFFERDATA)
-GLLoad(BufferSubData, BUFFERSUBDATA)
-GLLoad(DrawRangeElements, DRAWRANGEELEMENTS)
-GLLoad(DrawElementsInstanced, DRAWELEMENTSINSTANCED)
-GLLoad(BindVertexArray, BINDVERTEXARRAY)
-GLLoad(DeleteBuffers, DELETEBUFFERS)
-GLLoad(DeleteVertexArrays, DELETEVERTEXARRAYS)
-GLLoad(DeleteProgram, DELETEPROGRAM)
-GLLoad(GetUniformLocation, GETUNIFORMLOCATION)
-GLLoad(Uniform4f, UNIFORM4F)
-GLLoad(Uniform1f, UNIFORM1F)
-GLLoad(GenerateMipmap, GENERATEMIPMAP)
-GLLoad(ActiveTexture, ACTIVETEXTURE)
-GLLoad(Uniform1i, UNIFORM1I)
-GLLoad(Uniform1iv, UNIFORM1IV)
-GLLoad(UniformMatrix4fv, UNIFORMMATRIX4FV)
-GLLoad(CreateShader, CREATESHADER)
-GLLoad(CompileShader, COMPILESHADER)
-GLLoad(ShaderSource, SHADERSOURCE)
-GLLoad(AttachShader, ATTACHSHADER)
-GLLoad(DeleteShader, DELETESHADER)
-GLLoad(CreateProgram, CREATEPROGRAM)
-GLLoad(LinkProgram, LINKPROGRAM)
-GLLoad(UseProgram, USEPROGRAM)
-GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
-GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
-GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
-GLLoad(GetShaderiv, GETSHADERIV)
-GLLoad(GetProgramiv, GETPROGRAMIV)
-GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
-GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
-GLLoad(GenVertexArrays, GENVERTEXARRAYS)
-
-
+    //
+    // NOTE: fancy macro work, this include is included in 2 different places
+    //       one declares the function, the second one loads
+    //       the functions dynamically
+    // tldr: just place a name of gl function here (without gl) and it should load
+    // format: GLLoad(small, BIG)
+    //
+    
+    GLLoad(BindBuffer, BINDBUFFER)
+        GLLoad(GenBuffers, GENBUFFERS)
+        GLLoad(BufferData, BUFFERDATA)
+        GLLoad(BufferSubData, BUFFERSUBDATA)
+        GLLoad(DrawRangeElements, DRAWRANGEELEMENTS)
+        GLLoad(DrawElementsInstanced, DRAWELEMENTSINSTANCED)
+        GLLoad(BindVertexArray, BINDVERTEXARRAY)
+        GLLoad(DeleteBuffers, DELETEBUFFERS)
+        GLLoad(DeleteVertexArrays, DELETEVERTEXARRAYS)
+        GLLoad(DeleteProgram, DELETEPROGRAM)
+        GLLoad(GetUniformLocation, GETUNIFORMLOCATION)
+        GLLoad(Uniform4f, UNIFORM4F)
+        GLLoad(Uniform1f, UNIFORM1F)
+        GLLoad(GenerateMipmap, GENERATEMIPMAP)
+        GLLoad(ActiveTexture, ACTIVETEXTURE)
+        GLLoad(Uniform1i, UNIFORM1I)
+        GLLoad(Uniform1iv, UNIFORM1IV)
+        GLLoad(UniformMatrix4fv, UNIFORMMATRIX4FV)
+        GLLoad(CreateShader, CREATESHADER)
+        GLLoad(CompileShader, COMPILESHADER)
+        GLLoad(ShaderSource, SHADERSOURCE)
+        GLLoad(AttachShader, ATTACHSHADER)
+        GLLoad(DeleteShader, DELETESHADER)
+        GLLoad(CreateProgram, CREATEPROGRAM)
+        GLLoad(LinkProgram, LINKPROGRAM)
+        GLLoad(UseProgram, USEPROGRAM)
+        GLLoad(EnableVertexAttribArray, ENABLEVERTEXATTRIBARRAY)
+        GLLoad(DisableVertexAttribArray, DISABLEVERTEXATTRIBARRAY)
+        GLLoad(VertexAttribPointer, VERTEXATTRIBPOINTER)
+        GLLoad(GetShaderiv, GETSHADERIV)
+        GLLoad(GetProgramiv, GETPROGRAMIV)
+        GLLoad(GetShaderInfoLog, GETSHADERINFOLOG)
+        GLLoad(GetProgramInfoLog, GETPROGRAMINFOLOG)
+        GLLoad(GenVertexArrays, GENVERTEXARRAYS)
+        
+        
 #undef GLLoad // undefine GLLoad macro 
     
     LogSuccess("OpenGL functions loaded");
@@ -1829,10 +1881,10 @@ Win32DLLCodeLoad(char *mainDllPath, char *tempDllPath)
     // NOTE: Load the functions from the game dll
     if (result.library)
     {
-        result.initialize = (Initialize *)GetProcAddress(result.library, "Initialize");
-        result.hotReload = (HotReload *)GetProcAddress(result.library, "HotReload");
-        result.hotUnload = (HotUnload *)GetProcAddress(result.library, "HotUnload");
-        result.update = (Update *)GetProcAddress(result.library, "Update");
+        result.initialize = (Initialize *)GetProcAddress(result.library, "INIT");
+        result.hotReload = (HotReload *)GetProcAddress(result.library, "RELOAD");
+        result.hotUnload = (HotUnload *)GetProcAddress(result.library, "UNLOAD");
+        result.update = (Update *)GetProcAddress(result.library, "UPDATE");
         
         result.isValid = (result.update != 0) &&
             (result.hotReload != 0) && 
@@ -1903,6 +1955,7 @@ Win32UpdateDLLCode(win32_dll_code *dllCode, char *mainDLLPath, char *tempDLLPath
 
 static const GUID IID_IAudioClient = {0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2};
 static const GUID IID_IAudioRenderClient = {0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2};
+static const GUID IID_IAudioCaptureClient = {0xC8ADBD64, 0xE71E, 0x48a0, 0xA4, 0xDE, 0x18, 0x5C, 0x39, 0x5C, 0xD3, 0x17};
 static const GUID CLSID_MMDeviceEnumerator = {0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E};
 static const GUID IID_IMMDeviceEnumerator = {0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6};
 static const GUID PcmSubformatGuid = {STATIC_KSDATAFORMAT_SUBTYPE_PCM};
@@ -1922,13 +1975,16 @@ CoInitializeExFunction *CoInitializeExFunctionPointer = CoInitializeExStub;
 // NOTE: Number of REFERENCE_TIME units per second
 // One unit is equal to 100 nano seconds
 #define REF_TIMES_PER_SECOND 10000000
+#define REF_TIMES_PER_MSECOND 10000
 
-typedef struct win32_audio_data
+typedef struct win32_audio
 {
     IMMDevice *device;
     IAudioClient *audioClient;
+    
     IMMDeviceEnumerator *deviceEnum;
     IAudioRenderClient *audioRenderClient;
+    IAudioCaptureClient *audioCaptureClient;
     
     u32 samplesPerSecond;
     u32 numberOfChannels;
@@ -1940,10 +1996,10 @@ typedef struct win32_audio_data
     i32 bitsPerSample;
     REFERENCE_TIME bufferDuration;
     bool32 initialized;
-} win32_audio_data;
+} win32_audio;
 
 internal inline u32
-AudioBufferSize(win32_audio_data audioData)
+AudioBufferSize(win32_audio audioData)
 {
     return audioData.bufferFrameCount * (audioData.bitsPerSample * 2);
 }
@@ -1983,12 +2039,12 @@ Win32COMLoad(void)
 }
 
 // NOTE: Bigger number, smaller latency 
-internal win32_audio_data
+internal win32_audio
 Win32AudioInitialize(i32 samplesPerSecond)
 {
     Win32COMLoad();
     
-    win32_audio_data audio = {0};
+    win32_audio audio = {0};
     
     HRESULT result;
     result = CoInitializeExFunctionPointer(0, COINIT_SPEED_OVER_MEMORY);
@@ -2079,10 +2135,8 @@ Win32AudioInitialize(i32 samplesPerSecond)
         return audio;
     }
     
-    audio.audioRenderClient;
-    result = audio.audioClient->lpVtbl->GetService(
-                                                   audio.audioClient, &IID_IAudioRenderClient, (void**)&audio.audioRenderClient 
-                                                   );
+    result = audio.audioClient->lpVtbl->GetService(audio.audioClient, &IID_IAudioRenderClient, 
+                                                   (void**)&audio.audioRenderClient );
     
     if(result != S_OK)
     {
@@ -2111,8 +2165,125 @@ Win32AudioInitialize(i32 samplesPerSecond)
     return audio;
 }
 
+// NOTE: Bigger number, smaller latency 
+internal win32_audio
+Win32InitializeAudioCapture(i32 samplesPerSecond)
+{
+    win32_audio audio = {0};
+    
+    HRESULT result = CoCreateInstanceFunctionPointer(
+                                                     &CLSID_MMDeviceEnumerator, NULL,
+                                                     CLSCTX_ALL, &IID_IMMDeviceEnumerator,
+                                                     (LPVOID *)&audio.deviceEnum);
+    
+    if (result != S_OK)
+    {
+        LogError("CoCreateInstance");
+        return audio;
+    }
+    
+    result = audio.deviceEnum->lpVtbl->GetDefaultAudioEndpoint(audio.deviceEnum, 
+                                                               eCapture, eMultimedia, 
+                                                               &audio.device);
+    
+    if (result != S_OK)
+    {
+        LogError("GetDefaultAudioEndpoint");
+        return audio;
+    }
+    
+    result = audio.device->lpVtbl->Activate(
+                                            audio.device, &IID_IAudioClient, 
+                                            CLSCTX_ALL, 0, (void **)&audio.audioClient
+                                            );
+    
+    if (result != S_OK)
+    {
+        LogError("IAudioClient Activate");
+        return audio;
+    }
+    
+    // WAVEFORMATEX *currWaveFormat = 0;
+    // audioClient->lpVtbl->GetMixFormat(audioClient, &currWaveFormat);
+    
+    audio.bitsPerSample = 16;
+    audio.numberOfChannels = 2;
+    audio.samplesPerSecond = samplesPerSecond;
+    WAVEFORMATEX waveFormat = {0};
+    {
+        waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+        waveFormat.nChannels = audio.numberOfChannels;
+        waveFormat.nSamplesPerSec = audio.samplesPerSecond;
+        waveFormat.wBitsPerSample = audio.bitsPerSample;
+        waveFormat.nBlockAlign = waveFormat.nChannels * waveFormat.wBitsPerSample / 8;
+        waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
+        waveFormat.cbSize = 0;
+    }
+    
+    REFERENCE_TIME requestedBufferDuration = REF_TIMES_PER_SECOND * 2;
+    
+    result = audio.audioClient->lpVtbl->Initialize(
+                                                   audio.audioClient, AUDCLNT_SHAREMODE_SHARED, 
+                                                   AUDCLNT_STREAMFLAGS_RATEADJUST | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | 
+                                                   AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, 
+                                                   requestedBufferDuration, 0, &waveFormat, 0);
+    
+    if(result != S_OK)
+    {
+        switch(result)
+        {
+            case AUDCLNT_E_WRONG_ENDPOINT_TYPE:{ LogError("AUDCLNT_E_WRONG_ENDPOINT_TYPE");break;}
+            case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED:{ LogError("AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED");break;}
+            case AUDCLNT_E_BUFFER_SIZE_ERROR:{ LogError("AUDCLNT_E_BUFFER_SIZE_ERROR");break;}
+            case AUDCLNT_E_CPUUSAGE_EXCEEDED:{ LogError("AUDCLNT_E_CPUUSAGE_EXCEEDED");break;}
+            case AUDCLNT_E_DEVICE_INVALIDATED:{ LogError("AUDCLNT_E_DEVICE_INVALIDATED");break;}
+            case AUDCLNT_E_DEVICE_IN_USE:{ LogError("AUDCLNT_E_DEVICE_IN_USE");break;}
+            case AUDCLNT_E_ENDPOINT_CREATE_FAILED:{ LogError("AUDCLNT_E_ENDPOINT_CREATE_FAILED");break;}
+            case AUDCLNT_E_INVALID_DEVICE_PERIOD:{ LogError("AUDCLNT_E_INVALID_DEVICE_PERIOD");break;}
+            case AUDCLNT_E_UNSUPPORTED_FORMAT:{ LogError("AUDCLNT_E_UNSUPPORTED_FORMAT");break;}
+            case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED:{ LogError("AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED");break;}
+            case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL:{ LogError("AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL");break;}
+            case AUDCLNT_E_SERVICE_NOT_RUNNING:{ LogError("AUDCLNT_E_SERVICE_NOT_RUNNING");break;}
+            case E_POINTER:{ LogError("E_POINTER");break;}
+            case E_INVALIDARG:{ LogError("E_INVALIDARG");break;}
+            case E_OUTOFMEMORY:{ LogError("E_OUTOFMEMORY");break;}
+        }
+        LogError("IAudioClient Initialize");
+        return audio;
+    }
+    
+    result = audio.audioClient->lpVtbl->GetService(audio.audioClient, &IID_IAudioCaptureClient, 
+                                                   (void**)&audio.audioCaptureClient );
+    
+    if(result != S_OK)
+    {
+        LogError("IAudioClient GetService");
+        return audio;
+    }
+    
+    audio.audioClient->lpVtbl->GetBufferSize(audio.audioClient, &audio.bufferFrameCount);
+    
+    audio.bufferDuration = (REFERENCE_TIME)((f64)REF_TIMES_PER_SECOND *
+                                            (audio.bufferFrameCount / audio.samplesPerSecond));
+    
+    LogInfo("WASAPI Audio buffer frame count: %d", audio.bufferFrameCount);
+    LogInfo("WASAPI Audio buffer duration: %lld (10000000 is 1 second)", audio.bufferDuration);
+    
+    // result = audio.audioClient->lpVtbl->Start(audio.audioClient);
+    // if(result != S_OK)
+    // {
+    //     LogError("IAudioClient Start");
+    //     return audio;
+    // };
+    
+    audio.initialized = 1;
+    LogSuccess("WASAPI Initialized");
+    
+    return audio;
+}
+
 internal void
-Win32AudioBufferFill(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
+Win32AudioBufferFill(u32 samplesToWrite, i16 *samples, win32_audio *output)
 {
     if(samplesToWrite)
     {
@@ -2141,7 +2312,7 @@ Win32AudioBufferFill(u32 samplesToWrite, i16 *samples, win32_audio_data *output)
 }
 
 internal u32
-Win32AudioStatusUpdate(win32_audio_data *audioData, f64 currentFramesPerSecond, f32 latencyMultiplier)
+Win32AudioStatusUpdate(win32_audio *audioData, f64 currentFramesPerSecond, f32 latencyMultiplier)
 {
     u32 samplesToWrite = 0;
     if(audioData->initialized)
@@ -2170,7 +2341,7 @@ CleanAudioBuffer(void *audioBuffer, u32 audioBufferSize)
 }
 
 internal void
-Win32WasapiCleanup(win32_audio_data *audio)
+Win32WasapiCleanup(win32_audio *audio)
 {
     if(audio->initialized)
     {
@@ -2195,6 +2366,39 @@ Win32WindowGetSize()
     windowSize.height = ClientRect.bottom - ClientRect.top;
     
     return windowSize;
+}
+
+global WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
+internal void
+WindowToggleFullscreen()
+{
+    // NOTE(casey): This follows Raymond Chen's prescription
+    // for fullscreen toggling, see:
+    // http://blogs.msdn.com/b/oldnewthing/archive/2010/04/12/9994016.aspx
+    
+    DWORD Style = GetWindowLong(GLOBALWindow, GWL_STYLE);
+    if(Style & WS_OVERLAPPEDWINDOW)
+    {
+        MONITORINFO MonitorInfo = {sizeof(MonitorInfo)};
+        if(GetWindowPlacement(GLOBALWindow, &GlobalWindowPosition) &&
+           GetMonitorInfo(MonitorFromWindow(GLOBALWindow, MONITOR_DEFAULTTOPRIMARY), &MonitorInfo))
+        {
+            SetWindowLong(GLOBALWindow, GWL_STYLE, Style & ~WS_OVERLAPPEDWINDOW);
+            SetWindowPos(GLOBALWindow, HWND_TOP,
+                         MonitorInfo.rcMonitor.left, MonitorInfo.rcMonitor.top,
+                         MonitorInfo.rcMonitor.right - MonitorInfo.rcMonitor.left,
+                         MonitorInfo.rcMonitor.bottom - MonitorInfo.rcMonitor.top,
+                         SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    }
+    else
+    {
+        SetWindowLong(GLOBALWindow, GWL_STYLE, Style | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(GLOBALWindow, &GlobalWindowPosition);
+        SetWindowPos(GLOBALWindow, 0, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
 }
 
 LRESULT CALLBACK 
@@ -2442,6 +2646,86 @@ ScreenDraw(HDC deviceContext)
     }
 }
 
+// returns bytes written
+internal u64
+AudioRecord(win32_audio *audio, BYTE *buffer, u64 bufferSize)
+{
+    BYTE *recordingBufferTop = (BYTE *)buffer;
+    
+    HRESULT result;
+    result = audio->audioClient->lpVtbl->Start(audio->audioClient);
+    Assert(result == S_OK);
+    u64 writeCursor = 0;
+    
+    for(i32 i = 0; i < 1; i++)
+    {
+        Sleep((DWORD)(audio->bufferDuration/REF_TIMES_PER_MSECOND/2)); // sleep half of the buffer
+        
+        u32 packetLength = 0;
+        result = audio->audioCaptureClient->lpVtbl->GetNextPacketSize(audio->audioCaptureClient,
+                                                                      &packetLength);
+        Assert(result == S_OK);
+        
+        while(packetLength != 0)
+        {
+            DWORD flags;
+            BYTE *dataToCapture = 0;
+            u32 numFramesAvailable;
+            result = audio->audioCaptureClient->lpVtbl->GetBuffer(audio->audioCaptureClient,
+                                                                  &dataToCapture,
+                                                                  &numFramesAvailable,
+                                                                  &flags, NULL, NULL);
+            
+            if(result != S_OK || result == AUDCLNT_S_BUFFER_EMPTY)
+            {
+                if(result == E_POINTER) LogError("E_POINTER");
+                if(result == AUDCLNT_E_BUFFER_ERROR) LogError("AUDCLNT_E_BUFFER_ERROR");
+                if(result == AUDCLNT_E_OUT_OF_ORDER) LogError("AUDCLNT_E_OUT_OF_ORDER");
+                if(result == AUDCLNT_E_DEVICE_INVALIDATED) LogError("AUDCLNT_E_DEVICE_INVALIDATED");
+                if(result == AUDCLNT_E_BUFFER_OPERATION_PENDING) LogError("AUDCLNT_E_BUFFER_OPERATION_PENDING");
+                if(result == AUDCLNT_E_SERVICE_NOT_RUNNING) LogError("AUDCLNT_E_SERVICE_NOT_RUNNING");
+                Assert(result == S_OK || result == AUDCLNT_S_BUFFER_EMPTY);
+            }
+            
+            if (numFramesAvailable != 0)
+            {
+                if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+                {
+                    dataToCapture = 0; 
+                }
+                
+                u64 framesToBytes = (audio->bitsPerSample / 8) * 
+                    audio->numberOfChannels * 
+                    numFramesAvailable;
+                
+                if(dataToCapture)
+                {
+                    BYTE *source = (BYTE *)dataToCapture;
+                    for(u32 i = 0; i < framesToBytes; i++)
+                    {
+                        *recordingBufferTop++ = *source++;
+                    }
+                    writeCursor += framesToBytes;
+                }
+                
+            }
+            result = audio->audioCaptureClient->lpVtbl->ReleaseBuffer(audio->audioCaptureClient, 
+                                                                      numFramesAvailable);
+            Assert(result == S_OK);
+            
+            result = audio->audioCaptureClient->lpVtbl->GetNextPacketSize(audio->audioCaptureClient, 
+                                                                          &packetLength);
+            Assert(result == S_OK);
+        }
+        
+        
+    }
+    result = audio->audioClient->lpVtbl->Stop(audio->audioClient);
+    Assert(result == S_OK);
+    
+    return writeCursor;
+}
+
 int 
 WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showCode)
 {
@@ -2541,24 +2825,21 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     LogInfo("Monitor refresh rate: %f", GLOBALMonitorRefreshRate);
     
     // NOTE: INIT WASAPI and set audio latency
-    win32_audio_data audioData = Win32AudioInitialize(48000);
+    win32_audio audioData = Win32AudioInitialize(48000);
+    win32_audio captureData = Win32InitializeAudioCapture(48000);
     
     // NOTE: init operating system interface, allocate memory etc.
     operating_system_interface os = {0};
     {
-        os.pernamentStorage.maxSize = Megabytes(64);
-        os.temporaryStorage.maxSize = Megabytes(64);
+        os.memorySize = Megabytes(128);
         os.audioBufferSize = AudioBufferSize(audioData);
         
-        os.pernamentStorage.memory = VirtualAlloc(0, 
-                                                  os.pernamentStorage.maxSize + 
-                                                  os.temporaryStorage.maxSize + 
-                                                  os.audioBufferSize, 
-                                                  MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
-                                                  );
+        void *alloc = VirtualAlloc(0, os.memorySize + os.audioBufferSize, 
+                                   MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         
-        os.temporaryStorage.memory = ((i8 *)os.pernamentStorage.memory + os.pernamentStorage.maxSize);
-        os.audioBuffer = (i8 *)os.temporaryStorage.memory + os.temporaryStorage.maxSize;
+        
+        os.audioBuffer = (u8 *)alloc;
+        os.memory = os.audioBuffer + os.audioBufferSize;
         
         LogSuccess("OS Memory allocated");
         
@@ -2608,6 +2889,16 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     u64 beginFrameCycles = ProcessorClockCycles();
     i64 beginFrame = Win32PerformanceCountGet();
     
+    
+    u64 audioRecordingBufferSize = Megabytes(128);
+    BYTE *audioRecordingBuffer = (BYTE *)VirtualAlloc(0, audioRecordingBufferSize, 
+                                                      MEM_COMMIT | MEM_RESERVE, 
+                                                      PAGE_READWRITE);
+    
+    
+    u64 audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
+    u64 playCursor = 0;
+    
     GLOBALApplicationIsRunning = true;
     while(GLOBALApplicationIsRunning)
     {
@@ -2617,6 +2908,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         Win32InputUpdate(&os.userInput);
         // NOTE: Process input, controller
         Win32XInputUpdate(&os.userInput);
+        
         
         // NOTE: Figure out how much sound to write and where / update the latency based on
         // potential fps changes
@@ -2644,9 +2936,32 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             dllCode.update(&os);
         }
         
+        if(os.userInput.keyboard.currentKeyState[KEY_S] == true)
+        {
+            playCursor = 0;
+        }
+        
+        if(os.userInput.keyboard.currentKeyState[KEY_R] == true)
+        {
+            audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
+        }
+        
+        
+        i16 *dest = (i16 *)os.audioBuffer;
+        i16 *source = (i16 *)(audioRecordingBuffer + (playCursor * 4));
+        playCursor += os.requestedSamples;
+        for(i32 i = 0; i != os.requestedSamples; i++)
+        {
+            *dest++ = *source++;
+            *dest++ = *source++;
+        }
+        
+        
+        
+        
         if(audioData.initialized)
         {
-            Win32AudioBufferFill(samplesToWrite, os.audioBuffer, &audioData);
+            Win32AudioBufferFill(samplesToWrite, (i16 *)os.audioBuffer, &audioData);
         }
         
         f64 msPerFrame = (1 / os.targetFramesPerSecond * 1000);

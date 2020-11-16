@@ -1,3 +1,11 @@
+typedef struct memory_storage
+{
+    u8 *memory;
+    u64 allocatedSize;
+    u64 maxSize;
+    u64 highestAllocatedSize;
+} memory_storage;
+
 #define StoragePushStruct(storage, struct) \
 (struct *)StoragePush(storage, sizeof(struct))
 
