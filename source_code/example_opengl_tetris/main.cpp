@@ -12,12 +12,8 @@ struct game_state
 };
 
 // Called on the start of the app
-external void Initialize(operating_system_interface *os)
+void Initialize(OperatingSystemInterface *os)
 {
-    // NOTE: dll has a global os pointer which simplifies the interface 
-    // because we dont have to pass the os pointer around to everything
-    OSAttach(os);
-    
     memory_storage *storage = (memory_storage *)os->memory;
     storage->memory = (u8 *)(storage + 1);
     storage->maxSize = os->memorySize;
@@ -30,9 +26,8 @@ external void Initialize(operating_system_interface *os)
 }
 
 // Called on every frame
-external void Update(operating_system_interface *os)
+void Update(OperatingSystemInterface *os)
 {
-    if(KeyCheckIfDown(KEY_ESC)) os->Quit();
     memory_storage *storage = (memory_storage *)os->memory;
     storage->maxSize = os->memorySize;
 
@@ -41,12 +36,12 @@ external void Update(operating_system_interface *os)
                                             opengl_renderer);
     
     
-    if(KeyCheckIfDownOnce(KEY_F1))
+    if(KeyTap(KEY_F1))
     {
         os->WindowSetTransparency(40);
         os->WindowAlwaysOnTop();
     }
-    if(KeyCheckIfDownOnce(KEY_F2))
+    if(KeyTap(KEY_F2))
     {
         os->WindowSetTransparency(255);
         os->WindowNotAlwaysOnTop();
@@ -63,7 +58,7 @@ external void Update(operating_system_interface *os)
 }
 
 // Called when you recomplile while the app is running
-external void HotReload(operating_system_interface *os)
+void HotReload(OperatingSystemInterface *os)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
@@ -79,7 +74,7 @@ external void HotReload(operating_system_interface *os)
 }
 
 // Called when you recomplile while the app is running
-external void HotUnload(operating_system_interface *os)
+void HotUnload(OperatingSystemInterface *os)
 {
     LogInfo("HotUnload");
     OpenGLRendererDestroy();

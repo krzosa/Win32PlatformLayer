@@ -2,13 +2,13 @@
 #include "win32_platform_executable.c"
 
 // Called on the start of the app
-void Initialize(operating_system_interface *os)
+void Initialize(OperatingSystemInterface *os)
 {
     LogInfo("Initialize");
 }
 
 // Called on every frame
-void Update(operating_system_interface *os)
+void Update(OperatingSystemInterface *os)
 {
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -16,13 +16,13 @@ void Update(operating_system_interface *os)
 }
 
 // Called when you recomplile while the app is running
-void HotReload(operating_system_interface *os)
+void HotReload(OperatingSystemInterface *os)
 {
     LogInfo("HotReload");
 }
 
 // Called when you recomplile while the app is running
-void HotUnload(operating_system_interface *os)
+void HotUnload(OperatingSystemInterface *os)
 {
     LogInfo("HotUnload");
 }

@@ -13,13 +13,13 @@ main.c /////////////////////////////////////
 #include "win32_platform_executable.c"
 
 // Called on the start of the app
-void Initialize(operating_system_interface *os)
+void Initialize(OperatingSystemInterface *os)
 {
     LogInfo("Initialize");
 }
 
 // Called on every frame
-void Update(operating_system_interface *os)
+void Update(OperatingSystemInterface *os)
 {
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -27,13 +27,13 @@ void Update(operating_system_interface *os)
 }
 
 // Called when you recomplile while the app is running
-void HotReload(operating_system_interface *os)
+void HotReload(OperatingSystemInterface *os)
 {
     LogInfo("HotReload");
 }
 
 // Called when you recomplile while the app is running
-void HotUnload(operating_system_interface *os)
+void HotUnload(OperatingSystemInterface *os)
 {
     LogInfo("HotUnload");
 }
@@ -198,13 +198,13 @@ typedef union iv2
 
 // ------------------------- OS_INTERFACE_HEADER ------------------------- \\
 
-typedef struct file_data
+typedef struct FileData
 {
     void *contents;
     u32 size;
-} file_data;
+} FileData;
 
-typedef enum keyboard_keys
+typedef enum KeyboardKeys
 {
     KEY_Q,
     KEY_W,
@@ -245,9 +245,9 @@ typedef enum keyboard_keys
     KEY_ESC,
     
     KEY_COUNT,
-} keyboard_keys;
+} KeyboardKeys;
 
-typedef enum controller_buttons
+typedef enum ControllerButtons
 {
     BUTTON_UP,
     BUTTON_DOWN,
@@ -266,9 +266,9 @@ typedef enum controller_buttons
     BUTTON_SELECT,
     
     BUTTON_COUNT,
-} controller_buttons;
+} ControllerButtons;
 
-typedef struct user_input_controller
+typedef struct Controller
 {
     f32 leftStickX;
     f32 leftStickY;
@@ -279,15 +279,15 @@ typedef struct user_input_controller
     bool8 connected;
     bool8 currentButtonState[BUTTON_COUNT];
     bool8 previousButtonState[BUTTON_COUNT];
-} user_input_controller;
+} Controller;
 
-typedef struct user_input_keyboard
+typedef struct Keyboard
 {
     bool8 currentKeyState[KEY_COUNT];
     bool8 previousKeyState[KEY_COUNT];
-} user_input_keyboard;
+} Keyboard;
 
-typedef struct user_input_mouse
+typedef struct Mouse
 {
     i32 mousePosX;
     i32 mousePosY;
@@ -296,18 +296,18 @@ typedef struct user_input_mouse
     bool8 left;
     bool8 right;
     bool8 middle;
-} user_input_mouse;
+} Mouse;
 
-typedef struct user_input
+typedef struct UserInput
 {
-    user_input_controller controller[4];
+    Controller controller[4];
     i32 selectedController;
     
-    user_input_keyboard keyboard;
-    user_input_mouse mouse;
-} user_input;
+    Keyboard keyboard;
+    Mouse mouse;
+} UserInput;
 
-typedef struct time_data
+typedef struct Time
 {
     // TimeStamp taken at the program start
     // Cycles as in processor clock cycles
@@ -321,30 +321,30 @@ typedef struct time_data
     // Length of the update, with sleep
     u64 frameCycles;
     f64 frameMilliseconds;
-} time_data;
+} Time;
 
-typedef struct file_contents
+typedef struct FileContents
 {
     i8 *file;
     u64 fileSize;
     char fileName[260];
     u32 fileNameLength;
-} file_contents;
+} FileContents;
 
-typedef struct files
+typedef struct Files
 {
-    file_contents files[255];
+    FileContents files[255];
     u32 fileCount;
     u64 memoryFilled;
-} files;
+} Files;
 
-typedef enum enum_renderer
+typedef enum EnumRenderer
 {
     RENDERER_OPENGL,
     RENDERER_SOFTWARE,
-} enum_renderer;
+} EnumRenderer;
 
-typedef struct graphics_buffer
+typedef struct GraphicsBuffer
 {
     // NOTE(casey): Pixels are alwasy 32-bits wide, memory Order BB GG RR XX
     u8 *memory;
@@ -352,9 +352,9 @@ typedef struct graphics_buffer
     i32 bytesPerPixel;
     // how many bytes to get to the next row of the graphics buffer
     i32 strideInBytes;
-} graphics_buffer;
+} GraphicsBuffer;
 
-typedef struct operating_system_interface
+typedef struct OperatingSystemInterface
 {
     u8 *memory;
     u64 memorySize;
@@ -375,17 +375,17 @@ typedef struct operating_system_interface
     f32 audioLatencyMultiplier; 
     
     // Should be accessed through functions
-    // NOTE: user input info, accessed through KeyCheckIfDown etc.
-    user_input userInput;
+    // NOTE: user input info, accessed through KeyDown etc.
+    UserInput userInput;
     // NOTE: update time, frame time, app start time
-    time_data timeData;
+    Time timeData;
     
     // NOTE: you can change fps by changing this value
     f64 targetFramesPerSecond;
-    enum_renderer currentRenderer;
+    EnumRenderer currentRenderer;
     
     // NOTE(KKrzosa): For software rendering
-    graphics_buffer graphicsBuffer;
+    GraphicsBuffer graphicsBuffer;
     
     void   (*Quit)();
     void   (*Log)(char *text, ...);
@@ -397,7 +397,7 @@ typedef struct operating_system_interface
     u64    (*FileGetSize)(char *filename); 
     // NOTE: returns bytesRead
     u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead);
-    files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
+    Files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
@@ -412,7 +412,7 @@ typedef struct operating_system_interface
     void   (*WindowDrawBorder)(bool32 draw);
     
     void  *(*OpenGLLoadProcedures)(char *name);
-} operating_system_interface;
+} OperatingSystemInterface;
 
 // ------------------------- OS_INTERFACE_HEADER ------------------------- \\
 
@@ -420,16 +420,16 @@ typedef struct operating_system_interface
 
 #if defined(OS_INTERFACE_IMPLEMENTATION)
 void OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name));
-void Initialize(operating_system_interface *os);
-void Update(operating_system_interface *os);
-void HotReload(operating_system_interface *os);
-void HotUnload(operating_system_interface *os);
-bool32 KeyCheckIfDown(keyboard_keys KEY);
+void Initialize(OperatingSystemInterface *os);
+void Update(OperatingSystemInterface *os);
+void HotReload(OperatingSystemInterface *os);
+void HotUnload(OperatingSystemInterface *os);
+bool32 KeyDown(KeyboardKeys KEY);
 
-global operating_system_interface *PrivateOSPointer = 0;
+global OperatingSystemInterface *PrivateOSPointer = 0;
 
 internal void
-OSAttach(operating_system_interface *os)
+OSAttach(OperatingSystemInterface *os)
 {
     assert(os != 0);
     PrivateOSPointer = os;
@@ -437,7 +437,7 @@ OSAttach(operating_system_interface *os)
 }
 
 external void 
-INIT(operating_system_interface *os)
+INIT(OperatingSystemInterface *os)
 {
     // NOTE: dll has a global os pointer which simplifies the interface 
     // because we dont have to pass the os pointer around to everything
@@ -446,14 +446,14 @@ INIT(operating_system_interface *os)
 }
 
 external void 
-UPDATE(operating_system_interface *os)
+UPDATE(OperatingSystemInterface *os)
 {
-    if(KeyCheckIfDown(KEY_ESC)) os->Quit();
+    if(KeyDown(KEY_ESC)) os->Quit();
     Update(os);
 }
 
 external void 
-RELOAD(operating_system_interface *os)
+RELOAD(OperatingSystemInterface *os)
 {
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
@@ -462,30 +462,30 @@ RELOAD(operating_system_interface *os)
 }
 
 external void 
-UNLOAD(operating_system_interface *os)
+UNLOAD(OperatingSystemInterface *os)
 {
     HotUnload(os);
 }
 
-internal operating_system_interface *
+internal OperatingSystemInterface *
 OSGet()
 {
     assert(PrivateOSPointer != 0);
     return PrivateOSPointer;
 }
 
-internal graphics_buffer *
+internal GraphicsBuffer *
 GraphicsBufferGet()
 {
-    graphics_buffer *result = &OSGet()->graphicsBuffer;
+    GraphicsBuffer *result = &OSGet()->graphicsBuffer;
     
     return result;
 }
 
 internal bool32
-KeyCheckIfDownOnce(keyboard_keys KEY)
+KeyTap(KeyboardKeys KEY)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     if(os->userInput.keyboard.previousKeyState[KEY] == 0 &&
        os->userInput.keyboard.currentKeyState[KEY] == 1)
@@ -497,9 +497,9 @@ KeyCheckIfDownOnce(keyboard_keys KEY)
 }
 
 internal bool32
-KeyCheckIfUpOnce(keyboard_keys KEY)
+KeyTapUp(KeyboardKeys KEY)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     if(os->userInput.keyboard.previousKeyState[KEY] == 1 &&
        os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -510,9 +510,9 @@ KeyCheckIfUpOnce(keyboard_keys KEY)
 }
 
 internal bool32
-KeyCheckIfDown(keyboard_keys KEY)
+KeyDown(KeyboardKeys KEY)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     if(os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
         return true;
@@ -521,9 +521,9 @@ KeyCheckIfDown(keyboard_keys KEY)
 }
 
 internal bool32
-KeyCheckIfUp(keyboard_keys KEY)
+KeyUp(KeyboardKeys KEY)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     if(os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -535,14 +535,14 @@ KeyCheckIfUp(keyboard_keys KEY)
 internal void
 ControllerSelectActive(i32 index)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     os->userInput.selectedController = index;
 }
 
 internal bool32
-ControllerCheckIfButtonDownOnce(controller_buttons BUTTON)
+ControllerCheckIfButtonDownOnce(ControllerButtons BUTTON)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 0 &&
@@ -555,9 +555,9 @@ ControllerCheckIfButtonDownOnce(controller_buttons BUTTON)
 }
 
 internal bool32
-ControllerCheckIfButtonUpOnce(controller_buttons BUTTON)
+ControllerCheckIfButtonUpOnce(ControllerButtons BUTTON)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 1 &&
@@ -570,9 +570,9 @@ ControllerCheckIfButtonUpOnce(controller_buttons BUTTON)
 }
 
 internal bool32
-ControllerCheckIfButtonDown(controller_buttons BUTTON)
+ControllerCheckIfButtonDown(ControllerButtons BUTTON)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 1)
@@ -583,9 +583,9 @@ ControllerCheckIfButtonDown(controller_buttons BUTTON)
 }
 
 internal bool32
-ControllerCheckIfButtonUp(controller_buttons BUTTON)
+ControllerCheckIfButtonUp(ControllerButtons BUTTON)
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 0)
@@ -598,7 +598,7 @@ ControllerCheckIfButtonUp(controller_buttons BUTTON)
 internal v2
 ControllerGetLeftStick()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
@@ -609,7 +609,7 @@ ControllerGetLeftStick()
 internal v2
 ControllerGetRightStick()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
@@ -622,7 +622,7 @@ ControllerGetRightStick()
 internal i32
 MouseGetWheel()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     i32 result = os->userInput.mouse.mouseWheel;
     os->userInput.mouse.mouseWheel = 0;
     return result;
@@ -631,21 +631,21 @@ MouseGetWheel()
 internal i32
 MouseGetPositionX()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->userInput.mouse.mousePosX;
 }
 
 internal i32
 MouseGetPositionY()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->userInput.mouse.mousePosY;
 }
 
 internal iv2
 MouseGetPosition()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     iv2 result = {os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
     return result;
 }
@@ -653,14 +653,14 @@ MouseGetPosition()
 internal f64
 TimeAppStartMilliseconds()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.startAppMilliseconds;
 }
 
 internal i64 
 TimeAppStartCycles()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.startAppCycles;
 }
 
@@ -671,14 +671,14 @@ TimeAppStartCycles()
 internal f64
 TimeUpdateMilliseconds()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
 TimeUpdateCycles()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.updateCycles;
 }
 
@@ -688,14 +688,14 @@ TimeUpdateCycles()
 internal f64
 TimeFrameMilliseconds()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
 TimeFrameCycles()
 {
-    operating_system_interface *os = OSGet();
+    OperatingSystemInterface *os = OSGet();
     return os->timeData.updateCycles;
 }
 
@@ -881,7 +881,7 @@ global i64    GLOBALCountsPerSecond;
 global f32    GLOBALMonitorRefreshRate;
 global bool32 GLOBALVSyncState;
 
-global enum_renderer GLOBALRenderer;
+global EnumRenderer GLOBALRenderer;
 global win32_offscreen_buffer GLOBALGraphicsBuffer;
 
 global HWND   GLOBALWindow;
@@ -1150,7 +1150,7 @@ MillisecondsPerFrameToFramesPerSecond(f64 millisecondsPerFrame)
 }
 
 internal void
-EndFrameAndSleep(time_data *time, f64 targetMsPerFrame, i64 *prevFrame, u64 *prevFrameCycles)
+EndFrameAndSleep(Time *time, f64 targetMsPerFrame, i64 *prevFrame, u64 *prevFrameCycles)
 {
     //
     // NOTE: Time the frame and sleep to hit target framerate
@@ -1477,10 +1477,10 @@ Win32FileRead(char *filename, void *memory, u64 bytesToRead)
     return bytesRead;
 }
 
-internal files
+internal Files
 Win32DirectoryReadAllFiles(char *directory, void *memory, u64 bytesToRead)
 {
-    files result = {0};
+    Files result = {0};
     u64 totalSizeOfFiles = 0;
     WIN32_FIND_DATAA findData;
     
@@ -1638,10 +1638,10 @@ controller->previousButtonState[BUTTON] = controller->currentButtonState[BUTTON]
 controller->currentButtonState[BUTTON] = (gamepad->wButtons & XINPUT_BUTTON) != 0;
 
 internal void
-Win32InputUpdate(user_input *userInput)
+Win32InputUpdate(UserInput *userInput)
 {
-    user_input_keyboard *keyboard = &userInput->keyboard;
-    user_input_mouse *mouse = &userInput->mouse;
+    Keyboard *keyboard = &userInput->keyboard;
+    Mouse *mouse = &userInput->mouse;
     
     MSG message;
     while(PeekMessageA(&message, 0, 0, 0, PM_REMOVE))   
@@ -1736,13 +1736,13 @@ Win32InputUpdate(user_input *userInput)
 }
 
 internal void
-Win32XInputUpdate(user_input *userInput)
+Win32XInputUpdate(UserInput *userInput)
 {
     // NOTE: i = controller index
     for (DWORD i=0; i < XUSER_MAX_COUNT; i++ )
     {
         XINPUT_STATE state;
-        user_input_controller *controller = &userInput->controller[i];
+        Controller *controller = &userInput->controller[i];
         if(XInputGetStateFunctionPointer( i, &state ) == ERROR_SUCCESS)
         {
             XINPUT_GAMEPAD *gamepad = &state.Gamepad;
@@ -1819,17 +1819,17 @@ Win32XInputUpdate(user_input *userInput)
 //
 
 // NOTE: prototypes for function pointers
-typedef void Initialize(operating_system_interface *memory); // called at the beginning of the app
-typedef void HotReload(operating_system_interface *memory); // called on hot reload
-typedef void HotUnload(operating_system_interface *memory); // called on hot reload
-typedef void Update(operating_system_interface *memory); // called on every frame
+typedef void Initialize(OperatingSystemInterface *memory); // called at the beginning of the app
+typedef void HotReload(OperatingSystemInterface *memory); // called on hot reload
+typedef void HotUnload(OperatingSystemInterface *memory); // called on hot reload
+typedef void Update(OperatingSystemInterface *memory); // called on every frame
 
 // NOTE: empty functions meant to be replacements when
 // functions from the dll fail to load
-void InitializeStub(operating_system_interface *memory){}
-void HotReloadStub(operating_system_interface *memory){}
-void HotUnloadStub(operating_system_interface *memory){}
-void UpdateStub(operating_system_interface *memory){}
+void InitializeStub(OperatingSystemInterface *memory){}
+void HotReloadStub(OperatingSystemInterface *memory){}
+void HotUnloadStub(OperatingSystemInterface *memory){}
+void UpdateStub(OperatingSystemInterface *memory){}
 
 typedef struct win32_dll_code
 {
@@ -1926,7 +1926,7 @@ Win32DLLCodeUnload(win32_dll_code *dllCode)
 }
 
 internal void
-Win32UpdateDLLCode(win32_dll_code *dllCode, char *mainDLLPath, char *tempDLLPath, operating_system_interface *os)
+Win32UpdateDLLCode(win32_dll_code *dllCode, char *mainDLLPath, char *tempDLLPath, OperatingSystemInterface *os)
 {
     // NOTE: Check if dll was rebuild and load it again if it did
     FILETIME newDLLWriteTime = Win32LastWriteTimeGet(mainDLLPath);
@@ -2829,7 +2829,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     win32_audio captureData = Win32InitializeAudioCapture(48000);
     
     // NOTE: init operating system interface, allocate memory etc.
-    operating_system_interface os = {0};
+    OperatingSystemInterface os = {0};
     {
         os.memorySize = Megabytes(128);
         os.audioBufferSize = AudioBufferSize(audioData);

@@ -4,7 +4,7 @@ call ..\..\utilities\upgrade_cmd64
 
 set EXE_NAME=/Fe: "app"
 set DLL_NAME=/Fe: "app_code"
-set EXPORTED_FUNCTIONS=/EXPORT:Update /EXPORT:Initialize /EXPORT:HotReload /EXPORT:HotUnload
+set EXPORTED_FUNCTIONS=/EXPORT:UPDATE /EXPORT:INIT /EXPORT:RELOAD /EXPORT:UNLOAD
 
 cd bin 
 
