@@ -1,40 +1,35 @@
 #define OS_INTERFACE_IMPLEMENTATION
 #include "win32_platform_executable.c"
-#include "math_library.h"
-#include "memory_storage.c"
+#include <malloc.h>
+#include "krz/krz_string.c"
+#include "krz/krz_arena.h"
+#include "krz/krz_math.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "opengl_renderer.cpp"
 
-struct game_state
+struct GameState
 {
-    
+    MemoryArena openglArena;
+    OpenGLRenderer *renderer;
 };
 
 // Called on the start of the app
 void Initialize(OperatingSystemInterface *os)
 {
-    memory_storage *storage = (memory_storage *)os->memory;
-    storage->memory = (u8 *)(storage + 1);
-    storage->maxSize = os->memorySize;
-
-    StorageReset(storage);
-    opengl_renderer *gl = StoragePushStruct(storage, opengl_renderer);
+    GameState *game = (GameState *)os->memory;
+    void *arenaMemory = (void *)(game + 1);
+    ArenaInitialize(&game->openglArena, arenaMemory, os->memorySize - sizeof(GameState));
     
-    OpenGLRendererInitialize(gl);
-    OpenGLRendererAttach(gl);
+    game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
+    OpenGLRendererInitialize(game->renderer);
+    OpenGLRendererAttach(game->renderer);
 }
 
 // Called on every frame
 void Update(OperatingSystemInterface *os)
 {
-    memory_storage *storage = (memory_storage *)os->memory;
-    storage->maxSize = os->memorySize;
-
-    StorageReset(storage);
-    opengl_renderer *gl = StoragePushStruct(storage, 
-                                            opengl_renderer);
-    
+    GameState *game = (GameState *)os->memory;
     
     if(KeyTap(KEY_F1))
     {
@@ -47,30 +42,24 @@ void Update(OperatingSystemInterface *os)
         os->WindowNotAlwaysOnTop();
     }
     
-    m4x4 projectionMatrix = OrtographicProjectionMatrix(0, 1280, 0, 720, 0, 500);
-    ShaderUniform(gl->basicShader, "viewProjectionMatrix", projectionMatrix);
+    M4x4 projectionMatrix = OrtographicProjectionMatrix(0, 320, 0, 180, 0, 1);
+    ShaderUniform(game->renderer->basicShader, "viewProjectionMatrix", projectionMatrix);
     
     DrawBegin();
     {
-        DrawRectangle({200, 200, 300, 300}, {0,0.7f,0.5f,1.f});
+        DrawRectangle({0, 0, 40, 40}, {0,0.7f,0.5f,1.f});
+        DrawSprite({40, 40, 50, 50}, 1);
     }
     DrawEnd();
+    os->ScreenRefresh();
 }
 
 // Called when you recomplile while the app is running
 void HotReload(OperatingSystemInterface *os)
 {
-    // NOTE: we need to call those on every reload because dll loses all memory
-    // when we reload so the global variables get invalidated
-    OSAttach(os);
-    
-    memory_storage *storage = (memory_storage *)os->memory;
-    storage->maxSize = os->memorySize;
-
-    StorageReset(storage);
-    opengl_renderer *gl = StoragePushStruct(storage, opengl_renderer);
-    OpenGLRendererAttach(gl);
-    OpenGLRendererInitialize(gl);
+    GameState *game = (GameState *)os->memory;
+    OpenGLRendererAttach(game->renderer);
+    OpenGLRendererInitialize(game->renderer);
 }
 
 // Called when you recomplile while the app is running

@@ -45,7 +45,7 @@ void main()
 }
 )SHADER";
 
-struct texture2d
+struct Texture2D
 {
     u32 id;
     i32 width;
@@ -53,20 +53,20 @@ struct texture2d
     i32 numberOfChannels;
 };
 
-struct vertex
+struct Vertex
 {
-    v3 position;
-    v4 color;
-    v2 textureCoordinate;
+    V3 position;
+    V4 color;
+    V2 textureCoordinate;
     f32 textureIndex;
 };
 
-struct vertex_rectangle
+struct VertexRectangle
 {
-    vertex vertices[4];
+    Vertex vertices[4];
 };
 
-struct shader_program
+struct ShaderProgram
 {
     u32 id;
 };
@@ -76,9 +76,9 @@ static const i32 maxVertexCount = maxQuadCount * 4;
 static const i32 elementsPerQuad = 6;
 static const i32 maxTextureCount = 128;
 
-struct opengl_renderer
+struct OpenGLRenderer
 {
-    shader_program basicShader;
+    ShaderProgram basicShader;
     
     u32 vertexBufferIndex; 
     u32 vertexArrayIndex;
@@ -87,38 +87,36 @@ struct opengl_renderer
     i32 deviceTextureUnitCount;
     i32 textureSlots[32];
     
-    texture2d textures[maxTextureCount];
+    Texture2D textures[maxTextureCount];
     i32 textureCount;
     
     u32 elementArray[elementsPerQuad * maxQuadCount];
-    vertex_rectangle quadArray[maxQuadCount];
+    VertexRectangle quadArray[maxQuadCount];
     i32 currentQuadCount;
-    
-    camera2d camera;
 };
 
 // GLOBAL POINTER
 // Shouldn't be accessed directly because it can lead to
 // weird crashes when the pointer is null and you don't realize
 // Get and Attach functions add Assertions to check for null pointers
-global opengl_renderer *privateOpenGLRenderer;
+Global OpenGLRenderer *privateOpenGLRenderer;
 
-internal void
-OpenGLRendererAttach(opengl_renderer *gl)
+Internal void
+OpenGLRendererAttach(OpenGLRenderer *gl)
 {
     Assert(gl != 0);
     privateOpenGLRenderer = gl;
 }
 
-internal opengl_renderer *
+Internal OpenGLRenderer *
 OpenGLRendererGet()
 {
     Assert(privateOpenGLRenderer != 0);
     return privateOpenGLRenderer;
 }
 
-internal i32
-ShaderGetUniformLocation(shader_program shader, char *uniformName)
+Internal i32
+ShaderGetUniformLocation(ShaderProgram shader, char *uniformName)
 {
     i32 uniformLocation = glGetUniformLocation(shader.id, uniformName);
     if(uniformLocation != -1)
@@ -133,62 +131,62 @@ ShaderGetUniformLocation(shader_program shader, char *uniformName)
     }
 }
 
-internal void 
-ShaderUniform(shader_program shader, char *uniformName, i32 value)
+Internal void 
+ShaderUniform(ShaderProgram shader, char *uniformName, i32 value)
 {
     i32 uniformLocation = ShaderGetUniformLocation(shader, uniformName);
     glUniform1i(uniformLocation, value);
 }
 
-internal void 
-ShaderUniform(shader_program shader, char *uniformName, m4x4 matrix)
+Internal void 
+ShaderUniform(ShaderProgram shader, char *uniformName, M4x4 matrix)
 {
     i32 uniformLocation = ShaderGetUniformLocation(shader, uniformName);
     glUniformMatrix4fv(uniformLocation, 1, GL_FALSE, &matrix.e[0][0]);
 }
 
-internal void 
-ShaderUniform(shader_program shader, char *uniformName, i32 value[], i32 count)
+Internal void 
+ShaderUniform(ShaderProgram shader, char *uniformName, i32 value[], i32 count)
 {
     i32 uniformLocation = ShaderGetUniformLocation(shader, uniformName);
     glUniform1iv(uniformLocation, count, value);
 }
 
-internal void 
-ShaderUniform(shader_program shader, char *uniformName, v4 vector)
+Internal void 
+ShaderUniform(ShaderProgram shader, char *uniformName, V4 vector)
 {
     i32 uniformLocation = ShaderGetUniformLocation(shader, uniformName);
     glUniform4f(uniformLocation, vector.x, vector.y, vector.z, vector.w);
 }
 
-internal void
-ShaderUse(shader_program shader)
+Internal void
+ShaderUse(ShaderProgram shader)
 {
     glUseProgram(shader.id);
 }
 
-internal void
-ShaderDelete(shader_program shader)
+Internal void
+ShaderDelete(ShaderProgram shader)
 {
     glDeleteProgram(shader.id);
 }
 
 
-internal void
-TextureBind(texture2d texture, i32 index)
+Internal void
+TextureBind(Texture2D texture, i32 index)
 {
     glActiveTexture(GL_TEXTURE0 + index);
     glBindTexture(GL_TEXTURE_2D, texture.id);
     GLPrintErrors();
 }
 
-internal void
-TextureDelete(texture2d texture)
+Internal void
+TextureDelete(Texture2D texture)
 {
     glDeleteTextures(1, &texture.id);
 }
 
-internal void
+Internal void
 PrivateGLPrintErrors(int line, char *function, char *file)
 {
     GLenum err = glGetError(); 
@@ -206,7 +204,7 @@ PrivateGLPrintErrors(int line, char *function, char *file)
     }
 }
 
-internal u32 
+Internal u32 
 ShaderCreate(GLenum shaderType, const char *nullTerminatedShader)
 {
     u32 shader = glCreateShader(shaderType);
@@ -239,7 +237,7 @@ ShaderCreate(GLenum shaderType, const char *nullTerminatedShader)
     return shader;
 }
 
-internal u32
+Internal u32
 ProgramCreate(u32 shaders[], u32 shaderCount)
 {
     u32 shaderProgram;
@@ -271,14 +269,14 @@ ProgramCreate(u32 shaders[], u32 shaderCount)
 }
 
 
-internal shader_program
+Internal ShaderProgram
 ShaderCreate(const char *vertexShader, const char *fragmentShader)
 {
     u32 vertexShaderId = ShaderCreate(GL_VERTEX_SHADER, vertexShader);       
     u32 fragmentShaderId = ShaderCreate(GL_FRAGMENT_SHADER, fragmentShader);       
     u32 shaders[2] = {vertexShaderId, fragmentShaderId};
     
-    shader_program result;
+    ShaderProgram result;
     result.id = ProgramCreate(shaders, 2);
     
     return result;
@@ -286,18 +284,20 @@ ShaderCreate(const char *vertexShader, const char *fragmentShader)
 
 
 // pathToResource relative to executable directory
-internal texture2d 
+Internal Texture2D 
 TextureCreate(char *pathToResource)
 {
-    texture2d result = {};
+    Texture2D result = {};
     
     glGenTextures(1, &result.id);
     
-    stbi_set_flip_vertically_on_load(true);  // FIXME: 
-    u8 *resource = stbi_load("B:\\Programming\\Win32PlatformGithubCurrent\\source_code\\example_opengl_tetris\\bin\\awesomeface.png", 
+    stbi_set_flip_vertically_on_load(true);  
+    str8 *path = StringConcatChar(OS->exeDir, pathToResource);
+    u8 *resource = stbi_load(path, 
                              &result.width, 
                              &result.height, 
                              &result.numberOfChannels, 0);
+    StringFree(path);
     
     glBindTexture(GL_TEXTURE_2D, result.id);
     {
@@ -339,10 +339,10 @@ TextureCreate(char *pathToResource)
     return result;
 }
 
-internal texture2d
+Internal Texture2D
 TextureWhiteCreate()
 {
-    texture2d result = {};
+    Texture2D result = {};
     u32 whiteColor = 0xffffffff;
     
     glGenTextures(1, &result.id);
@@ -360,10 +360,10 @@ TextureWhiteCreate()
 
 
 
-internal vertex_rectangle
-VertexCreateRectangle(f32 x, f32 y, f32 z, f32 width, f32 height, f32 textureIndex, v4 color)
+Internal VertexRectangle
+VertexCreateRectangle(f32 x, f32 y, f32 z, f32 width, f32 height, f32 textureIndex, V4 color)
 {
-    vertex_rectangle result = {};
+    VertexRectangle result = {};
     
     f32 w = width + x;
     f32 h = height + y;
@@ -391,16 +391,16 @@ VertexCreateRectangle(f32 x, f32 y, f32 z, f32 width, f32 height, f32 textureInd
     return result;
 }
 
-internal vertex_rectangle
-QuadTextured(v2 position, v2 size, f32 textureIndex)
+Internal VertexRectangle
+QuadTextured(V4 rectangle, f32 textureIndex)
 {
-    vertex_rectangle result = {};
+    VertexRectangle result = {};
     
-    f32 x = position.x;
-    f32 y = position.y;
+    f32 x = rectangle.x;
+    f32 y = rectangle.y;
     f32 z = 0;
-    f32 w = size.width + x;
-    f32 h = size.height + y;
+    f32 w = rectangle.width + x;
+    f32 h = rectangle.height + y;
     
     result.vertices[0].position = {x, y, z};
     result.vertices[0].color = {1, 1, 1, 1};
@@ -425,16 +425,16 @@ QuadTextured(v2 position, v2 size, f32 textureIndex)
     return result;
 }
 
-internal vertex_rectangle
-QuadColored(v2 position, v2 size, v4 color)
+Internal VertexRectangle
+QuadColored(V4 rectangle, V4 color)
 {
-    vertex_rectangle result = {};
+    VertexRectangle result = {};
     
-    f32 x = position.x;
-    f32 y = position.y;
+    f32 x = rectangle.x;
+    f32 y = rectangle.y;
     f32 z = 0;
-    f32 w = size.width + x;
-    f32 h = size.height + y;
+    f32 w = rectangle.width + x;
+    f32 h = rectangle.height + y;
     f32 textureIndex = 0;
     
     result.vertices[0].position = {x, y, z};
@@ -460,8 +460,8 @@ QuadColored(v2 position, v2 size, v4 color)
     return result;
 }
 
-internal void
-OpenGLRendererInitialize(opengl_renderer *renderer)
+Internal void
+OpenGLRendererInitialize(OpenGLRenderer *renderer)
 {
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &renderer->deviceTextureUnitCount);
     glGenBuffers(1, &renderer->vertexBufferIndex);
@@ -494,12 +494,12 @@ OpenGLRendererInitialize(opengl_renderer *renderer)
     // TODO(KKrzosa): I need to just make it TextureCreate and DrawTexture
     // indexing should be handled automatically
     renderer->textures[renderer->textureCount++] = TextureWhiteCreate();
-    //    renderer->textures[renderer->textureCount++] = TextureCreate("/wall.jpg");
-    //    renderer->textures[renderer->textureCount++] = TextureCreate("/awesomeface.png");
+    renderer->textures[renderer->textureCount++] = TextureCreate("/wall.jpg");
+    renderer->textures[renderer->textureCount++] = TextureCreate("/awesomeface.png");
     
     TextureBind(renderer->textures[0], 0);
-    //    TextureBind(renderer->textures[1], 1);
-    //    TextureBind(renderer->textures[2], 2);
+    TextureBind(renderer->textures[1], 1);
+    TextureBind(renderer->textures[2], 2);
     
     glBindVertexArray(renderer->vertexArrayIndex);
     {
@@ -516,28 +516,28 @@ OpenGLRendererInitialize(opengl_renderer *renderer)
                      GL_DYNAMIC_DRAW);
         
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              (void *)offsetof(vertex, position));
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, position));
         
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              (void *)offsetof(vertex, color));
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, color));
         
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              (void *)offsetof(vertex, textureCoordinate));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, textureCoordinate));
         
         glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(vertex),
-                              (void *)offsetof(vertex, textureIndex));
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void *)offsetof(Vertex, textureIndex));
     }
     GLPrintErrors();
 }
 
-internal void
+Internal void
 OpenGLRendererDestroy()
 {
-    opengl_renderer *renderer = OpenGLRendererGet();
+    OpenGLRenderer *renderer = OpenGLRendererGet();
     
     // BUFFERS
     glDeleteBuffers(1, &renderer->vertexBufferIndex);
@@ -555,10 +555,10 @@ OpenGLRendererDestroy()
     renderer->textureCount = 0;
 }
 
-internal void
-PushQuad(vertex_rectangle quad)
+Internal void
+PushQuad(VertexRectangle quad)
 {
-    opengl_renderer *renderer = OpenGLRendererGet();
+    OpenGLRenderer *renderer = OpenGLRendererGet();
     
     if(renderer->currentQuadCount < maxQuadCount)
     {
@@ -570,35 +570,39 @@ PushQuad(vertex_rectangle quad)
     }
 }
 
-internal void
+Internal void
 DrawBegin()
 {
-    opengl_renderer *gl = OpenGLRendererGet();
+    OpenGLRenderer *gl = OpenGLRendererGet();
     glClearColor(0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     gl->currentQuadCount = 0;
 }
 
-internal void
+Internal void
 DrawEnd()
 {
-    opengl_renderer *gl = OpenGLRendererGet();
+    OpenGLRenderer *gl = OpenGLRendererGet();
     glBufferSubData(GL_ARRAY_BUFFER, 0,
-                    sizeof(vertex_rectangle) * gl->currentQuadCount,
+                    sizeof(VertexRectangle) * gl->currentQuadCount,
                     gl->quadArray);
-    glDrawElements(GL_TRIANGLES, 
-                   6 * gl->currentQuadCount, 
-                   GL_UNSIGNED_INT,
-                   0);
+    
+    glDrawElements(GL_TRIANGLES, 6 * gl->currentQuadCount, 
+                   GL_UNSIGNED_INT, 0);
     
     GLPrintErrors();
 }
 
-internal void
-DrawRectangle(v4 rectangle, v4 color)
+Internal void
+DrawRectangle(V4 rectangle, V4 color)
 {
-    vertex_rectangle rect = QuadColored(rectangle.xy,
-                                        rectangle.zw,
-                                        color);
+    VertexRectangle rect = QuadColored(rectangle, color);
+    PushQuad(rect);
+}
+
+Internal void
+DrawSprite(V4 rectangle, i32 texture)
+{
+    VertexRectangle rect = QuadTextured(rectangle, (f32)texture);
     PushQuad(rect);
 }

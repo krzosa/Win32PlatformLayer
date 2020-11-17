@@ -24,6 +24,7 @@
 //     glClearColor(0, 0.5, 0.5, 1.0);
 //     glClear(GL_COLOR_BUFFER_BIT);
 //     glDrawArrays(GL_TRIANGLES, 0, 3);
+//     os->ScreenRefresh();
 // }
 // 
 // Called when you recomplile while the app is running
@@ -58,8 +59,8 @@
 #define RENDERER_SOFTWARE_ORIGIN 1
 
 // 1 for origin in bottom left corner ( y is rising upwards )(like in math)
-#define WINDOW_WIDTH 900
-#define WINDOW_HEIGHT 500
+#define WINDOW_WIDTH 960
+#define WINDOW_HEIGHT 540
 
 // CW_USEDEFAULT == doesnt matter
 #define DEFAULT_WINDOW_POS_X 0
@@ -358,7 +359,7 @@ typedef struct OperatingSystemInterface
     u8 *memory;
     u64 memorySize;
     
-    str8 *pathToExecutableDirectory;
+    str8 *exeDir;
     
     // NOTE: this buffer should be filled from the very beginning on every frame
     // by the ammount specified in requestedSamples, one sample should be 16bits
@@ -394,8 +395,7 @@ typedef struct OperatingSystemInterface
     u64    (*TimeGetProcessorCycles)();
     
     u64    (*FileGetSize)(char *filename); 
-    // NOTE: returns bytesRead
-    u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead);
+    u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead); // returns bytesRead
     Files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
     
     bool32 (*VSyncGetState)();
@@ -409,6 +409,7 @@ typedef struct OperatingSystemInterface
     void   (*WindowSetSize)(i32 width, i32 height);
     void   (*WindowSetPosition)(i32 width, i32 height);
     void   (*WindowDrawBorder)(bool32 draw);
+    void   (*ScreenRefresh)();
     
     void  *(*OpenGLLoadProcedures)(char *name);
 } OperatingSystemInterface;
@@ -425,13 +426,13 @@ void HotReload(OperatingSystemInterface *os);
 void HotUnload(OperatingSystemInterface *os);
 bool32 KeyDown(KeyboardKeys KEY);
 
-Global OperatingSystemInterface *PrivateOSPointer = 0;
+Global OperatingSystemInterface *OS = 0;
 
 internal void
 OSAttach(OperatingSystemInterface *os)
 {
     assert(os != 0);
-    PrivateOSPointer = os;
+    OS = os;
     OpenGLLoadProcedures(os->OpenGLLoadProcedures);
 }
 
@@ -448,6 +449,7 @@ external void
 UPDATE(OperatingSystemInterface *os)
 {
     if(KeyDown(KEY_ESC)) os->Quit();
+    assert(OS);
     Update(os);
 }
 
@@ -457,26 +459,28 @@ RELOAD(OperatingSystemInterface *os)
     // NOTE: we need to call those on every reload because dll loses all memory
     // when we reload so the global variables get invalidated
     OSAttach(os);
+    assert(OS);
     HotReload(os);
 }
 
 external void 
 UNLOAD(OperatingSystemInterface *os)
 {
+    assert(OS);
     HotUnload(os);
 }
 
 internal OperatingSystemInterface *
 OSGet()
 {
-    assert(PrivateOSPointer != 0);
-    return PrivateOSPointer;
+    assert(OS);
+    return OS;
 }
 
 internal GraphicsBuffer *
 GraphicsBufferGet()
 {
-    GraphicsBuffer *result = &OSGet()->graphicsBuffer;
+    GraphicsBuffer *result = &OS->graphicsBuffer;
     
     return result;
 }
@@ -484,7 +488,7 @@ GraphicsBufferGet()
 internal bool32
 KeyTap(KeyboardKeys KEY)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     if(os->userInput.keyboard.previousKeyState[KEY] == 0 &&
        os->userInput.keyboard.currentKeyState[KEY] == 1)
@@ -498,7 +502,7 @@ KeyTap(KeyboardKeys KEY)
 internal bool32
 KeyTapUp(KeyboardKeys KEY)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     if(os->userInput.keyboard.previousKeyState[KEY] == 1 &&
        os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -511,7 +515,7 @@ KeyTapUp(KeyboardKeys KEY)
 internal bool32
 KeyDown(KeyboardKeys KEY)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     if(os->userInput.keyboard.currentKeyState[KEY] == 1)
     {
         return true;
@@ -522,7 +526,7 @@ KeyDown(KeyboardKeys KEY)
 internal bool32
 KeyUp(KeyboardKeys KEY)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     if(os->userInput.keyboard.currentKeyState[KEY] == 0)
     {
@@ -534,14 +538,14 @@ KeyUp(KeyboardKeys KEY)
 internal void
 ControllerSelectActive(i32 index)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     os->userInput.selectedController = index;
 }
 
 internal bool32
 ControllerCheckIfButtonDownOnce(ControllerButtons BUTTON)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 0 &&
@@ -556,7 +560,7 @@ ControllerCheckIfButtonDownOnce(ControllerButtons BUTTON)
 internal bool32
 ControllerCheckIfButtonUpOnce(ControllerButtons BUTTON)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].previousButtonState[BUTTON] == 1 &&
@@ -571,7 +575,7 @@ ControllerCheckIfButtonUpOnce(ControllerButtons BUTTON)
 internal bool32
 ControllerCheckIfButtonDown(ControllerButtons BUTTON)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 1)
@@ -584,7 +588,7 @@ ControllerCheckIfButtonDown(ControllerButtons BUTTON)
 internal bool32
 ControllerCheckIfButtonUp(ControllerButtons BUTTON)
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     if(os->userInput.controller[c].currentButtonState[BUTTON] == 0)
@@ -597,7 +601,7 @@ ControllerCheckIfButtonUp(ControllerButtons BUTTON)
 internal v2
 ControllerGetLeftStick()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].leftStickX, os->userInput.controller[c].leftStickY};
@@ -608,7 +612,7 @@ ControllerGetLeftStick()
 internal v2
 ControllerGetRightStick()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     
     i32 c = os->userInput.selectedController;
     v2 result = {os->userInput.controller[c].rightStickX, os->userInput.controller[c].rightStickY};
@@ -621,7 +625,7 @@ ControllerGetRightStick()
 internal i32
 MouseGetWheel()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     i32 result = os->userInput.mouse.mouseWheel;
     os->userInput.mouse.mouseWheel = 0;
     return result;
@@ -630,21 +634,21 @@ MouseGetWheel()
 internal i32
 MouseGetPositionX()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->userInput.mouse.mousePosX;
 }
 
 internal i32
 MouseGetPositionY()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->userInput.mouse.mousePosY;
 }
 
 internal iv2
 MouseGetPosition()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     iv2 result = {os->userInput.mouse.mousePosX, os->userInput.mouse.mousePosY};
     return result;
 }
@@ -652,14 +656,14 @@ MouseGetPosition()
 internal f64
 TimeAppStartMilliseconds()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.startAppMilliseconds;
 }
 
 internal i64 
 TimeAppStartCycles()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.startAppCycles;
 }
 
@@ -670,14 +674,14 @@ TimeAppStartCycles()
 internal f64
 TimeUpdateMilliseconds()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
 TimeUpdateCycles()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.updateCycles;
 }
 
@@ -687,14 +691,14 @@ TimeUpdateCycles()
 internal f64
 TimeFrameMilliseconds()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.updateMilliseconds;
 }
 
 internal i64 
 TimeFrameCycles()
 {
-    OperatingSystemInterface *os = OSGet();
+    OperatingSystemInterface *os = OS;
     return os->timeData.updateCycles;
 }
 
@@ -705,8 +709,8 @@ TimeMillisecondsToFramesPerSecond(f64 millisecondsPerFrame)
 }
 
 
-#define ConsoleLog(text, ...) OSGet()->Log(text, __VA_ARGS__)
-#define ConsoleLogExtra(prepend, text, ...) OSGet()->LogExtra(prepend, text, __VA_ARGS__)
+#define ConsoleLog(text, ...) OS->Log(text, __VA_ARGS__)
+#define ConsoleLogExtra(prepend, text, ...) OS->LogExtra(prepend, text, __VA_ARGS__)
 
 // ------------------------- OS_INTERFACE ------------------------- \\
 
@@ -2812,7 +2816,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     
     // NOTE: INIT WASAPI and set audio latency
     win32_audio audioData = Win32AudioInitialize(48000);
-    win32_audio captureData = Win32InitializeAudioCapture(48000);
+    // win32_audio captureData = Win32InitializeAudioCapture(48000);
     
     // NOTE: init operating system interface, allocate memory etc.
     OperatingSystemInterface os = {0};
@@ -2829,7 +2833,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         LogSuccess("OS Memory allocated");
         
-        os.pathToExecutableDirectory = pathToExeDirectory;
+        os.exeDir = pathToExeDirectory;
         
         os.audioLatencyMultiplier = 4.f;
         os.samplesPerSecond = audioData.samplesPerSecond;
@@ -2862,6 +2866,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.WindowSetSize                       = &WindowDrawAreaSetSize;
         os.WindowSetPosition                   = &WindowSetPosition;
         os.WindowDrawBorder                    = &WindowDrawBorder;
+        os.ScreenRefresh                       = &ScreenRefresh;
         
         os.OpenGLLoadProcedures                = &Win32OpenGLLoadProcedures;
         
@@ -2876,14 +2881,14 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     i64 beginFrame = Win32PerformanceCountGet();
     
     
-    u64 audioRecordingBufferSize = Megabytes(128);
-    BYTE *audioRecordingBuffer = (BYTE *)VirtualAlloc(0, audioRecordingBufferSize, 
-                                                      MEM_COMMIT | MEM_RESERVE, 
-                                                      PAGE_READWRITE);
-    
-    
-    u64 audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
-    u64 playCursor = 0;
+    // u64 audioRecordingBufferSize = Megabytes(128);
+    // BYTE *audioRecordingBuffer = (BYTE *)VirtualAlloc(0, audioRecordingBufferSize, 
+    // MEM_COMMIT | MEM_RESERVE, 
+    // PAGE_READWRITE);
+    // 
+    // 
+    // u64 audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
+    // u64 playCursor = 0;
     
     GLOBALApplicationIsRunning = true;
     while(GLOBALApplicationIsRunning)
@@ -2922,26 +2927,26 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             dllCode.update(&os);
         }
         
-        if(os.userInput.keyboard.currentKeyState[KEY_S] == true)
-        {
-            playCursor = 0;
-        }
-        
-        if(os.userInput.keyboard.currentKeyState[KEY_R] == true)
-        {
-            audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
-        }
-        
-        
-        i16 *dest = (i16 *)os.audioBuffer;
-        i16 *source = (i16 *)(audioRecordingBuffer + (playCursor * 4));
-        playCursor += os.requestedSamples;
-        for(i32 i = 0; i != os.requestedSamples; i++)
-        {
-            *dest++ = *source++;
-            *dest++ = *source++;
-        }
-        if(playCursor * 4 > audioWritten) playCursor = 0;
+        // if(os.userInput.keyboard.currentKeyState[KEY_S] == true)
+        // {
+        // playCursor = 0;
+        // }
+        // 
+        // if(os.userInput.keyboard.currentKeyState[KEY_R] == true)
+        // {
+        // audioWritten = AudioRecord(&captureData, audioRecordingBuffer, audioRecordingBufferSize);
+        // }
+        // 
+        // 
+        // i16 *dest = (i16 *)os.audioBuffer;
+        // i16 *source = (i16 *)(audioRecordingBuffer + (playCursor * 4));
+        // playCursor += os.requestedSamples;
+        // for(i32 i = 0; i != os.requestedSamples; i++)
+        // {
+        // *dest++ = *source++;
+        // *dest++ = *source++;
+        // }
+        // if(playCursor * 4 > audioWritten) playCursor = 0;
         
         
         
@@ -2953,8 +2958,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         
         f64 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
         EndFrameAndSleep(&os.timeData, msPerFrame, &beginFrame, &beginFrameCycles);
-        
-        ScreenRefresh();
     }
     
     return(1);

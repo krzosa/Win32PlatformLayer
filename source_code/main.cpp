@@ -13,6 +13,7 @@ void Update(OperatingSystemInterface *os)
     glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    os->ScreenRefresh();
 }
 
 // Called when you recomplile while the app is running
