@@ -1,57 +1,56 @@
-/*  
-TODO : 
-    Better Mouse click event handling
 
-
-HOW TO USE
-
-////////////////////////////////////////////
-   CREATE DLL ENTRYPOINT
-main.c /////////////////////////////////////
-
-#define OS_INTERFACE_IMPLEMENTATION
-#include "win32_platform_executable.c"
-
+// TODO : 
+// Better Mouse click event handling
+// 
+///////////////////////////////////////////////
+// HOW TO USE
+// 
+///////////////////////////////////////////////
+// CREATE DLL ENTRYPOINT
+// main.c /////////////////////////////////////
+// 
+// #define OS_INTERFACE_IMPLEMENTATION
+// #include "win32_platform_executable.c"
+// 
 // Called on the start of the app
-void Initialize(OperatingSystemInterface *os)
-{
-    LogInfo("Initialize");
-}
-
+// void Initialize(OperatingSystemInterface *os)
+// {
+//     LogInfo("Initialize");
+// }
+// 
 // Called on every frame
-void Update(OperatingSystemInterface *os)
-{
-    glClearColor(0, 0.5, 0.5, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-}
-
+// void Update(OperatingSystemInterface *os)
+// {
+//     glClearColor(0, 0.5, 0.5, 1.0);
+//     glClear(GL_COLOR_BUFFER_BIT);
+//     glDrawArrays(GL_TRIANGLES, 0, 3);
+// }
+// 
 // Called when you recomplile while the app is running
-void HotReload(OperatingSystemInterface *os)
-{
-    LogInfo("HotReload");
-}
-
+// void HotReload(OperatingSystemInterface *os)
+// {
+//     LogInfo("HotReload");
+// }
+// 
 // Called when you recomplile while the app is running
-void HotUnload(OperatingSystemInterface *os)
-{
-    LogInfo("HotUnload");
-}
-
-////////////////////////////////////////////
-   COMPILE LIKE THIS
-build.bat /////////////////////////////////////
-
-set EXPORTED_FUNCTIONS=-EXPORT:UPDATE -EXPORT:INIT -EXPORT:RELOAD -EXPORT:UNLOAD
-
-cl main.cpp -Fe: "app" -LD -link opengl32.lib %EXPORTED_FUNCTIONS%
-cl win32_platform_executable.c -Fe: "app_code" -DWIN32_EXE user32.lib gdi32.lib opengl32.lib winmm.lib
-
-Where: -LD tells compiler to create dll
-       -Fe tells filename
-       -Export exports a function
-
-*/
+// void HotUnload(OperatingSystemInterface *os)
+// {
+//     LogInfo("HotUnload");
+// }
+// 
+//////////////////////////////////////////////////
+// COMPILE LIKE THIS
+// build.bat /////////////////////////////////////
+// 
+// set EXPORTED_FUNCTIONS=-EXPORT:UPDATE -EXPORT:INIT -EXPORT:RELOAD -EXPORT:UNLOAD
+// 
+// cl main.cpp -Fe: "app" -LD -link opengl32.lib %EXPORTED_FUNCTIONS%
+// cl win32_platform_executable.c -Fe: "app_code" -DWIN32_EXE user32.lib gdi32.lib opengl32.lib winmm.lib
+// 
+// Where: -LD tells compiler to create dll
+// -Fe tells filename
+// -Export exports a function
+////////////////////////////////////////////////// 
 
 // RENDERER_OPENGL || RENDERER_SOFTWARE
 #define RENDERER_START RENDERER_OPENGL
@@ -91,10 +90,10 @@ typedef int8_t   bool8;
 typedef int16_t  bool16;
 typedef int32_t  bool32;
 
-#define global static
+#define Global static
 // Variable that persists it's value even if it goes out of scope
 // so pretty much a locally spaced global variable
-#define local_persisit static
+#define LocalPersist static
 // Function internal to the obj, file
 #define internal static 
 // WARNING(KKrzosa): Only for .CPP
@@ -346,7 +345,7 @@ typedef enum EnumRenderer
 
 typedef struct GraphicsBuffer
 {
-    // NOTE(casey): Pixels are alwasy 32-bits wide, memory Order BB GG RR XX
+    // Pixels are alwasy 32-bits wide, memory Order BB GG RR XX
     u8 *memory;
     iv2 size;
     i32 bytesPerPixel;
@@ -426,7 +425,7 @@ void HotReload(OperatingSystemInterface *os);
 void HotUnload(OperatingSystemInterface *os);
 bool32 KeyDown(KeyboardKeys KEY);
 
-global OperatingSystemInterface *PrivateOSPointer = 0;
+Global OperatingSystemInterface *PrivateOSPointer = 0;
 
 internal void
 OSAttach(OperatingSystemInterface *os)
@@ -863,7 +862,7 @@ OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name))
 
 typedef struct win32_offscreen_buffer
 {
-    // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
+    // Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
     BITMAPINFO info;
     void *memory;
     int width;
@@ -874,18 +873,19 @@ typedef struct win32_offscreen_buffer
 
 
 // Loop status, the app closes if it equals 0
-global bool32 GLOBALApplicationIsRunning; 
-global bool32 GLOBALSleepIsGranular;
-global i64    GLOBALCountsPerSecond;
+Global bool32 GLOBALApplicationIsRunning; 
+Global bool32 GLOBALSleepIsGranular;
+Global i64    GLOBALCountsPerSecond;
 
-global f32    GLOBALMonitorRefreshRate;
-global bool32 GLOBALVSyncState;
+Global f32    GLOBALMonitorRefreshRate;
+Global bool32 GLOBALVSyncState;
 
-global EnumRenderer GLOBALRenderer;
-global win32_offscreen_buffer GLOBALGraphicsBuffer;
+Global EnumRenderer GLOBALRenderer;
+Global win32_offscreen_buffer GLOBALGraphicsBuffer;
 
-global HWND   GLOBALWindow;
-global HANDLE GLOBALConsoleHandle;
+Global HWND   GLOBALWindow;
+Global HANDLE GLOBALConsoleHandle;
+Global HDC    GLOBALDeviceContext;
 
 /* TODO: 
  * fullscreen
@@ -1355,9 +1355,6 @@ Win32OpenGLSetVSync(bool32 state)
 internal void
 Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int width, int height)
 {
-    // TODO(casey): Bulletproof this.
-    // Maybe don't free first, free after, then free first if that fails.
-    
     if(Buffer->memory)
     {
         VirtualFree(Buffer->memory, 0, MEM_RELEASE);
@@ -1369,7 +1366,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int width, int height)
     int bytesPerPixel = 4;
     Buffer->bytesPerPixel = bytesPerPixel;
     
-    // NOTE(casey): When the biHeight field is negative, this is the clue to
+    // When the biHeight field is negative, this is the clue to
     // Windows to treat this bitmap as top-down, not bottom-up, meaning that
     // the first three bytes of the image are the color for the top left pixel
     // in the bitmap, not the bottom left!
@@ -1381,22 +1378,15 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int width, int height)
     Buffer->info.bmiHeader.biBitCount = 32;
     Buffer->info.bmiHeader.biCompression = BI_RGB;
     
-    // NOTE(casey): Thank you to Chris Hecker of Spy Party fame
-    // for clarifying the deal with StretchDIBits and BitBlt!
-    // No more DC for us.
     int BitmapMemorySize = (Buffer->width*Buffer->height)*bytesPerPixel;
     Buffer->memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Buffer->pitch = width*bytesPerPixel;
-    
-    // TODO(casey): Probably clear this to black
 }
 
 internal void
 Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
                            HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
-    // TODO(casey): Aspect ratio correction
-    // TODO(casey): Play with stretch modes
     StretchDIBits(DeviceContext,
                   /*
                   X, Y, Width, Height,
@@ -2368,14 +2358,10 @@ Win32WindowGetSize()
     return windowSize;
 }
 
-global WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
+Global WINDOWPLACEMENT GlobalWindowPosition = {sizeof(GlobalWindowPosition)};
 internal void
 WindowToggleFullscreen()
 {
-    // NOTE(casey): This follows Raymond Chen's prescription
-    // for fullscreen toggling, see:
-    // http://blogs.msdn.com/b/oldnewthing/archive/2010/04/12/9994016.aspx
-    
     DWORD Style = GetWindowLong(GLOBALWindow, GWL_STYLE);
     if(Style & WS_OVERLAPPEDWINDOW)
     {
@@ -2632,17 +2618,17 @@ WindowDrawBorder(bool32 draw)
 }
 
 internal void
-ScreenDraw(HDC deviceContext)
+ScreenRefresh()
 {
     if(GLOBALRenderer == RENDERER_SOFTWARE)
     {
         iv2 windowSize = Win32WindowDrawAreaGetSize();
-        Win32DisplayBufferInWindow(&GLOBALGraphicsBuffer, deviceContext,
+        Win32DisplayBufferInWindow(&GLOBALGraphicsBuffer, GLOBALDeviceContext,
                                    windowSize.x, windowSize.y);
     }
     else if(GLOBALRenderer == RENDERER_OPENGL)
     {
-        wglSwapLayerBuffers(deviceContext, WGL_SWAP_MAIN_PLANE);
+        wglSwapLayerBuffers(GLOBALDeviceContext, WGL_SWAP_MAIN_PLANE);
     }
 }
 
@@ -2694,12 +2680,12 @@ AudioRecord(win32_audio *audio, BYTE *buffer, u64 bufferSize)
                     dataToCapture = 0; 
                 }
                 
-                u64 framesToBytes = (audio->bitsPerSample / 8) * 
-                    audio->numberOfChannels * 
-                    numFramesAvailable;
                 
                 if(dataToCapture)
                 {
+                    u64 framesToBytes = (audio->bitsPerSample / 8) * audio->numberOfChannels * 
+                        numFramesAvailable;
+                    
                     BYTE *source = (BYTE *)dataToCapture;
                     for(u32 i = 0; i < framesToBytes; i++)
                     {
@@ -2780,7 +2766,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     WindowDrawAreaSetSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     
     // NOTE: Window context setup
-    HDC deviceContext = GetDC(GLOBALWindow);
+    GLOBALDeviceContext = GetDC(GLOBALWindow);
     
     iv2 windowSize = Win32WindowGetSize();
     iv2 drawAreaSize = Win32WindowDrawAreaGetSize();
@@ -2792,7 +2778,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
     {
         // NOTE: Setup openGL context, choose pixel format, load wgl functions
         //       function for setting vsync is loaded here
-        HGLRC openglContext = Win32OpenGLInit(deviceContext);
+        HGLRC openglContext = Win32OpenGLInit(GLOBALDeviceContext);
         // NOTE: Set the opengl viewport to match the aspect ratio
         //Win32OpenGLAspectRatioUpdate(16, 9);
         LogSuccess("OPENGL VERSION: %s", glGetString(GL_VERSION));
@@ -2955,6 +2941,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
             *dest++ = *source++;
             *dest++ = *source++;
         }
+        if(playCursor * 4 > audioWritten) playCursor = 0;
         
         
         
@@ -2967,7 +2954,7 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         f64 msPerFrame = (1 / os.targetFramesPerSecond * 1000);
         EndFrameAndSleep(&os.timeData, msPerFrame, &beginFrame, &beginFrameCycles);
         
-        ScreenDraw(deviceContext);
+        ScreenRefresh();
     }
     
     return(1);
