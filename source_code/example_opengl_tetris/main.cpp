@@ -33,8 +33,7 @@ void Initialize(OperatingSystemInterface *os)
     // 
     // Files files = os->DirectoryReadAllFiles(path, memory, 1000000);
     game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
-    OpenGLRendererInitialize(game->renderer);
-    OpenGLRendererAttach(game->renderer);
+    OpenGLRendererInitialize(&game->openglArena, game->renderer);
 }
 
 // Called on every frame
@@ -62,6 +61,7 @@ void Update(OperatingSystemInterface *os)
     {
         DrawRectangle({0, 0, 40, 40}, {0,0.7f,0.5f,1.f});
         DrawSprite({40, 40, 50, 50}, 1);
+        DrawSprite({90, 40, 50, 50}, 2);
     }
     DrawEnd();
     os->ScreenRefresh();
@@ -71,8 +71,7 @@ void Update(OperatingSystemInterface *os)
 void HotReload(OperatingSystemInterface *os)
 {
     GameState *game = (GameState *)os->memory;
-    OpenGLRendererAttach(game->renderer);
-    OpenGLRendererInitialize(game->renderer);
+    OpenGLRendererInitialize(&game->openglArena, game->renderer);
 }
 
 // Called when you recomplile while the app is running

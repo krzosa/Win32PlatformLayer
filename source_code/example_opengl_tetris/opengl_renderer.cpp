@@ -71,14 +71,14 @@ struct ShaderProgram
     u32 id;
 };
 
-Global const i32 maxQuadCount = 255;
-Global const i32 maxVertexCount = maxQuadCount * 4; 
-Global const i32 elementsPerQuad = 6;
-Global const i32 maxTextureCount = 128;
-
 struct OpenGLRenderer
 {
     ShaderProgram basicShader;
+    
+    u32 maxQuadCount;
+    u32 maxVertexCount;
+    u32 elementsPerQuad;
+    u32 maxTextureCount;
     
     u32 vertexBufferIndex; 
     u32 vertexArrayIndex;
@@ -87,12 +87,13 @@ struct OpenGLRenderer
     i32 deviceTextureUnitCount;
     i32 textureSlots[32];
     
-    Texture2D textures[maxTextureCount];
-    i32 textureCount;
+    Texture2D *textures;
+    u32 textureCount;
     
-    u32 elementArray[elementsPerQuad * maxQuadCount];
-    VertexRectangle quadArray[maxQuadCount];
-    i32 currentQuadCount;
+    u32 *elements; // array 
+    u32 elementCount;
+    VertexRectangle *quads; //array
+    u32 currentQuadCount;
 };
 
 // GLOBAL POINTER
@@ -177,6 +178,15 @@ TextureBind(Texture2D texture, i32 index)
 {
     glActiveTexture(GL_TEXTURE0 + index);
     glBindTexture(GL_TEXTURE_2D, texture.id);
+    GLPrintErrors();
+}
+
+Internal void
+TextureBind(u32 indexTexture, i32 indexOpenGLSlot)
+{
+    glActiveTexture(GL_TEXTURE0 + indexOpenGLSlot);
+    OpenGLRenderer *renderer = OpenGLRendererGet();
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[indexTexture].id);
     GLPrintErrors();
 }
 
@@ -282,24 +292,36 @@ ShaderCreate(const char *vertexShader, const char *fragmentShader)
     return result;
 }
 
+Internal u32
+PushTexture(Texture2D texture)
+{
+    OpenGLRenderer *renderer = OpenGLRendererGet();
+    
+    Assert(renderer->maxTextureCount > renderer->textureCount);
+    u32 index = renderer->textureCount++;
+    renderer->textures[index] = texture;
+    
+    return index;
+}
 
-// pathToResource relative to executable directory
-Internal Texture2D 
+// @arguments: pathToResource relative to executable directory
+// @return:    index to the texture array
+Internal u32 
 TextureCreate(char *pathToResource)
 {
-    Texture2D result = {};
+    Texture2D texture = {};
     
-    glGenTextures(1, &result.id);
+    glGenTextures(1, &texture.id);
     
     stbi_set_flip_vertically_on_load(true);  
     str8 *path = StringConcatChar(OS->exeDir, pathToResource);
     u8 *resource = stbi_load(path, 
-                             &result.width, 
-                             &result.height, 
-                             &result.numberOfChannels, 0);
+                             &texture.width, 
+                             &texture.height, 
+                             &texture.numberOfChannels, 0);
     StringFree(path);
     
-    glBindTexture(GL_TEXTURE_2D, result.id);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
     {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
@@ -308,17 +330,17 @@ TextureCreate(char *pathToResource)
         
         if(resource)
         {
-            if(result.numberOfChannels == 4)
+            if(texture.numberOfChannels == 4)
             {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result.width, result.height, 
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 
                              0, GL_RGBA, GL_UNSIGNED_BYTE, resource);
-                LogInfo("%s load %d", pathToResource, result.numberOfChannels);
+                LogInfo("%s load %d", pathToResource, texture.numberOfChannels);
             }
-            else if(result.numberOfChannels == 3)
+            else if(texture.numberOfChannels == 3)
             {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, result.width, result.height, 
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.width, texture.height, 
                              0, GL_RGB, GL_UNSIGNED_BYTE, resource);
-                LogInfo("%s load %d", pathToResource, result.numberOfChannels);
+                LogInfo("%s load %d", pathToResource, texture.numberOfChannels);
             }
             else 
             {
@@ -336,17 +358,20 @@ TextureCreate(char *pathToResource)
     stbi_image_free(resource);
     GLPrintErrors();
     
+    u32 result = PushTexture(texture);
+    
     return result;
 }
 
-Internal Texture2D
+// @return: index to the texture array
+Internal u32
 TextureWhiteCreate()
 {
-    Texture2D result = {};
+    Texture2D texture = {};
     u32 whiteColor = 0xffffffff;
     
-    glGenTextures(1, &result.id);
-    glBindTexture(GL_TEXTURE_2D, result.id);
+    glGenTextures(1, &texture.id);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
     {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
@@ -354,10 +379,10 @@ TextureWhiteCreate()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &whiteColor);
     }
+    u32 result = PushTexture(texture);
     
     return result;
 }
-
 
 
 Internal VertexRectangle
@@ -461,8 +486,19 @@ QuadColored(V4 rectangle, V4 color)
 }
 
 Internal void
-OpenGLRendererInitialize(OpenGLRenderer *renderer)
+OpenGLRendererInitialize(MemoryArena *arena, OpenGLRenderer *renderer)
 {
+    renderer->maxQuadCount = 10000;
+    renderer->maxVertexCount = renderer->maxQuadCount * 4; 
+    renderer->elementsPerQuad = 6;
+    renderer->maxTextureCount = 128;
+    
+    renderer->elementCount = renderer->elementsPerQuad * renderer->maxQuadCount;
+    renderer->textures = ArenaPushArray(arena, Texture2D, renderer->maxTextureCount);
+    renderer->elements = ArenaPushArray(arena, u32, renderer->elementCount);
+    renderer->quads = ArenaPushArray(arena, VertexRectangle, renderer->maxQuadCount);
+    OpenGLRendererAttach(renderer);
+    
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &renderer->deviceTextureUnitCount);
     glGenBuffers(1, &renderer->vertexBufferIndex);
     glGenBuffers(1, &renderer->elementBufferIndex);
@@ -474,16 +510,17 @@ OpenGLRendererInitialize(OpenGLRenderer *renderer)
     // NOTE: Fill the element indices array with correct ordering of vertices
     // for every possible quad
     u32 offset = 0;
-    for(u32 i = 0; i < maxQuadCount; i+=6)
+    for(u32 i = 0; i < renderer->elementCount; i+=6)
     {
-        renderer->elementArray[i] = 1 + offset;
-        renderer->elementArray[i+1] = 0 + offset;
-        renderer->elementArray[i+2] = 2 + offset;
-        renderer->elementArray[i+3] = 2 + offset;
-        renderer->elementArray[i+4] = 0 + offset;
-        renderer->elementArray[i+5] = 3 + offset;
+        renderer->elements[i] = 1 + offset;
+        renderer->elements[i+1] = 0 + offset;
+        renderer->elements[i+2] = 2 + offset;
+        renderer->elements[i+3] = 2 + offset;
+        renderer->elements[i+4] = 0 + offset;
+        renderer->elements[i+5] = 3 + offset;
         
         offset += 4;
+        // if(i > 100) Assert(offset > 100); // check for overflow
     }
     
     renderer->basicShader = ShaderCreate(vertexShader, fragmentShader);
@@ -491,28 +528,30 @@ OpenGLRendererInitialize(OpenGLRenderer *renderer)
     ShaderUse(renderer->basicShader);
     ShaderUniform(renderer->basicShader, "textures", renderer->textureSlots, renderer->deviceTextureUnitCount);
     
-    // TODO(KKrzosa): I need to just make it TextureCreate and DrawTexture
-    // indexing should be handled automatically
-    renderer->textures[renderer->textureCount++] = TextureWhiteCreate();
-    renderer->textures[renderer->textureCount++] = TextureCreate("/data/wall.jpg");
-    renderer->textures[renderer->textureCount++] = TextureCreate("/data/awesomeface.png");
+    u32 whiteTexture = TextureWhiteCreate();
+    u32 wall = TextureCreate("/data/wall.jpg");
+    u32 face = TextureCreate("/data/awesomeface.png");
     
-    TextureBind(renderer->textures[0], 0);
-    TextureBind(renderer->textures[1], 1);
-    TextureBind(renderer->textures[2], 2);
+    TextureBind(whiteTexture, 0);
+    TextureBind(wall, 1);
+    TextureBind(face, 2);
     
     glBindVertexArray(renderer->vertexArrayIndex);
     {
         // Vertex draw order buffer
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
                      renderer->elementBufferIndex);
+        
+        // TODO: should elements be STATIC_DRAW?
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     sizeof(renderer->elementArray),
-                     renderer->elementArray, GL_STATIC_DRAW);
+                     sizeof(u32) * renderer->elementCount,
+                     renderer->elements, GL_STATIC_DRAW);
         
         // Buffer with our quads
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBufferIndex);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(renderer->quadArray), 0,
+        glBufferData(GL_ARRAY_BUFFER,
+                     sizeof(VertexRectangle) * renderer->maxQuadCount, 
+                     0,
                      GL_DYNAMIC_DRAW);
         
         glEnableVertexAttribArray(0);
@@ -552,6 +591,7 @@ OpenGLRendererDestroy()
     { 
         TextureDelete(renderer->textures[i]);
     }
+    
     renderer->textureCount = 0;
 }
 
@@ -560,9 +600,9 @@ PushQuad(VertexRectangle quad)
 {
     OpenGLRenderer *renderer = OpenGLRendererGet();
     
-    if(renderer->currentQuadCount < maxQuadCount)
+    if(renderer->currentQuadCount < renderer->maxQuadCount)
     {
-        renderer->quadArray[renderer->currentQuadCount++] = quad;
+        renderer->quads[renderer->currentQuadCount++] = quad;
     }
     else
     {
@@ -573,9 +613,10 @@ PushQuad(VertexRectangle quad)
 Internal void
 DrawBegin()
 {
-    OpenGLRenderer *gl = OpenGLRendererGet();
     glClearColor(0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
+    
+    OpenGLRenderer *gl = OpenGLRendererGet();
     gl->currentQuadCount = 0;
 }
 
@@ -583,9 +624,11 @@ Internal void
 DrawEnd()
 {
     OpenGLRenderer *gl = OpenGLRendererGet();
+    GLPrintErrors();
     glBufferSubData(GL_ARRAY_BUFFER, 0,
                     sizeof(VertexRectangle) * gl->currentQuadCount,
-                    gl->quadArray);
+                    gl->quads);
+    GLPrintErrors();
     
     glDrawElements(GL_TRIANGLES, 6 * gl->currentQuadCount, 
                    GL_UNSIGNED_INT, 0);
