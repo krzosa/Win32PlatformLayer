@@ -304,6 +304,16 @@ PushTexture(Texture2D texture)
     return index;
 }
 
+Internal Texture2D
+TextureGet(u32 index)
+{
+    OpenGLRenderer *renderer = OpenGLRendererGet();
+    Assert(index < renderer->textureCount);
+    Texture2D result = renderer->textures[index];
+    
+    return result;
+}
+
 // @arguments: pathToResource relative to executable directory
 // @return:    index to the texture array
 Internal u32 
@@ -643,9 +653,16 @@ DrawRectangle(V4 rectangle, V4 color)
     PushQuad(rect);
 }
 
+// Internal void
+// DrawSprite(V4 rectangle, i32 texture)
+// {
+// VertexRectangle rect = QuadTextured(rectangle, (f32)texture);
+// PushQuad(rect);
+// }
 Internal void
-DrawSprite(V4 rectangle, i32 texture)
+DrawSprite(V4 rectangle, u32 texture)
 {
+    Texture2D text = TextureGet(texture);
     VertexRectangle rect = QuadTextured(rectangle, (f32)texture);
     PushQuad(rect);
 }
