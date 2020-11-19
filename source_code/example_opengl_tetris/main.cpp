@@ -21,6 +21,17 @@ void Initialize(OperatingSystemInterface *os)
     void *arenaMemory = (void *)(game + 1);
     ArenaInitialize(&game->openglArena, arenaMemory, os->memorySize - sizeof(GameState));
     
+    
+    str8 *path = StringConcatChar(OS->exeDir, "/data");
+    FilePaths *root = os->DirectoryGetFilePaths(path);
+    for(FilePaths *node = root; node; node = node->next)
+    {
+        LogInfo("%s", node->filePath);
+    }
+    os->FilePathsFree(root);
+    // void *memory = ArenaPushSize(&game->openglArena, 1000000);
+    // 
+    // Files files = os->DirectoryReadAllFiles(path, memory, 1000000);
     game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
     OpenGLRendererInitialize(game->renderer);
     OpenGLRendererAttach(game->renderer);
@@ -30,6 +41,8 @@ void Initialize(OperatingSystemInterface *os)
 void Update(OperatingSystemInterface *os)
 {
     GameState *game = (GameState *)os->memory;
+    game->openglArena;
+    
     
     if(KeyTap(KEY_F1))
     {

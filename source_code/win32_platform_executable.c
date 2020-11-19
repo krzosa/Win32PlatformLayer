@@ -338,6 +338,13 @@ typedef struct Files
     u64 memoryFilled;
 } Files;
 
+typedef struct FilePaths FilePaths;
+struct FilePaths
+{
+    FilePaths *next;
+    str8 *filePath;
+};
+
 typedef enum EnumRenderer
 {
     RENDERER_OPENGL,
@@ -396,7 +403,11 @@ typedef struct OperatingSystemInterface
     
     u64    (*FileGetSize)(char *filename); 
     u64    (*FileRead)(char *filename, void *memoryToFill, u64 maxBytesToRead); // returns bytesRead
-    Files  (*DirectoryReadAllFiles)(char *directory, void *memoryToFill, u64 maxBytesToRead);
+    Files  (*DirectoryReadAllFiles)(char *directory, 
+                                    void *memoryToFill, 
+                                    u64 maxBytesToRead);
+    FilePaths *(*DirectoryGetFilePaths)(char *directory);
+    void   (*FilePathsFree)(FilePaths *root);
     
     bool32 (*VSyncGetState)();
     bool32 (*VSyncSetState)(bool32 state);
@@ -1489,7 +1500,8 @@ Win32DirectoryReadAllFiles(char *directory, void *memory, u64 bytesToRead)
     }
     else
     {
-        LogSuccess("FindFirstFileA %s %lld", findData.cFileName, findData.nFileSizeLow);
+        LogSuccess("FindFirstFileA %s %lld", findData.cFileName,
+                   findData.nFileSizeLow);
     }
     
     while(FindNextFileA(handle, &findData) != 0)
@@ -1537,6 +1549,80 @@ Win32DirectoryReadAllFiles(char *directory, void *memory, u64 bytesToRead)
     
     result.memoryFilled = totalSizeOfFiles;
     return result;
+}
+
+internal void
+FilePathsFree(FilePaths *root)
+{
+    FilePaths *current = root;
+    FilePaths *next = 0;
+    while(current != 0)
+    {
+        next = current->next;
+        free(current);
+        current = next;
+    }
+}
+
+internal FilePaths *
+Win32DirectoryGetFilePaths(char *directory)
+{
+    WIN32_FIND_DATAA findData;
+    
+    str8 *query = StringConcatChar(directory, "/*");
+    Assert(StringLength(query) < MAX_PATH);
+    
+    LogInfo("Load all files in directory %s", directory);
+    HANDLE handle = FindFirstFileA(query, &findData);
+    if(handle == INVALID_HANDLE_VALUE)
+    {
+        LogError("INVALID HANDLE VALUE %s", directory);
+        return 0;
+    }
+    else
+    {
+        LogSuccess("FindFirstFileA %s %lld", findData.cFileName, findData.nFileSizeLow);
+    }
+    
+    FilePaths *root = (FilePaths *)malloc(sizeof(FilePaths));
+    FilePaths *current = root;
+    FilePaths *previous = 0;
+    
+    while(FindNextFileA(handle, &findData) != 0)
+    {
+        LogSuccess("FindNextFile %s %lld", findData.cFileName,
+                   findData.nFileSizeLow);
+        
+        if(findData.nFileSizeLow == 0) continue; // skip empty files and ".."
+        
+        str8 *slash = StringConcatChar(directory, "/");
+        str8 *filePath = StringConcatChar(slash, findData.cFileName);
+        
+        previous = current;
+        current->filePath = filePath;
+        current->next = (FilePaths *)malloc(sizeof(FilePaths));
+        current = current->next;
+        
+        StringFree(slash);
+    }
+    
+    if(previous)
+    {
+        if(previous->next) free(previous->next);
+        previous->next = 0;
+    }
+    
+    DWORD message = GetLastError();
+    if(message != ERROR_NO_MORE_FILES)
+    {
+        LogError("FindNextFile %lu", message);
+        FilePathsFree(root);
+    }
+    
+    FindClose(handle);
+    StringFree(query);
+    
+    return root;
 }
 
 internal str8 *
@@ -2851,6 +2937,8 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, i32 showC
         os.FileRead                            = &Win32FileRead;
         os.FileGetSize                         = &Win32FileGetSize;
         os.DirectoryReadAllFiles               = &Win32DirectoryReadAllFiles;
+        os.DirectoryGetFilePaths               = &Win32DirectoryGetFilePaths;
+        os.FilePathsFree                       = &FilePathsFree;
         
         os.TimeGetMilliseconds                 = &Win32MillisecondsGet;
         os.TimeGetProcessorCycles              = &TimeGetProcessorCycles;

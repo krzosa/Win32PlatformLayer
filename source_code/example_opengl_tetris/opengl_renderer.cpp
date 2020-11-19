@@ -40,7 +40,7 @@ uniform sampler2D textures[32];
 
 void main()
 {
-    int textureIndex = int(vertexTextureIndex);
+       int textureIndex = int(vertexTextureIndex);
     FragColor = texture(textures[textureIndex], vertexTextureCoordinate) * vertexColor;
 }
 )SHADER";
@@ -71,10 +71,10 @@ struct ShaderProgram
     u32 id;
 };
 
-static const i32 maxQuadCount = 255;
-static const i32 maxVertexCount = maxQuadCount * 4; 
-static const i32 elementsPerQuad = 6;
-static const i32 maxTextureCount = 128;
+Global const i32 maxQuadCount = 255;
+Global const i32 maxVertexCount = maxQuadCount * 4; 
+Global const i32 elementsPerQuad = 6;
+Global const i32 maxTextureCount = 128;
 
 struct OpenGLRenderer
 {
@@ -494,8 +494,8 @@ OpenGLRendererInitialize(OpenGLRenderer *renderer)
     // TODO(KKrzosa): I need to just make it TextureCreate and DrawTexture
     // indexing should be handled automatically
     renderer->textures[renderer->textureCount++] = TextureWhiteCreate();
-    renderer->textures[renderer->textureCount++] = TextureCreate("/wall.jpg");
-    renderer->textures[renderer->textureCount++] = TextureCreate("/awesomeface.png");
+    renderer->textures[renderer->textureCount++] = TextureCreate("/data/wall.jpg");
+    renderer->textures[renderer->textureCount++] = TextureCreate("/data/awesomeface.png");
     
     TextureBind(renderer->textures[0], 0);
     TextureBind(renderer->textures[1], 1);
