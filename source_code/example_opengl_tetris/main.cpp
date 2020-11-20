@@ -6,12 +6,16 @@
 #include "krz/krz_math.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "opengl_renderer.h"
 #include "opengl_renderer.cpp"
 
 struct GameState
 {
     MemoryArena openglArena;
     OpenGLRenderer *renderer;
+    
+    Texture2D wall;
+    Texture2D face;
 };
 
 // Called on the start of the app
@@ -22,26 +26,26 @@ void Initialize(OperatingSystemInterface *os)
     ArenaInitialize(&game->openglArena, arenaMemory, os->memorySize - sizeof(GameState));
     
     
-    str8 *path = StringConcatChar(OS->exeDir, "/data");
-    FilePaths *root = os->DirectoryGetFilePaths(path);
-    for(FilePaths *node = root; node; node = node->next)
-    {
-        LogInfo("%s", node->filePath);
-    }
-    os->FilePathsFree(root);
+    // str8 *path = StringConcatChar(OS->exeDir, "/data");
+    // FilePaths *root = os->DirectoryGetFilePaths(path);
+    // for(FilePaths *node = root; node; node = node->next)
+    // {
+    // LogInfo("%s", node->filePath);
+    // }
+    // os->FilePathsFree(root);
     // void *memory = ArenaPushSize(&game->openglArena, 1000000);
     // 
     // Files files = os->DirectoryReadAllFiles(path, memory, 1000000);
     game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
-    OpenGLRendererInitialize(&game->openglArena, game->renderer);
+    HotReload(os);
+    
+    
 }
 
 // Called on every frame
 void Update(OperatingSystemInterface *os)
 {
     GameState *game = (GameState *)os->memory;
-    game->openglArena;
-    
     
     if(KeyTap(KEY_F1))
     {
@@ -54,14 +58,22 @@ void Update(OperatingSystemInterface *os)
         os->WindowNotAlwaysOnTop();
     }
     
-    M4x4 projectionMatrix = OrtographicProjectionMatrix(0, 320, 0, 180, 0, 1);
-    ShaderUniform(game->renderer->basicShader, "viewProjectionMatrix", projectionMatrix);
-    
     DrawBegin();
     {
-        DrawRectangle({0, 0, 40, 40}, {0,0.7f,0.5f,1.f});
-        DrawSprite({40, 40, 50, 50}, 1);
-        DrawSprite({90, 40, 50, 50}, 2);
+        for(i32 i = 0; i < 100; i++)
+        {
+            i32 x = 0;
+            i32 y = 0;
+            if(i % 2)
+                x = i;
+            else
+                y = i;
+            
+            DrawRectangle({0 + (f32)x, 0 + (f32)y, 40, 40}, {0,0.7f,0.5f,1.f});
+        }
+        
+        DrawSprite({90, 40, 50, 50}, game->wall);
+        DrawSprite({40, 40, 50, 50}, game->face);
     }
     DrawEnd();
     os->ScreenRefresh();
@@ -71,7 +83,9 @@ void Update(OperatingSystemInterface *os)
 void HotReload(OperatingSystemInterface *os)
 {
     GameState *game = (GameState *)os->memory;
-    OpenGLRendererInitialize(&game->openglArena, game->renderer);
+    OpenGLRendererInit(&game->openglArena, game->renderer, 320, 180);
+    game->face = TextureCreate("/data/awesomeface.png");
+    game->wall = TextureCreate("/data/wall.jpg");
 }
 
 // Called when you recomplile while the app is running

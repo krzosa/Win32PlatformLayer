@@ -1559,6 +1559,7 @@ FilePathsFree(FilePaths *root)
     while(current != 0)
     {
         next = current->next;
+        StringFree(current->filePath);
         free(current);
         current = next;
     }
