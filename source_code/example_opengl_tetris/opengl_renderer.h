@@ -43,7 +43,7 @@ uniform mat4 viewProjectionMatrix;
 
 void main()
 {
-    gl_Position = vec4(position, 1.0) * viewProjectionMatrix;
+      gl_Position = vec4(position, 1.0) * viewProjectionMatrix;
 
     // NOTE: Send to fragment shader
     vertexColor = color;
@@ -65,8 +65,10 @@ uniform sampler2D textures[32];
 
 void main()
 {
+
        int textureIndex = int(vertexTextureIndex);
     FragColor = texture(textures[textureIndex], vertexTextureCoordinate) * vertexColor;
+
 }
 )SHADER";
 
@@ -101,8 +103,15 @@ enum DrawCallType
     DRAWCALLNull,
     DRAWCALLSprite,
     DRAWCALLColor,
+    DRAWCALLText,
 };
 
+// TODO(KKrzosa): Allow multiple textures per drawcall, store them in array
+// make sure we are not doing more than device limit and then just
+// bind those textures to multiple active textures and draw at once
+// not really sure anymore if the indexes in vertex buffer is good anymore
+// we will have to then update the vertices texture indexes before drawing
+// or perhaps update that when push draw call happens from 1 ... limit
 struct DrawCall
 {
     DrawCallType type;
@@ -111,27 +120,32 @@ struct DrawCall
     u32 dataOffset;
 };
 
+
+#define MAX_QUAD_COUNT 65536
+#define MAX_DRAW_CALLS 65536
+#define MAX_TEXTURE_COUNT 128
+#define ELEMENTS_PER_QUAD 6
+
+#define MAX_VERTEX_COUNT MAX_QUAD_COUNT * 4
+#define ELEMENT_COUNT ELEMENTS_PER_QUAD * MAX_QUAD_COUNT
+#define TEXTURE_ARRAY_SIZE_IN_SHADER 32
+
 struct OpenGLRenderer
 {
     ShaderProgram basicShader;
     
     f32 width;
     f32 height;
-#define MAX_QUAD_COUNT 1024
-#define MAX_VERTEX_COUNT MAX_QUAD_COUNT * 4
-#define ELEMENTS_PER_QUAD 6
-#define ELEMENT_COUNT ELEMENTS_PER_QUAD * MAX_QUAD_COUNT
-#define MAX_DRAW_CALLS 128
-#define TEXTURE_NUMBERS_TO_MAKE_ON_GPU 32
-#define MAX_TEXTURE_COUNT 128
-    
     u32 vertexBufferIndex; 
     u32 vertexArrayIndex;
     u32 elementBufferIndex;
     
+    // Query string opengl info about device
     i32 MAX_TEXTURE_IMAGE_UNITS;
     i32 MAX_COMBINED_TEXTURE_IMAGE_UNITS;
-    i32 textureSlots[TEXTURE_NUMBERS_TO_MAKE_ON_GPU];
+    
+    
+    i32 textureSlots[TEXTURE_ARRAY_SIZE_IN_SHADER];
     Texture2D whiteTexture;
     
     u32 texturesOnGPU[MAX_TEXTURE_COUNT];
@@ -143,9 +157,12 @@ struct OpenGLRenderer
     
     
     u32 elements[ELEMENT_COUNT];
-    VertexRectangle quads[MAX_QUAD_COUNT]; 
+    VertexRectangle quadBuffer[MAX_QUAD_COUNT]; 
     u32 currentQuadCount;
 };
 
+
+Internal void OpenGLRendererAttach(OpenGLRenderer *gl);
+Internal OpenGLRenderer *OpenGLRendererGet();
 
 #endif //OPENGL_RENDERER_H

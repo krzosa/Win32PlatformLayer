@@ -32,7 +32,6 @@ OpenGLRendererInit(MemoryArena *arena, OpenGLRenderer *renderer,
     glGenBuffers(1, &renderer->elementBufferIndex);
     glGenVertexArrays(1, &renderer->vertexArrayIndex);
     
-    
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &renderer->MAX_TEXTURE_IMAGE_UNITS);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &renderer->MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     
@@ -41,7 +40,7 @@ OpenGLRendererInit(MemoryArena *arena, OpenGLRenderer *renderer,
     
     
     // NOTE: Setup the texture Array
-    for(i32 i = 0; i < TEXTURE_NUMBERS_TO_MAKE_ON_GPU; i++) 
+    for(i32 i = 0; i < TEXTURE_ARRAY_SIZE_IN_SHADER; i++) 
         renderer->textureSlots[i] = i;
     
     // NOTE: Fill the element indices array with correct ordering of vertices
@@ -79,7 +78,7 @@ OpenGLRendererInit(MemoryArena *arena, OpenGLRenderer *renderer,
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(u32) * ELEMENT_COUNT,
                      renderer->elements, GL_STATIC_DRAW);
         
-        // Buffer with our quads
+        // Buffer with our quadBuffer
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBufferIndex);
         glBufferData(GL_ARRAY_BUFFER, sizeof(VertexRectangle) * MAX_QUAD_COUNT, 
                      0, GL_DYNAMIC_DRAW);
@@ -166,7 +165,7 @@ PushDrawCall(DrawCallType type, VertexRectangle rect, Texture2D texture = {})
     }
     
     Assert(gl->currentQuadCount < MAX_QUAD_COUNT);
-    gl->quads[gl->currentQuadCount++] = rect;
+    gl->quadBuffer[gl->currentQuadCount++] = rect;
 }
 
 Internal void
@@ -185,7 +184,7 @@ DrawEnd()
     OpenGLRenderer *gl = OpenGLRendererGet();
     PushActiveDrawCall();
     
-    glClearColor(0, 0.0, 0.0, 1.0);
+    glClearColor(0, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     
     for(i32 i = 0; i < gl->drawCallCount; i++)
@@ -201,7 +200,7 @@ DrawEnd()
                 glBufferSubData(GL_ARRAY_BUFFER,
                                 0,
                                 drawCall->dataSize * sizeof(VertexRectangle),
-                                gl->quads + drawCall->dataOffset);
+                                gl->quadBuffer + drawCall->dataOffset);
                 
                 glDrawElements(GL_TRIANGLES, 6 * drawCall->dataSize, 
                                GL_UNSIGNED_INT, 0);
@@ -218,7 +217,7 @@ DrawEnd()
                 glBufferSubData(GL_ARRAY_BUFFER,
                                 0,
                                 drawCall->dataSize * sizeof(VertexRectangle),
-                                gl->quads + drawCall->dataOffset);
+                                gl->quadBuffer + drawCall->dataOffset);
                 
                 glDrawElements(GL_TRIANGLES, 6 * drawCall->dataSize, 
                                GL_UNSIGNED_INT, 0);
@@ -232,6 +231,8 @@ DrawEnd()
     GLPrintErrors();
 }
 
+
+
 Internal void
 DrawRectangle(V4 rectangle, V4 color)
 {
@@ -244,4 +245,14 @@ DrawSprite(V4 rectangle, Texture2D texture)
 {
     VertexRectangle rect = RectangleTexture(rectangle, 1);
     PushDrawCall(DRAWCALLSprite, rect, texture);
+}
+
+Internal void
+DrawText(i32 symbol, V2 position, Font *font)
+{
+    V4 rectangle = {
+        position.x, position.y, (f32)font->symbols[symbol].width, (f32)font->symbols[symbol].height
+    };
+    VertexRectangle rect = VertexForSymbol(font, symbol, rectangle, {1,1,1,1}, 1);
+    PushDrawCall(DRAWCALLSprite, rect, {font->id});
 }

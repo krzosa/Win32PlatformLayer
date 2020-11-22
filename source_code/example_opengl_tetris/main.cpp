@@ -6,7 +6,10 @@
 #include "krz/krz_math.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 #include "opengl_renderer.h"
+#include "assets.c"
 #include "opengl_renderer.cpp"
 
 struct GameState
@@ -16,6 +19,7 @@ struct GameState
     
     Texture2D wall;
     Texture2D face;
+    Font font;
 };
 
 // Called on the start of the app
@@ -25,21 +29,7 @@ void Initialize(OperatingSystemInterface *os)
     void *arenaMemory = (void *)(game + 1);
     ArenaInitialize(&game->openglArena, arenaMemory, os->memorySize - sizeof(GameState));
     
-    
-    // str8 *path = StringConcatChar(OS->exeDir, "/data");
-    // FilePaths *root = os->DirectoryGetFilePaths(path);
-    // for(FilePaths *node = root; node; node = node->next)
-    // {
-    // LogInfo("%s", node->filePath);
-    // }
-    // os->FilePathsFree(root);
-    // void *memory = ArenaPushSize(&game->openglArena, 1000000);
-    // 
-    // Files files = os->DirectoryReadAllFiles(path, memory, 1000000);
-    game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
     HotReload(os);
-    
-    
 }
 
 // Called on every frame
@@ -49,7 +39,7 @@ void Update(OperatingSystemInterface *os)
     
     if(KeyTap(KEY_F1))
     {
-        os->WindowSetTransparency(40);
+        os->WindowSetTransparency(100);
         os->WindowAlwaysOnTop();
     }
     if(KeyTap(KEY_F2))
@@ -74,8 +64,11 @@ void Update(OperatingSystemInterface *os)
         
         DrawSprite({90, 40, 50, 50}, game->wall);
         DrawSprite({40, 40, 50, 50}, game->face);
+        DrawSprite({40, 40, 150, 150}, {game->font.id});
+        DrawText('a' - 33, {0,0}, &game->font);
     }
     DrawEnd();
+    
     os->ScreenRefresh();
 }
 
@@ -83,7 +76,9 @@ void Update(OperatingSystemInterface *os)
 void HotReload(OperatingSystemInterface *os)
 {
     GameState *game = (GameState *)os->memory;
+    game->renderer = ArenaPushStruct(&game->openglArena, OpenGLRenderer);
     OpenGLRendererInit(&game->openglArena, game->renderer, 320, 180);
+    game->font = FontLoad(&game->openglArena, "/data/LiberationMono-Regular.ttf");
     game->face = TextureCreate("/data/awesomeface.png");
     game->wall = TextureCreate("/data/wall.jpg");
 }
@@ -91,6 +86,7 @@ void HotReload(OperatingSystemInterface *os)
 // Called when you recomplile while the app is running
 void HotUnload(OperatingSystemInterface *os)
 {
-    LogInfo("HotUnload");
+    GameState *game = (GameState *)os->memory;
     OpenGLRendererDestroy();
+    ArenaZeroTheWholeThing(&game->openglArena);
 }

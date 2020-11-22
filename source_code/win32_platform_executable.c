@@ -196,8 +196,6 @@ typedef union iv2
     i32 e[2];
 } iv2;
 
-// ------------------------- OS_INTERFACE_HEADER ------------------------- \\
-
 typedef struct FileData
 {
     void *contents;
@@ -425,11 +423,10 @@ typedef struct OperatingSystemInterface
     void  *(*OpenGLLoadProcedures)(char *name);
 } OperatingSystemInterface;
 
-// ------------------------- OS_INTERFACE_HEADER ------------------------- \\
 
-// ------------------------- OS_INTERFACE ------------------------- \\
 
-#if defined(OS_INTERFACE_IMPLEMENTATION)
+#if defined(OS_INTERFACE_IMPLEMENTATION) ///////////////////////////////////////
+
 void OpenGLLoadProcedures(void *(*OpenGLLoadProcedures)(char *name));
 void Initialize(OperatingSystemInterface *os);
 void Update(OperatingSystemInterface *os);

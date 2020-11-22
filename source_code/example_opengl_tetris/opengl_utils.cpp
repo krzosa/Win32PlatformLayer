@@ -139,65 +139,6 @@ ShaderCreate(const char *vertexShader, const char *fragmentShader)
     return result;
 }
 
-Internal Texture2D 
-TextureCreate(char *pathToResource)
-{
-    Texture2D result = {};
-    
-    glGenTextures(1, &result.id);
-    
-    stbi_set_flip_vertically_on_load(true);  
-    str8 *path = StringConcatChar(OS->exeDir, pathToResource);
-    u8 *resource = stbi_load(path, 
-                             &result.width, 
-                             &result.height, 
-                             &result.numberOfChannels, 0);
-    StringFree(path);
-    
-    glBindTexture(GL_TEXTURE_2D, result.id);
-    {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        
-        if(resource)
-        {
-            if(result.numberOfChannels == 4)
-            {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result.width, result.height, 
-                             0, GL_RGBA, GL_UNSIGNED_BYTE, resource);
-                LogInfo("%s load %d", pathToResource, result.numberOfChannels);
-            }
-            else if(result.numberOfChannels == 3)
-            {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, result.width, result.height, 
-                             0, GL_RGB, GL_UNSIGNED_BYTE, resource);
-                LogInfo("%s load %d", pathToResource, result.numberOfChannels);
-            }
-            else 
-            {
-                LogError("Unsupported number of channels %s", pathToResource);
-                Assert(0);
-            }
-            glGenerateMipmap(GL_TEXTURE_2D);
-        } 
-        else 
-        {
-            LogError("Failed to load resource %s", pathToResource);
-            Assert(0);
-        }
-    }
-    stbi_image_free(resource);
-    GLPrintErrors();
-    
-    OpenGLRenderer *renderer = OpenGLRendererGet();
-    Assert(renderer->textureCount < MAX_TEXTURE_COUNT);
-    renderer->texturesOnGPU[renderer->textureCount++] = result.id;
-    
-    return result;
-}
-
 Internal Texture2D
 TextureWhiteCreate()
 {
@@ -218,13 +159,50 @@ TextureWhiteCreate()
     return result;
 }
 
-
 Internal VertexRectangle
-VertexRectangleCreate(f32 x, f32 y, f32 z, 
-                      f32 width, f32 height, 
-                      f32 textureIndex, V4 color)
+VertexForSymbol(Font *font, i32 symbol, V4 rectangle, V4 color, f32 textureIndex)
 {
     VertexRectangle result = {};
+    
+    
+    
+    // TODO(KKrzosa): Idea 1 atlas should be built in such a way to make it as easy as possible to
+    
+    f32 x = rectangle.x;
+    f32 y = rectangle.y;
+    f32 w = rectangle.width + x;
+    f32 h = rectangle.height + y;
+    V4 box = font->symbols[symbol].atlasBoundingBox;
+    
+    result.vertices[0].position = {x, y, 0};
+    result.vertices[0].color = color;
+    result.vertices[0].textureCoordinate = {box.x1, box.y1};
+    result.vertices[0].textureIndex = textureIndex;
+    
+    result.vertices[1].position = {x, h, 0};
+    result.vertices[1].color = color;
+    result.vertices[1].textureCoordinate = {box.x1, box.y2};
+    result.vertices[1].textureIndex = textureIndex;
+    
+    result.vertices[2].position = {w, h, 0};
+    result.vertices[2].color = color;
+    result.vertices[2].textureCoordinate = {box.x2, box.y2};
+    result.vertices[2].textureIndex = textureIndex;
+    
+    result.vertices[3].position = {w, y, 0};
+    result.vertices[3].color = color;
+    result.vertices[3].textureCoordinate = {box.x2, box.y1};
+    result.vertices[3].textureIndex = textureIndex;
+    
+    return result;
+}
+
+Internal VertexRectangle
+VertexForRectangle(f32 x, f32 y, f32 z, 
+                   f32 width, f32 height, 
+                   f32 textureIndex, V4 color)
+{
+    VertexRectangle result;
     
     f32 w = width + x;
     f32 h = height + y;
@@ -249,15 +227,21 @@ VertexRectangleCreate(f32 x, f32 y, f32 z,
     result.vertices[3].textureCoordinate = {1.0f, 0.0f};
     result.vertices[3].textureIndex = textureIndex;
     
+    // flipped
+    // result.vertices[0].textureCoordinate = {1.0f, 1.0f};
+    // result.vertices[1].textureCoordinate = {1.0f, 0.0f};
+    // result.vertices[2].textureCoordinate = {0.0f, 0.0f};
+    // result.vertices[3].textureCoordinate = {0.0f, 1.0f};
+    
     return result;
 }
 
 Internal VertexRectangle
 RectangleTexture(V4 rectangle, i32 textureIndex)
 {
-    VertexRectangle result = VertexRectangleCreate(rectangle.x, rectangle.y, 0, 
-                                                   rectangle.width, rectangle.height, 
-                                                   (f32)textureIndex, {1,1,1,1});
+    VertexRectangle result = VertexForRectangle(rectangle.x, rectangle.y, 0, 
+                                                rectangle.width, rectangle.height, 
+                                                (f32)textureIndex, {1,1,1,1});
     
     return result;
 }
@@ -265,9 +249,9 @@ RectangleTexture(V4 rectangle, i32 textureIndex)
 Internal VertexRectangle
 RectangleColor(V4 rectangle, V4 color)
 {
-    VertexRectangle result = VertexRectangleCreate(rectangle.x, rectangle.y, 0, 
-                                                   rectangle.width, rectangle.height, 
-                                                   0, color);
+    VertexRectangle result = VertexForRectangle(rectangle.x, rectangle.y, 0, 
+                                                rectangle.width, rectangle.height, 
+                                                0, color);
     
     return result;
 }

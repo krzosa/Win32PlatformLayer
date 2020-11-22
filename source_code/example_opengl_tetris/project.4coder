@@ -15,7 +15,7 @@ blacklist_patterns = {
 };
 load_paths_base = {
  { ".", .relative = true, .recursive = true, },
- { "C:\Programming\GlobalHeaders", .relative = false, .recursive = true, },
+ { "C:\Programming\GlobalHeaders\krz", .relative = false, .recursive = false, },
 };
 load_paths = {
  { load_paths_base, .os = "win", },
