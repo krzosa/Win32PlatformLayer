@@ -65,7 +65,10 @@ void Update(OperatingSystemInterface *os)
         DrawSprite({90, 40, 50, 50}, game->wall);
         DrawSprite({40, 40, 50, 50}, game->face);
         DrawSprite({40, 40, 150, 150}, {game->font.id});
-        DrawText('a' - 33, {0,0}, &game->font);
+        // DrawSymbol('A', {0,0}, &game->font);
+        DrawText("MEMES", {0,0}, &game->font);
+        DrawText("abc2", {180,0}, &game->font);
+        DrawText("qQW1234", {180,90}, &game->font);
     }
     DrawEnd();
     

@@ -59,14 +59,21 @@ OpenGLRendererInit(MemoryArena *arena, OpenGLRenderer *renderer,
         // if(i > 100) Assert(offset > 100); // check for overflow
     }
     
-    renderer->basicShader = ShaderCreate(vertexShader, fragmentShader);
-    
-    ShaderUse(renderer->basicShader);
-    ShaderUniform(renderer->basicShader, "textures", renderer->textureSlots, renderer->MAX_TEXTURE_IMAGE_UNITS);
-    
+    renderer->rectangleShader = ShaderCreate(vertexShader, fragmentShader);
+    renderer->fontShader = ShaderCreate(vertexShader, fontFragmentShader);
     M4x4 projectionMatrix = OrtographicProjectionMatrix(0, width, 0, height, 0, 1);
-    ShaderUniform(renderer->basicShader, "viewProjectionMatrix", projectionMatrix);
     
+    ShaderUse(renderer->fontShader);
+    ShaderUniform(renderer->rectangleShader, "textures", renderer->textureSlots, renderer->MAX_TEXTURE_IMAGE_UNITS);
+    ShaderUniform(renderer->rectangleShader, "viewProjectionMatrix", projectionMatrix);
+    
+    ShaderUse(renderer->rectangleShader);
+    ShaderUniform(renderer->rectangleShader, "textures", renderer->textureSlots, renderer->MAX_TEXTURE_IMAGE_UNITS);
+    ShaderUniform(renderer->rectangleShader, "viewProjectionMatrix", projectionMatrix);
+    
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     glBindVertexArray(renderer->vertexArrayIndex);
     {
@@ -119,7 +126,7 @@ OpenGLRendererDestroy()
     glDeleteVertexArrays(1, &renderer->vertexArrayIndex);
     
     // SHADER
-    ShaderDelete(renderer->basicShader);
+    ShaderDelete(renderer->rectangleShader);
     
     // TEXTURES
     for(i32 i = 0; i < renderer->textureCount; i++)
@@ -194,6 +201,7 @@ DrawEnd()
         {
             case DRAWCALLColor:
             {
+                ShaderUse(gl->rectangleShader);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, gl->whiteTexture.id);
                 
@@ -211,6 +219,24 @@ DrawEnd()
             }
             case DRAWCALLSprite:
             {
+                ShaderUse(gl->rectangleShader);
+                glActiveTexture(GL_TEXTURE0 + 1);
+                glBindTexture(GL_TEXTURE_2D, drawCall->texture.id);
+                
+                glBufferSubData(GL_ARRAY_BUFFER,
+                                0,
+                                drawCall->dataSize * sizeof(VertexRectangle),
+                                gl->quadBuffer + drawCall->dataOffset);
+                
+                glDrawElements(GL_TRIANGLES, 6 * drawCall->dataSize, 
+                               GL_UNSIGNED_INT, 0);
+                
+                GLPrintErrors();
+                break;
+            }
+            case DRAWCALLText:
+            {
+                ShaderUse(gl->fontShader);
                 glActiveTexture(GL_TEXTURE0 + 1);
                 glBindTexture(GL_TEXTURE_2D, drawCall->texture.id);
                 
@@ -248,11 +274,23 @@ DrawSprite(V4 rectangle, Texture2D texture)
 }
 
 Internal void
-DrawText(i32 symbol, V2 position, Font *font)
+DrawSymbol(char symbol, V2 position, Font *font)
 {
+    symbol -= 33;
     V4 rectangle = {
         position.x, position.y, (f32)font->symbols[symbol].width, (f32)font->symbols[symbol].height
     };
+    
     VertexRectangle rect = VertexForSymbol(font, symbol, rectangle, {1,1,1,1}, 1);
-    PushDrawCall(DRAWCALLSprite, rect, {font->id});
+    PushDrawCall(DRAWCALLText, rect, {font->id});
+}
+
+Internal void
+DrawText(char *text, V2 position, Font *font)
+{
+    for(i32 i = 0; text[i] != 0; i++)
+    {
+        if(i != 0) position.x += font->symbols[text[i]].width;
+        DrawSymbol(text[i], position, font);
+    }
 }

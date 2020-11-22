@@ -72,7 +72,7 @@ FontLoad(MemoryArena *arena, char *pathToResource)
     Font result = {};
     result.width = 512;
     result.height = 512;
-    result.symbolGapX = 0;
+    result.symbolGapX = 10;
     result.symbolGapY = 10;
     
     for(i32 i = 0; i < 94; i++)

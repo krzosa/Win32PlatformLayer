@@ -72,6 +72,26 @@ void main()
 }
 )SHADER";
 
+static const char *fontFragmentShader = R"SHADER(
+#version 330 core
+out vec4 FragColor;
+
+in vec4 vertexColor;
+in vec2 vertexTextureCoordinate;
+in float vertexTextureIndex;
+
+uniform sampler2D textures[32];
+
+void main()
+{
+
+       int textureIndex = int(vertexTextureIndex);
+float fontData = texture(textures[textureIndex], vertexTextureCoordinate).r;
+    FragColor = vec4(vertexColor.xyz, fontData);
+
+}
+)SHADER";
+
 struct Texture2D
 {
     u32 id;
@@ -132,7 +152,8 @@ struct DrawCall
 
 struct OpenGLRenderer
 {
-    ShaderProgram basicShader;
+    ShaderProgram rectangleShader;
+    ShaderProgram fontShader;
     
     f32 width;
     f32 height;
