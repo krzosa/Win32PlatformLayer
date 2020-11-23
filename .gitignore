@@ -1,6 +1,6 @@
 .vscode/
 .vs/
-bin
+
 *.pdb
 *.exe
 *.ilk
@@ -12,12 +12,6 @@ bin
 *.o
 
 handmade/
-backup
-run.bat
-compileTime
-aa
-run.bat
 b.bat
 r.bat
 br.bat
-win32_software_render.c

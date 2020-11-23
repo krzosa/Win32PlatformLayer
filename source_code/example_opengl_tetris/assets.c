@@ -6,6 +6,7 @@ struct FontSymbol
     i32 xOffset;
     i32 yOffset;
     V4 atlasBoundingBox;
+    V4 stbBoundingBox;
     i32 xAdvance;
     u8 *symbolData;
 };
@@ -15,14 +16,15 @@ struct Font
     u32 id;
     i32 width;
     i32 height;
-    i32 symbolGapX;
-    i32 symbolGapY;
+    i32 ascent;
+    i32 descent;
+    i32 linegap;
     V2 symbolGapNormalized;
-    FontSymbol symbols[95]; // 'A' - 33 to access the letter
+    FontSymbol symbols[96]; // 'A' - 32 to access the letter
 };
 
 Internal FontSymbol
-FontLoadSymbol(MemoryArena *arena, stbtt_fontinfo *fontInfo, i32 codePoint, f32 scale) 
+FontLoadSymbol(MemoryArena *arena, stbtt_fontinfo *fontInfo, i32 codePoint, f32 scale, i32 ascent) 
 {
     FontSymbol result;
     
@@ -31,10 +33,28 @@ FontLoadSymbol(MemoryArena *arena, stbtt_fontinfo *fontInfo, i32 codePoint, f32 
                                           &result.xOffset, &result.yOffset);
     
     stbtt_GetCodepointHMetrics(fontInfo, codePoint, &result.xAdvance, NULL);
+    
+    i32 x0, y0, x1, y1;
+    stbtt_GetCodepointBox(fontInfo, codePoint, &x0, &y0, &x1, &y1);
+    
+    result.stbBoundingBox = {
+        ((f32)x0 * scale),
+        ((f32)y0 * scale),
+        ((f32)x1 * scale),
+        ((f32)y1 * scale),
+    };
+    
     result.xAdvance = (i32)((f32)result.xAdvance * scale);
     
+    //
     // Flip Y 
-    result.symbolData= (u8 *)ArenaPushArray(arena, u8, result.width * result.height);
+    //
+
+    result.stbBoundingBox.y1 *= -1;
+    result.stbBoundingBox.y2 *= -1;
+    result.yOffset *= -1;
+    
+    result.symbolData = (u8 *)ArenaPushArray(arena, u8, result.width * result.height);
     
     u8 *source = bitmap;
     u8 *destRow = result.symbolData  + (result.height - 1) * result.width;
@@ -47,6 +67,8 @@ FontLoadSymbol(MemoryArena *arena, stbtt_fontinfo *fontInfo, i32 codePoint, f32 
         }
         destRow -= result.width;
     }
+
+
     stbtt_FreeBitmap(bitmap, 0);
     
     return result;
@@ -59,33 +81,38 @@ FontLoad(MemoryArena *arena, char *pathToResource)
     str8 *path = StringConcatChar(OS->exeDir, pathToResource);
     
     // TODO: Error checking
-    u64 fileSize = OS->FileGetSize(path);
+    u64 fileSize = OS->FileGetSize(path); Assert(fileSize != 0);
     u8 *ttfFile = (u8 *)ArenaPushSize(arena, fileSize);
     u64 bytesRead = OS->FileRead(path, ttfFile, fileSize);
     
     if(!stbtt_InitFont(&fontInfo, ttfFile, 0)) Assert(!"Error init font");
     float scaleFactor = stbtt_ScaleForPixelHeight(&fontInfo, 48.0f);
     
-    i32 ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
-    
     Font result = {};
+    stbtt_GetFontVMetrics(&fontInfo, &result.ascent, &result.descent, &result.linegap);
+    result.ascent = (f32)result.ascent * scaleFactor;
+    result.descent = (f32)result.descent * scaleFactor;
+    result.linegap = (f32)result.linegap * scaleFactor;
     result.width = 512;
     result.height = 512;
-    result.symbolGapX = 10;
-    result.symbolGapY = 10;
-    
+
+    // Load symbols
+
     for(i32 i = 0; i < 94; i++)
     {
-        result.symbols[i] = FontLoadSymbol(arena, &fontInfo, i + 33 , scaleFactor);
+        result.symbols[i] = FontLoadSymbol(arena, &fontInfo, i + 32 , scaleFactor, result.ascent);
     }
     
-    u8 *fontAtlas = (u8 *)ArenaPushArray(arena, u8, result.width * result.height);
-    
-    // NOTE(KKrzosa): Pack the symbols into a texture Atlas
+    //
+    // Pack the symbols into a texture Atlas
+    //
+
     i32 plusWidth = 0;
     i32 plusHeight = 0;
+    i32 symbolGapX = 10;
+    i32 symbolGapY = 10;
     i32 highestHeightInRow = 0;
+    u8 *fontAtlas = (u8 *)ArenaPushArray(arena, u8, result.width * result.height);
     for(i32 i = 0; i < 94; i++)
     {
         if(result.symbols[i].height > highestHeightInRow)
@@ -93,17 +120,19 @@ FontLoad(MemoryArena *arena, char *pathToResource)
             highestHeightInRow = result.symbols[i].height;
         }
         
-        u8 *source = result.symbols[i].symbolData;
-        u8 *destRow = fontAtlas + plusWidth + (plusHeight * (i32)result.width);
+        ///
+        /// Calculate normalized Atlas bounding box
+        ///         for texture coordinates
+        ///
         
         V2 atlasOffsetNormalized = {
-            (plusWidth / (f32)result.width),
-            (plusHeight) / (f32)result.height
+            (f32)(plusWidth / (f32)result.width),
+            (f32)(plusHeight) / (f32)result.height,
         };
         
         V2 normalizedSymbolSize = {
             (f32)result.symbols[i].width / (f32)result.width , 
-            (f32)result.symbols[i].height / (f32)result.height
+            (f32)(result.symbols[i].height) / (f32)result.height
         };
         
         result.symbols[i].atlasBoundingBox = {
@@ -112,6 +141,13 @@ FontLoad(MemoryArena *arena, char *pathToResource)
             atlasOffsetNormalized.x + normalizedSymbolSize.x,
             atlasOffsetNormalized.y + normalizedSymbolSize.y,
         };
+
+        //
+        // Pack the symbols into atlas
+        //
+        
+        u8 *source = result.symbols[i].symbolData;
+        u8 *destRow = fontAtlas + plusWidth + (plusHeight * (i32)result.width);
         
         for(i32 y = 0; y < result.symbols[i].height; y++)
         {
@@ -122,15 +158,18 @@ FontLoad(MemoryArena *arena, char *pathToResource)
             }
             destRow += (i32)result.width;
         }
-        
-        
-        plusWidth += result.symbols[i].width + result.symbolGapX;
+
+        //
+        // Measure the symbol packing, by how much to advance the pointer
+        //
+
+        plusWidth += result.symbols[i].width + symbolGapX;
         
         // TODO(KKrzosa): i here overflows
-        if(plusWidth + result.symbols[i+1].width + result.symbolGapX > result.width)
+        if(plusWidth + result.symbols[i+1].width + symbolGapX > result.width)
         {
             // precompute the height * width
-            plusHeight += highestHeightInRow + result.symbolGapY;
+            plusHeight += highestHeightInRow + symbolGapY;
             plusWidth = 0;
             highestHeightInRow = 0;
         }
@@ -159,7 +198,6 @@ Internal Texture2D
 TextureCreate(char *pathToResource)
 {
     Texture2D result = {};
-    
     
     stbi_set_flip_vertically_on_load(true);  
     str8 *path = StringConcatChar(OS->exeDir, pathToResource);

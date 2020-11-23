@@ -274,11 +274,13 @@ DrawSprite(V4 rectangle, Texture2D texture)
 }
 
 Internal void
-DrawSymbol(char symbol, V2 position, Font *font)
+DrawSymbol(char symbol, V2 position, Font *font, f32 fontSize)
 {
-    symbol -= 33;
     V4 rectangle = {
-        position.x, position.y, (f32)font->symbols[symbol].width, (f32)font->symbols[symbol].height
+        position.x, 
+        position.y - font->symbols[symbol].stbBoundingBox.y1, 
+        (f32)font->symbols[symbol].width,
+        (f32)font->symbols[symbol].height
     };
     
     VertexRectangle rect = VertexForSymbol(font, symbol, rectangle, {1,1,1,1}, 1);
@@ -286,11 +288,12 @@ DrawSymbol(char symbol, V2 position, Font *font)
 }
 
 Internal void
-DrawText(char *text, V2 position, Font *font)
+DrawText(char *text, V2 position, Font *font, f32 fontSize, i32 symbolGap)
 {
     for(i32 i = 0; text[i] != 0; i++)
     {
-        if(i != 0) position.x += font->symbols[text[i]].width;
-        DrawSymbol(text[i], position, font);
+        char symbol = text[i] - 32;
+        if(i != 0) position.x += (font->symbols[symbol].width) + symbolGap;
+        DrawSymbol(symbol, position, font, fontSize);
     }
 }
